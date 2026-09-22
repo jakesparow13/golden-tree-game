@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌳 الشجرة الذهبية</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a472a 0%, #0d2818 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: gold;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            max-width: 400px;
+            width: 100%;
+            padding: 20px;
+        }
+        
+        .header {
+            background: rgba(255,215,0,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+            border: 2px solid rgba(255,215,0,0.3);
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .balance {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffd700;
+        }
+        
+        .user-info {
+            font-size: 14px;
+            color: #90ee90;
+            margin-top: 10px;
+        }
+        
+        .slot-machine {
+            background: rgba(0,0,0,0.5);
+            border: 3px solid gold;
+            border-radius: 20px;
+            padding: 30px 20px;
+            box-shadow: 0 10px 30px rgba(255,215,0,0.3);
+        }
+        
+        .reels {
+            display: flex;
+            justify-content: space-around;
+            margin: 30px 0;
+            gap: 10px;
+        }
+        
+        .reel {
+            width: 90px;
+            height: 90px;
+            background: rgba(255,255,255,0.1);
+            border: 3px solid gold;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 55px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+        
+        .reel.spinning {
+            animation: spin 0.1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-20px); }
+        }
+        
+        .controls {
+            text-align: center;
+        }
+        
+        .bet-selector {
+            margin: 20px 0;
+        }
+        
+        .bet-selector label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .bet-selector input {
+            width: 80%;
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 10px;
+            border: 2px solid gold;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            text-align: center;
+        }
+        
+        .spin-btn {
+            background: linear-gradient(145deg, #ffd700, #ffed4e);
+            border: none;
+            padding: 18px 60px;
+            font-size: 22px;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            color: #0d2818;
+            box-shadow: 0 8px 20px rgba(255,215,0,0.5);
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+        
+        .spin-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(255,215,0,0.6);
+        }
+        
+        .spin-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .spin-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .result {
+            margin-top: 25px;
+            font-size: 20px;
+            min-height: 30px;
+            font-weight: bold;
+        }
+        
+        .win {
+            color: #00ff00;
+            animation: glow 1s ease-in-out infinite;
+        }
+        
+        .lose {
+            color: #ff4444;
+        }
+        
+        @keyframes glow {
+            0%, 100% { text-shadow: 0 0 10px #00ff00; }
+            50% { text-shadow: 0 0 25px #00ff00, 0 0 35px #00ff00; }
+        }
+        
+        .stats {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            font-size: 14px;
+        }
+        
+        .stats div {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌳 الشجرة الذهبية</h1>
+            <div class="balance">💰 الرصيد: <span id="balance">...</span></div>
+            <div class="user-info" id="userInfo">جاري التحميل...</div>
+        </div>
+
+        <div class="slot-machine">
+            <div class="reels">
+                <div class="reel" id="reel1">🍒</div>
+                <div class="reel" id="reel2">🍋</div>
+                <div class="reel" id="reel3">🍊</div>
+            </div>
+            
+            <div class="controls">
+                <div class="bet-selector">
+                    <label>💵 الرهان:</label>
+                    <input type="number" id="betAmount" value="10" min="10" max="100" step="10">
+                </div>
+                
+                <button class="spin-btn" id="spinBtn" onclick="spin()">
+                    🎰 العب الآن
+                </button>
+                
+                <div class="result" id="result"></div>
+            </div>
+            
+            <div class="stats">
+                <div>🎲 عدد المحاولات: <span id="totalSpins">0</span></div>
+                <div>🏆 مجموع الأرباح: <span id="totalWins">0</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, set, get, update } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+
+        // إعدادات Firebase - معلوماتك الحقيقية
+        const firebaseConfig = {
+            apiKey: "AIzaSyAfsY0dQI9qnIrksRqY4TvOe7YtPhig_Pg",
+            authDomain: "chekinroad-afa14.firebaseapp.com",
+            databaseURL: "https://chekinroad-afa14-default-rtdb.firebaseio.com",
+            projectId: "chekinroad-afa14",
+            storageBucket: "chekinroad-afa14.firebasestorage.app",
+            messagingSenderId: "871996125208",
+            appId: "1:871996125208:web:7f98cf25c469ea0568536d"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.ready();
+
+        let userId = tg.initDataUnsafe?.user?.id || 'test_' + Date.now();
+        let userName = tg.initDataUnsafe?.user?.first_name || 'ضيف';
+
+        const symbols = ['🍒', '🍋', '🍊', '🍇', '💎', '🌳', '⭐'];
+        
+        let balance = 0;
+        let spinning = false;
+        let totalSpins = 0;
+        let totalWins = 0;
+
+        document.getElementById('userInfo').textContent = `مرحباً ${userName} 👋`;
+
+        async function loadUserData() {
+            try {
+                const userRef = ref(db, 'users/' + userId);
+                const snapshot = await get(userRef);
+                
+                if (snapshot.exists()) {
+                    const userData = snapshot.val();
+                    balance = userData.balance || 1000;
+                    totalSpins = userData.totalSpins || 0;
+                    totalWins = userData.totalWins || 0;
+                } else {
+                    balance = 1000;
+                    await set(userRef, {
+                        name: userName,
+                        balance: 1000,
+                        totalSpins: 0,
+                        totalWins: 0,
+                        createdAt: Date.now()
+                    });
+                }
+                updateDisplay();
+            } catch (error) {
+                console.error('خطأ:', error);
+                document.getElementById('result').innerHTML = 
+                    '<span class="lose">⚠️ خطأ في الاتصال</span>';
+            }
+        }
+
+        function updateDisplay() {
+            document.getElementById('balance').textContent = balance;
+            document.getElementById('totalSpins').textContent = totalSpins;
+            document.getElementById('totalWins').textContent = totalWins;
+        }
+
+        async function saveUserData(won, winAmount) {
+            try {
+                const userRef = ref(db, 'users/' + userId);
+                await update(userRef, {
+                    balance: balance,
+                    totalSpins: totalSpins,
+                    totalWins: totalWins,
+                    lastPlayed: Date.now()
+                });
+            } catch (error) {
+                console.error('خطأ في الحفظ:', error);
+            }
+        }
+
+        window.spin = async function() {
+            const betAmount = parseInt(document.getElementById('betAmount').value);
+            
+            if (spinning) return;
+            if (balance < betAmount) {
+                document.getElementById('result').innerHTML = 
+                    '<span class="lose">❌ رصيدك غير كافي!</span>';
+                return;
+            }
+
+            spinning = true;
+            balance -= betAmount;
+            totalSpins++;
+            updateDisplay();
+            
+            document.getElementById('spinBtn').disabled = true;
+            document.getElementById('result').textContent = '';
+
+            const reels = ['reel1', 'reel2', 'reel3'];
+            reels.forEach(id => {
+                document.getElementById(id).classList.add('spinning');
+            });
+
+            let spinCount = 0;
+            const spinInterval = setInterval(() => {
+                reels.forEach(id => {
+                    const randomSymbol = symbols[Math.floor(Math.random() * symbols.length)];
+                    document.getElementById(id).textContent = randomSymbol;
+                });
+                spinCount++;
+                
+                if (spinCount >= 15) {
+                    clearInterval(spinInterval);
+                    showResult(betAmount);
+                }
+            }, 100);
+        }
+
+        async function showResult(betAmount) {
+            const reels = ['reel1', 'reel2', 'reel3'];
+            reels.forEach(id => {
+                document.getElementById(id).classList.remove('spinning');
+            });
+
+            let r1 = symbols[Math.floor(Math.random() * symbols.length)];
+            let r2 = symbols[Math.floor(Math.random() * symbols.length)];
+            let r3 = symbols[Math.floor(Math.random() * symbols.length)];
+
+            document.getElementById('reel1').textContent = r1;
+            document.getElementById('reel2').textContent = r2;
+            document.getElementById('reel3').textContent = r3;
+
+            let winAmount = 0;
+            let won = false;
+
+            if (r1 === r2 && r2 === r3) {
+                if (r1 === '🌳') winAmount = betAmount * 50;
+                else if (r1 === '💎') winAmount = betAmount * 20;
+                else if (r1 === '⭐') winAmount = betAmount * 15;
+                else winAmount = betAmount * 5;
+                won = true;
+            } else if (r1 === r2 || r2 === r3 || r1 === r3) {
+                winAmount = betAmount * 2;
+                won = true;
+            }
+
+            if (won) {
+                balance += winAmount;
+                totalWins += winAmount;
+                document.getElementById('result').innerHTML = 
+                    `<span class="win">🎉 ربحت ${winAmount} نقطة!</span>`;
+                
+                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+            } else {
+                document.getElementById('result').innerHTML = 
+                    '<span class="lose">😔 حاول مرة أخرى</span>';
+            }
+
+            updateDisplay();
+            await saveUserData(won, winAmount);
+
+            spinning = false;
+            document.getElementById('spinBtn').disabled = false;
+        }
+
+        loadUserData();
+    </script>
+</body>
+</html>
