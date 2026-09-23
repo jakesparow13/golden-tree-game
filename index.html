@@ -24,6 +24,18 @@
   }
   h1,h2,.brand{font-family:'Amiri',serif;}
 
+  /* ===== Loading overlay (جديد) ===== */
+  .loading-overlay{
+    position:fixed;inset:0;background:var(--bg);
+    display:none;flex-direction:column;align-items:center;justify-content:center;
+    z-index:999;
+  }
+  .loading-overlay .tree-spin{font-size:60px;margin-bottom:22px;animation:pulse 1s ease-in-out infinite;}
+  .loading-bar-wrap{width:70%;max-width:280px;height:10px;background:rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;border:1px solid var(--gold);}
+  .loading-bar{height:100%;width:0%;background:linear-gradient(90deg,var(--gold),var(--gold-bright));transition:width .12s linear;}
+  .loading-pct{margin-top:12px;color:var(--gold-bright);font-weight:700;font-size:16px;}
+  .loading-label{margin-top:6px;color:#999;font-size:12px;}
+
   /* ===== Top bar ===== */
   .topbar{
     display:flex;
@@ -178,6 +190,7 @@
     grid-template-rows:repeat(3,1fr);
     gap:6px;
     margin:20px 0;
+    min-height:180px;
   }
   .cell{
     aspect-ratio:1;
@@ -277,6 +290,14 @@
 </style>
 </head>
 <body>
+
+<!-- ===== شاشة التحميل (جديدة) ===== -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="tree-spin">🌳</div>
+  <div class="loading-bar-wrap"><div class="loading-bar" id="loadingBar"></div></div>
+  <div class="loading-pct" id="loadingPct">0%</div>
+  <div class="loading-label">جاري تحميل اللعبة...</div>
+</div>
 
 <!-- ===== LOBBY ===== -->
 <div id="lobbyView">
@@ -410,11 +431,47 @@ window.notReady = function(){
   setTimeout(()=>toast.classList.remove('show'), 1500);
 }
 
+/* =====================================================================
+   شاشة التحميل بالنسبة المئوية (جديد)
+   بتبلش فورًا عند الضغط على "العب"، وبنفس الوقت بترسم شبكة اللعبة
+   وتجيب بيانات المستخدم بالخلفية، بحيث لما توصل النسبة ١٠٠٪ تكون
+   اللعبة جاهزة فعليًا ومرسومة، مش بس شاشة تحميل شكلية.
+   ===================================================================== */
+function startLoading(onDone){
+  const overlay = document.getElementById('loadingOverlay');
+  const bar = document.getElementById('loadingBar');
+  const pct = document.getElementById('loadingPct');
+  overlay.style.display = 'flex';
+  bar.style.width = '0%';
+  pct.textContent = '0%';
+
+  let progress = 0;
+  const timer = setInterval(() => {
+    progress += Math.random() * 18 + 6;
+    if (progress >= 100) {
+      progress = 100;
+      clearInterval(timer);
+      bar.style.width = '100%';
+      pct.textContent = '100%';
+      setTimeout(() => {
+        overlay.style.display = 'none';
+        onDone();
+      }, 250);
+    } else {
+      bar.style.width = progress + '%';
+      pct.textContent = Math.floor(progress) + '%';
+    }
+  }, 130);
+}
+
 window.openGame = function(id){
   if(id === 'golden-tree'){
     document.getElementById('lobbyView').style.display = 'none';
-    document.getElementById('gameView').style.display = 'block';
+    // نرسم الشبكة ونجيب البيانات فورًا بالخلفية (ما منستنى شاشة التحميل)
     loadUserData();
+    startLoading(() => {
+      document.getElementById('gameView').style.display = 'block';
+    });
   }
 }
 
@@ -504,10 +561,21 @@ function randomWildMult(){ return pickWeighted(WILD_MULTS).val; }
 let balance = 0, spinning = false, totalSpins = 0, totalWins = 0;
 let inFreeSpins = false, freeSpinsLeft = 0, freeSpinsTotalWin = 0;
 
+/* ✅ الإصلاح الأساسي: نرسم الشبكة وجدول الأرباح فورًا (بشكل متزامن)
+   قبل ما ننتظر Firebase أبدًا. هيك اللعبة تظهر مباشرة حتى لو
+   الاتصال بالسيرفر بطيء أو معلّق. وبعدين منحاول نجيب الرصيد
+   الحقيقي بمهلة أقصاها 6 ثواني (timeout) بدل ما نعلّق للأبد. */
 async function loadUserData(){
+  renderPaytable();
+  renderGridSymbols(makeGrid());
+  updateDisplay();
+
   try{
     const userRef = ref(db, 'users/' + userId);
-    const snapshot = await get(userRef);
+    const snapshot = await Promise.race([
+      get(userRef),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000))
+    ]);
     if(snapshot.exists()){
       const userData = snapshot.val();
       balance = (typeof userData.balance === 'number') ? userData.balance : 0;
@@ -518,11 +586,9 @@ async function loadUserData(){
       await set(userRef, { name:userName, balance:0, totalSpins:0, totalWins:0, createdAt:Date.now() });
     }
     updateDisplay();
-    renderPaytable();
-    renderGridSymbols(makeGrid()); // شبكة أولية للعرض بس
   }catch(error){
     console.error('خطأ:', error);
-    document.getElementById('result').innerHTML = '<span class="lose">⚠️ خطأ في الاتصال</span>';
+    document.getElementById('result').innerHTML = '<span class="lose">⚠️ تعذّر الاتصال بالخادم، رصيدك الحالي غير محدّث</span>';
   }
 }
 
