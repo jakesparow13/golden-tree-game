@@ -219,7 +219,7 @@
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getDatabase, ref, set, get, update } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 
-        // إعدادات Firebase - معلوماتك الحقيقية
+        // إعدادات Firebase - نفس قاعدة البوت
         const firebaseConfig = {
             apiKey: "AIzaSyAfsY0dQI9qnIrksRqY4TvOe7YtPhig_Pg",
             authDomain: "chekinroad-afa14.firebaseapp.com",
@@ -256,14 +256,18 @@
                 
                 if (snapshot.exists()) {
                     const userData = snapshot.val();
-                    balance = userData.balance || 1000;
+                    // مهم: نتحقق من النوع (typeof) مش من truthy/falsy
+                    // عشان رصيد = 0 ما ينترجم غلط لـ 1000 NSP مجانية
+                    balance = (typeof userData.balance === 'number') ? userData.balance : 0;
                     totalSpins = userData.totalSpins || 0;
                     totalWins = userData.totalWins || 0;
                 } else {
-                    balance = 1000;
+                    // مستخدم فتح اللعبة مباشرة بدون ما يمر بالبوت أولاً
+                    // منعطيه رصيد 0 (نفس افتراضي البوت)، مش 1000
+                    balance = 0;
                     await set(userRef, {
                         name: userName,
-                        balance: 1000,
+                        balance: 0,
                         totalSpins: 0,
                         totalWins: 0,
                         createdAt: Date.now()
@@ -367,7 +371,7 @@
                 balance += winAmount;
                 totalWins += winAmount;
                 document.getElementById('result').innerHTML = 
-                    `<span class="win">🎉 ربحت ${winAmount} نقطة!</span>`;
+                    `<span class="win">🎉 ربحت ${winAmount} NSP!</span>`;
                 
                 if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
             } else {
