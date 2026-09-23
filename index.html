@@ -172,6 +172,69 @@
     box-shadow:0 10px 30px rgba(212,175,55,0.25);
   }
   .reels{display:flex;justify-content:space-around;margin:26px 0;gap:10px;}
+  .reels-grid{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    grid-template-rows:repeat(3,1fr);
+    gap:6px;
+    margin:20px 0;
+  }
+  .cell{
+    aspect-ratio:1;
+    background:rgba(255,255,255,0.08);
+    border:2px solid var(--gold);
+    border-radius:10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:26px;
+    position:relative;
+    box-shadow:inset 0 0 8px rgba(0,0,0,0.5);
+  }
+  .cell.win{
+    border-color:var(--emerald);
+    box-shadow:0 0 10px var(--emerald);
+    animation:pulse 0.6s ease-in-out infinite;
+  }
+  @keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.08);}}
+  .cell .mult-badge{
+    position:absolute;
+    bottom:-6px;
+    right:-6px;
+    background:var(--gold-bright);
+    color:#0a0a0a;
+    font-size:10px;
+    font-weight:800;
+    padding:1px 5px;
+    border-radius:8px;
+    border:1px solid #0a0a0a;
+  }
+  .buy-bonus-btn{
+    display:block;
+    width:100%;
+    margin-top:10px;
+    padding:12px 0;
+    border:1.5px solid var(--gold);
+    border-radius:30px;
+    background:rgba(212,175,55,0.1);
+    color:var(--gold-bright);
+    font-weight:700;
+    font-size:14px;
+    cursor:pointer;
+  }
+  .buy-bonus-btn:disabled{opacity:0.5;cursor:not-allowed;}
+  .paytable-details{
+    margin-top:16px;
+    background:rgba(0,0,0,0.3);
+    border-radius:10px;
+    padding:10px 14px;
+    font-size:13px;
+  }
+  .paytable-details summary{cursor:pointer;font-weight:700;color:var(--gold-bright);}
+  .paytable-list{margin-top:10px;display:flex;flex-direction:column;gap:6px;}
+  .paytable-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .paytable-row .sym{font-size:20px;width:28px;text-align:center;}
+  .paytable-row .vals{color:#ccc;font-size:12px;}
   .reel{
     width:88px;height:88px;
     background:rgba(255,255,255,0.08);
@@ -231,24 +294,22 @@
   <button class="back-btn" onclick="showLobby()">🔙 رجوع للألعاب</button>
   <div class="container">
     <div class="header">
-      <h2>🌳 Golden Tree</h2>
+      <h2>🌳 Tree of Chronos</h2>
       <div class="balance">💰 الرصيد: <span id="balance">...</span></div>
+      <div id="freeSpinsBadge" style="display:none;color:var(--emerald);font-weight:700;margin-top:6px;"></div>
     </div>
 
     <div class="slot-machine">
-      <div class="reels">
-        <div class="reel" id="reel1">🍒</div>
-        <div class="reel" id="reel2">🍋</div>
-        <div class="reel" id="reel3">🍊</div>
-      </div>
+      <div class="reels-grid" id="reelsGrid"></div>
 
       <div class="controls">
         <div class="bet-selector">
           <label>💵 الرهان:</label>
-          <input type="number" id="betAmount" value="10" min="10" max="100" step="10">
+          <input type="number" id="betAmount" value="10" min="10" max="500" step="10">
         </div>
 
         <button class="spin-btn" id="spinBtn" onclick="spin()">🎰 اسحب</button>
+        <button class="buy-bonus-btn" id="buyBonusBtn" onclick="buyBonus()">✨ شراء الميزة (×100 الرهان)</button>
 
         <div class="result" id="result"></div>
       </div>
@@ -257,6 +318,11 @@
         <div>🎲 عدد المحاولات: <span id="totalSpins">0</span></div>
         <div>🏆 مجموع الأرباح: <span id="totalWins">0</span></div>
       </div>
+
+      <details class="paytable-details">
+        <summary>📖 جدول الأرباح والرموز</summary>
+        <div class="paytable-list" id="paytableList"></div>
+      </details>
     </div>
   </div>
 </div>
@@ -370,9 +436,73 @@ async function loadLobbyBalance(){
 }
 loadLobbyBalance();
 
-/* ===== لعبة الشجرة الذهبية (نفس المنطق الأصلي) ===== */
-const symbols = ['🍒','🍋','🍊','🍇','💎','🌳','⭐'];
+/* =====================================================================
+   محرك لعبة "Tree of Chronos" (مبني على تفاصيل اللعبة الأصلية الحقيقية)
+   ✅ مبني حسب الصور: شبكة 5×3، 10 خطوط دفع، Wild بمضاعف، Scatter، Buy Bonus
+   ⏸️ مؤجل لمرحلة لاحقة: ميزة القمار (كرت أحمر/أسود)، Turbo، Auto-play
+   ===================================================================== */
+
+const ROWS = 3, REELS = 5;
+
+// الرموز + وزن الظهور (رقم أعلى = بيطلع أكتر)
+const SYMBOL_DEFS = [
+  { key:'wild',   icon:'🌳', weight:2  },
+  { key:'scatter',icon:'⭐', weight:3  },
+  { key:'seven',  icon:'7️⃣', weight:5  },
+  { key:'grape',  icon:'🍇', weight:7  },
+  { key:'melon',  icon:'🍉', weight:7  },
+  { key:'bell',   icon:'🔔', weight:9  },
+  { key:'cherry', icon:'🍒', weight:13 },
+  { key:'orange', icon:'🍊', weight:13 },
+  { key:'lemon',  icon:'🍋', weight:13 },
+  { key:'plum',   icon:'🍑', weight:13 }
+];
+const SYMBOL_WEIGHTS_TOTAL = SYMBOL_DEFS.reduce((s,x)=>s+x.weight,0);
+
+// جدول الأرباح (× الرهان) — نسب مبنية على أرقام اللعبة الأصلية
+const PAYTABLE = {
+  wild:   {2:0.6, 3:3,   4:15,  5:300},
+  seven:  {2:0.6, 3:3,   4:15,  5:300},
+  grape:  {3:2.4, 4:7.2, 5:42},
+  melon:  {3:2.4, 4:7.2, 5:42},
+  bell:   {3:1.2, 4:2.4, 5:12},
+  cherry: {3:0.6, 4:1.8, 5:9},
+  orange: {3:0.6, 4:1.8, 5:9},
+  lemon:  {3:0.6, 4:1.8, 5:9},
+  plum:   {3:0.6, 4:1.8, 5:9}
+};
+
+// 10 خطوط دفع (رقم الصف 0=فوق 1=وسط 2=تحت لكل بكرة)
+const PAYLINES = [
+  [1,1,1,1,1],
+  [0,0,0,0,0],
+  [2,2,2,2,2],
+  [0,1,2,1,0],
+  [2,1,0,1,2],
+  [0,0,1,0,0],
+  [2,2,1,2,2],
+  [1,0,0,0,1],
+  [1,2,2,2,1],
+  [0,1,1,1,0]
+];
+
+// مضاعفات الـ Wild الممكنة (بأوزان — x2 الأكثر شيوعًا، x10 الأندر)
+const WILD_MULTS = [
+  {val:2, weight:10}, {val:3, weight:6}, {val:5, weight:3}, {val:10, weight:1}
+];
+
+function pickWeighted(list){
+  const total = list.reduce((s,x)=>s+x.weight,0);
+  let r = Math.random()*total;
+  for(const item of list){ r -= item.weight; if(r<=0) return item; }
+  return list[list.length-1];
+}
+
+function randomSymbol(){ return pickWeighted(SYMBOL_DEFS).key; }
+function randomWildMult(){ return pickWeighted(WILD_MULTS).val; }
+
 let balance = 0, spinning = false, totalSpins = 0, totalWins = 0;
+let inFreeSpins = false, freeSpinsLeft = 0, freeSpinsTotalWin = 0;
 
 async function loadUserData(){
   try{
@@ -388,6 +518,8 @@ async function loadUserData(){
       await set(userRef, { name:userName, balance:0, totalSpins:0, totalWins:0, createdAt:Date.now() });
     }
     updateDisplay();
+    renderPaytable();
+    renderGridSymbols(makeGrid()); // شبكة أولية للعرض بس
   }catch(error){
     console.error('خطأ:', error);
     document.getElementById('result').innerHTML = '<span class="lose">⚠️ خطأ في الاتصال</span>';
@@ -398,6 +530,13 @@ function updateDisplay(){
   document.getElementById('balance').textContent = balance;
   document.getElementById('totalSpins').textContent = totalSpins;
   document.getElementById('totalWins').textContent = totalWins;
+  const badge = document.getElementById('freeSpinsBadge');
+  if(inFreeSpins){
+    badge.style.display = 'block';
+    badge.textContent = `🎁 لفات مجانية متبقية: ${freeSpinsLeft}`;
+  }else{
+    badge.style.display = 'none';
+  }
 }
 
 async function saveUserData(){
@@ -408,71 +547,192 @@ async function saveUserData(){
   }catch(error){ console.error('خطأ في الحفظ:', error); }
 }
 
+function renderPaytable(){
+  const icons = Object.fromEntries(SYMBOL_DEFS.map(s=>[s.key,s.icon]));
+  const rows = Object.entries(PAYTABLE).map(([key,vals])=>{
+    const parts = Object.entries(vals).map(([c,v])=>`${c}x=${v}×`).join(' | ');
+    return `<div class="paytable-row"><span class="sym">${icons[key]}</span><span class="vals">${parts}</span></div>`;
+  }).join('');
+  document.getElementById('paytableList').innerHTML = rows +
+    `<div class="paytable-row"><span class="sym">⭐</span><span class="vals">3 وأكتر بأي مكان = تفعيل 5 لفات مجانية</span></div>`;
+}
+
+/* توليد شبكة عشوائية 5×3 */
+function makeGrid(){
+  const grid = [];
+  for(let r=0;r<REELS;r++){
+    const col = [];
+    for(let row=0;row<ROWS;row++){
+      const key = randomSymbol();
+      col.push({ key, mult: key==='wild' ? randomWildMult() : null });
+    }
+    grid.push(col);
+  }
+  return grid;
+}
+
+function iconOf(key){ return SYMBOL_DEFS.find(s=>s.key===key).icon; }
+
+function renderGridSymbols(grid, winningCells=[]){
+  const container = document.getElementById('reelsGrid');
+  let html = '';
+  for(let row=0;row<ROWS;row++){
+    for(let r=0;r<REELS;r++){
+      const cell = grid[r][row];
+      const isWin = winningCells.some(([wr,wrow])=>wr===r&&wrow===row);
+      html += `<div class="cell ${isWin?'win':''}">${iconOf(cell.key)}${cell.mult?`<span class="mult-badge">x${cell.mult}</span>`:''}</div>`;
+    }
+  }
+  container.innerHTML = html;
+}
+
+/* حساب الأرباح على الخطوط العشرة */
+function evaluateGrid(grid, bet){
+  let totalWin = 0;
+  const winningCells = [];
+  const winLines = [];
+
+  PAYLINES.forEach(line => {
+    const seq = line.map((row,r) => grid[r][row]);
+    // أول رمز مش Wild ومش Scatter بيحدد نوع الخط
+    let target = null;
+    for(const s of seq){
+      if(s.key !== 'wild' && s.key !== 'scatter'){ target = s.key; break; }
+    }
+    if(!target) target = 'wild'; // خط كله Wild
+
+    let count = 0;
+    const cellsInLine = [];
+    for(let i=0;i<seq.length;i++){
+      const s = seq[i];
+      if(s.key === target || s.key === 'wild'){
+        count++;
+        cellsInLine.push([i, line[i]]);
+      } else break;
+    }
+
+    const table = PAYTABLE[target];
+    if(table && table[count]){
+      let win = bet * table[count];
+      // مجموع مضاعفات الـ Wild المشاركة بالخط
+      const wildMultSum = cellsInLine.reduce((sum,[r,row])=>{
+        const c = grid[r][row];
+        return c.key==='wild' ? sum + c.mult : sum;
+      }, 0);
+      if(wildMultSum > 0) win *= wildMultSum;
+      totalWin += win;
+      winningCells.push(...cellsInLine);
+      winLines.push({target, count, win});
+    }
+  });
+
+  // عدّ الـ Scatter بأي مكان بالشبكة
+  let scatterCount = 0;
+  for(let r=0;r<REELS;r++) for(let row=0;row<ROWS;row++) if(grid[r][row].key==='scatter') scatterCount++;
+
+  return { totalWin, winningCells, winLines, scatterCount };
+}
+
 window.spin = async function(){
-  const betAmount = parseInt(document.getElementById('betAmount').value);
+  const betAmount = parseInt(document.getElementById('betAmount').value) || 10;
   if(spinning) return;
-  if(balance < betAmount){
+
+  if(!inFreeSpins && balance < betAmount){
     document.getElementById('result').innerHTML = '<span class="lose">❌ رصيدك غير كافي!</span>';
     return;
   }
+
   spinning = true;
-  balance -= betAmount;
-  totalSpins++;
-  updateDisplay();
   document.getElementById('spinBtn').disabled = true;
+  document.getElementById('buyBonusBtn').disabled = true;
   document.getElementById('result').textContent = '';
 
-  const reels = ['reel1','reel2','reel3'];
-  reels.forEach(id => document.getElementById(id).classList.add('spinning'));
-
-  let spinCount = 0;
-  const spinInterval = setInterval(() => {
-    reels.forEach(id => {
-      document.getElementById(id).textContent = symbols[Math.floor(Math.random()*symbols.length)];
-    });
-    spinCount++;
-    if(spinCount >= 15){
-      clearInterval(spinInterval);
-      showResult(betAmount);
-    }
-  }, 100);
-}
-
-async function showResult(betAmount){
-  const reels = ['reel1','reel2','reel3'];
-  reels.forEach(id => document.getElementById(id).classList.remove('spinning'));
-
-  const r1 = symbols[Math.floor(Math.random()*symbols.length)];
-  const r2 = symbols[Math.floor(Math.random()*symbols.length)];
-  const r3 = symbols[Math.floor(Math.random()*symbols.length)];
-  document.getElementById('reel1').textContent = r1;
-  document.getElementById('reel2').textContent = r2;
-  document.getElementById('reel3').textContent = r3;
-
-  let winAmount = 0, won = false;
-  if(r1 === r2 && r2 === r3){
-    if(r1 === '🌳') winAmount = betAmount*50;
-    else if(r1 === '💎') winAmount = betAmount*20;
-    else if(r1 === '⭐') winAmount = betAmount*15;
-    else winAmount = betAmount*5;
-    won = true;
-  }else if(r1 === r2 || r2 === r3 || r1 === r3){
-    winAmount = betAmount*2;
-    won = true;
-  }
-
-  if(won){
-    balance += winAmount;
-    totalWins += winAmount;
-    document.getElementById('result').innerHTML = `<span class="win">🎉 ربحت ${winAmount} NSP!</span>`;
-    if(navigator.vibrate) navigator.vibrate([100,50,100]);
-  }else{
-    document.getElementById('result').innerHTML = '<span class="lose">😔 حاول مرة أخرى</span>';
+  if(!inFreeSpins){
+    balance -= betAmount;
+    totalSpins++;
   }
   updateDisplay();
+
+  // أنيميشن دوران بسيط: نعرض شبكات عشوائية بسرعة قبل النتيجة النهائية
+  let ticks = 0;
+  const spinInterval = setInterval(() => {
+    renderGridSymbols(makeGrid());
+    ticks++;
+    if(ticks >= 8){
+      clearInterval(spinInterval);
+      resolveSpin(betAmount);
+    }
+  }, 90);
+}
+
+async function resolveSpin(betAmount){
+  const grid = makeGrid();
+  const { totalWin, winningCells, scatterCount } = evaluateGrid(grid, betAmount);
+  renderGridSymbols(grid, winningCells);
+
+  let msg = '';
+
+  if(totalWin > 0){
+    balance += totalWin;
+    totalWins += totalWin;
+    if(inFreeSpins) freeSpinsTotalWin += totalWin;
+    msg += `<span class="win">🎉 ربحت ${totalWin} نقطة!</span>`;
+    if(navigator.vibrate) navigator.vibrate([100,50,100]);
+  }
+
+  // تفعيل اللفات المجانية عند 3+ Scatter (بس لو مش أصلًا داخل لفات مجانية)
+  if(scatterCount >= 3 && !inFreeSpins){
+    inFreeSpins = true;
+    freeSpinsLeft = 5;
+    freeSpinsTotalWin = totalWin > 0 ? totalWin : 0;
+    msg += `<br><span class="win">🎁 3 نجوم Scatter! فزت بـ 5 لفات مجانية</span>`;
+  }
+
+  if(totalWin === 0 && scatterCount < 3){
+    msg = '<span class="lose">😔 حاول مرة أخرى</span>';
+  }
+
+  document.getElementById('result').innerHTML = msg;
+  updateDisplay();
   await saveUserData();
+
   spinning = false;
-  document.getElementById('spinBtn').disabled = false;
+  document.getElementById('buyBonusBtn').disabled = false;
+
+  if(inFreeSpins){
+    freeSpinsLeft--;
+    if(freeSpinsLeft <= 0){
+      inFreeSpins = false;
+      document.getElementById('result').innerHTML += `<br><span class="win">🏆 انتهت اللفات المجانية — مجموع ربحها: ${freeSpinsTotalWin} نقطة</span>`;
+      updateDisplay();
+      document.getElementById('spinBtn').disabled = false;
+    }else{
+      // تكمل تلقائيًا للفة المجانية الجاية بعد ثانية
+      updateDisplay();
+      setTimeout(() => spin(), 1200);
+    }
+  }else{
+    document.getElementById('spinBtn').disabled = false;
+  }
+}
+
+/* شراء الميزة: تكلفة ×100 الرهان الحالي، بتفعّل مباشرة 5 لفات مجانية */
+window.buyBonus = async function(){
+  if(spinning || inFreeSpins) return;
+  const betAmount = parseInt(document.getElementById('betAmount').value) || 10;
+  const cost = betAmount * 100;
+  if(balance < cost){
+    document.getElementById('result').innerHTML = `<span class="lose">❌ رصيدك غير كافي لشراء الميزة (${cost} نقطة)</span>`;
+    return;
+  }
+  balance -= cost;
+  inFreeSpins = true;
+  freeSpinsLeft = 5;
+  freeSpinsTotalWin = 0;
+  document.getElementById('result').innerHTML = `<span class="win">✨ تم شراء الميزة! بدأت 5 لفات مجانية</span>`;
+  updateDisplay();
+  await saveUserData();
+  spin();
 }
 </script>
 </body>
