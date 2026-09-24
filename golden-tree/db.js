@@ -14,7 +14,7 @@ const firebaseConfig = {
 
 const db = getDatabase(initializeApp(firebaseConfig));
 
-// جلب بيانات المستخدم (مهلة 8 ثواني). إذا المستخدم جديد بينعمل له سجل.
+// جلب بيانات المستخدم (مهلة 8 ثواني). إذا المستخدم جديد بينعمل له سجل برصيد ترحيبي 1000.
 export async function loadBalance(userId, name){
   const r = ref(db, 'users/' + userId);
   const snap = await Promise.race([
@@ -29,9 +29,9 @@ export async function loadBalance(userId, name){
       totalWins: d.totalWins || 0
     };
   }
-  const fresh = { name, balance: 0, totalSpins: 0, totalWins: 0, createdAt: Date.now() };
+  const fresh = { name, balance: 1000, totalSpins: 0, totalWins: 0, createdAt: Date.now() };
   await set(r, fresh);
-  return { balance: 0, totalSpins: 0, totalWins: 0 };
+  return { balance: 1000, totalSpins: 0, totalWins: 0 };
 }
 
 // حفظ الرصيد والإحصائيات
