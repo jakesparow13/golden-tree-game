@@ -389,12 +389,6 @@ const ICONS = {
 
 /* =====================================================================
    قائمة الألعاب — القايمة النهائية (6 ألعاب)
-   لإضافة صورة حقيقية للعبة:
-   1) ارفعي صورة الغلاف (jpg أو png) داخل مجلد اسمه "images" جنب index.html
-      على GitHub (نفس مكان الملف بالضبط)
-   2) سمّي الملف نفس اسم "img" تحت (مثلاً images/counts-curse.jpg)
-   3) خلص — الكود بيعرضها تلقائيًا. لو الملف مش موجود بعد، بتظهر
-      أيقونة بسيطة بديلة (fallback) بمكانها لحد ما تحطي الصورة
    ===================================================================== */
 const GAMES = [
   { id:'counts-curse',   name:"Count's Curse",             img:'counts-curse.jpg',           icon:ICONS.countsCurse,   tint:'rgba(61,220,151,0.3)',  tag:null,  ready:false },
@@ -432,10 +426,7 @@ window.notReady = function(){
 }
 
 /* =====================================================================
-   شاشة التحميل بالنسبة المئوية (جديد)
-   بتبلش فورًا عند الضغط على "العب"، وبنفس الوقت بترسم شبكة اللعبة
-   وتجيب بيانات المستخدم بالخلفية، بحيث لما توصل النسبة ١٠٠٪ تكون
-   اللعبة جاهزة فعليًا ومرسومة، مش بس شاشة تحميل شكلية.
+   شاشة التحميل بالنسبة المئوية
    ===================================================================== */
 function startLoading(onDone){
   const overlay = document.getElementById('loadingOverlay');
@@ -464,14 +455,11 @@ function startLoading(onDone){
   }, 130);
 }
 
+/* ✅ التعديل الوحيد: زر "العب الآن" بيوجّه لمجلد اللعبة الجديدة
+   ومعو location.hash (فيه بيانات تيليجرام) عشان ما تنفقد */
 window.openGame = function(id){
   if(id === 'golden-tree'){
-    document.getElementById('lobbyView').style.display = 'none';
-    // نرسم الشبكة ونجيب البيانات فورًا بالخلفية (ما منستنى شاشة التحميل)
-    loadUserData();
-    startLoading(() => {
-      document.getElementById('gameView').style.display = 'block';
-    });
+    location.href = 'golden-tree/index.html' + location.hash;
   }
 }
 
@@ -494,14 +482,12 @@ async function loadLobbyBalance(){
 loadLobbyBalance();
 
 /* =====================================================================
-   محرك لعبة "Tree of Chronos" (مبني على تفاصيل اللعبة الأصلية الحقيقية)
-   ✅ مبني حسب الصور: شبكة 5×3، 10 خطوط دفع، Wild بمضاعف، Scatter، Buy Bonus
-   ⏸️ مؤجل لمرحلة لاحقة: ميزة القمار (كرت أحمر/أسود)، Turbo، Auto-play
+   محرك اللعبة القديمة (Tree of Chronos داخل نفس الملف) — ما عاد بيُستعمل
+   لأنو الزر صار يفتح اللعبة الجديدة بمجلدها. تركناه متل ما هو للسلامة.
    ===================================================================== */
 
 const ROWS = 3, REELS = 5;
 
-// الرموز + وزن الظهور (رقم أعلى = بيطلع أكتر)
 const SYMBOL_DEFS = [
   { key:'wild',   icon:'🌳', weight:2  },
   { key:'scatter',icon:'⭐', weight:3  },
@@ -514,9 +500,7 @@ const SYMBOL_DEFS = [
   { key:'lemon',  icon:'🍋', weight:13 },
   { key:'plum',   icon:'🍑', weight:13 }
 ];
-const SYMBOL_WEIGHTS_TOTAL = SYMBOL_DEFS.reduce((s,x)=>s+x.weight,0);
 
-// جدول الأرباح (× الرهان) — نسب مبنية على أرقام اللعبة الأصلية
 const PAYTABLE = {
   wild:   {2:0.6, 3:3,   4:15,  5:300},
   seven:  {2:0.6, 3:3,   4:15,  5:300},
@@ -529,21 +513,11 @@ const PAYTABLE = {
   plum:   {3:0.6, 4:1.8, 5:9}
 };
 
-// 10 خطوط دفع (رقم الصف 0=فوق 1=وسط 2=تحت لكل بكرة)
 const PAYLINES = [
-  [1,1,1,1,1],
-  [0,0,0,0,0],
-  [2,2,2,2,2],
-  [0,1,2,1,0],
-  [2,1,0,1,2],
-  [0,0,1,0,0],
-  [2,2,1,2,2],
-  [1,0,0,0,1],
-  [1,2,2,2,1],
-  [0,1,1,1,0]
+  [1,1,1,1,1],[0,0,0,0,0],[2,2,2,2,2],[0,1,2,1,0],[2,1,0,1,2],
+  [0,0,1,0,0],[2,2,1,2,2],[1,0,0,0,1],[1,2,2,2,1],[0,1,1,1,0]
 ];
 
-// مضاعفات الـ Wild الممكنة (بأوزان — x2 الأكثر شيوعًا، x10 الأندر)
 const WILD_MULTS = [
   {val:2, weight:10}, {val:3, weight:6}, {val:5, weight:3}, {val:10, weight:1}
 ];
@@ -561,10 +535,6 @@ function randomWildMult(){ return pickWeighted(WILD_MULTS).val; }
 let balance = 0, spinning = false, totalSpins = 0, totalWins = 0;
 let inFreeSpins = false, freeSpinsLeft = 0, freeSpinsTotalWin = 0;
 
-/* ✅ الإصلاح الأساسي: نرسم الشبكة وجدول الأرباح فورًا (بشكل متزامن)
-   قبل ما ننتظر Firebase أبدًا. هيك اللعبة تظهر مباشرة حتى لو
-   الاتصال بالسيرفر بطيء أو معلّق. وبعدين منحاول نجيب الرصيد
-   الحقيقي بمهلة أقصاها 6 ثواني (timeout) بدل ما نعلّق للأبد. */
 async function loadUserData(){
   renderPaytable();
   renderGridSymbols(makeGrid());
@@ -623,7 +593,6 @@ function renderPaytable(){
     `<div class="paytable-row"><span class="sym">⭐</span><span class="vals">3 وأكتر بأي مكان = تفعيل 5 لفات مجانية</span></div>`;
 }
 
-/* توليد شبكة عشوائية 5×3 */
 function makeGrid(){
   const grid = [];
   for(let r=0;r<REELS;r++){
@@ -652,7 +621,6 @@ function renderGridSymbols(grid, winningCells=[]){
   container.innerHTML = html;
 }
 
-/* حساب الأرباح على الخطوط العشرة */
 function evaluateGrid(grid, bet){
   let totalWin = 0;
   const winningCells = [];
@@ -660,12 +628,11 @@ function evaluateGrid(grid, bet){
 
   PAYLINES.forEach(line => {
     const seq = line.map((row,r) => grid[r][row]);
-    // أول رمز مش Wild ومش Scatter بيحدد نوع الخط
     let target = null;
     for(const s of seq){
       if(s.key !== 'wild' && s.key !== 'scatter'){ target = s.key; break; }
     }
-    if(!target) target = 'wild'; // خط كله Wild
+    if(!target) target = 'wild';
 
     let count = 0;
     const cellsInLine = [];
@@ -680,7 +647,6 @@ function evaluateGrid(grid, bet){
     const table = PAYTABLE[target];
     if(table && table[count]){
       let win = bet * table[count];
-      // مجموع مضاعفات الـ Wild المشاركة بالخط
       const wildMultSum = cellsInLine.reduce((sum,[r,row])=>{
         const c = grid[r][row];
         return c.key==='wild' ? sum + c.mult : sum;
@@ -692,7 +658,6 @@ function evaluateGrid(grid, bet){
     }
   });
 
-  // عدّ الـ Scatter بأي مكان بالشبكة
   let scatterCount = 0;
   for(let r=0;r<REELS;r++) for(let row=0;row<ROWS;row++) if(grid[r][row].key==='scatter') scatterCount++;
 
@@ -719,7 +684,6 @@ window.spin = async function(){
   }
   updateDisplay();
 
-  // أنيميشن دوران بسيط: نعرض شبكات عشوائية بسرعة قبل النتيجة النهائية
   let ticks = 0;
   const spinInterval = setInterval(() => {
     renderGridSymbols(makeGrid());
@@ -746,7 +710,6 @@ async function resolveSpin(betAmount){
     if(navigator.vibrate) navigator.vibrate([100,50,100]);
   }
 
-  // تفعيل اللفات المجانية عند 3+ Scatter (بس لو مش أصلًا داخل لفات مجانية)
   if(scatterCount >= 3 && !inFreeSpins){
     inFreeSpins = true;
     freeSpinsLeft = 5;
@@ -773,7 +736,6 @@ async function resolveSpin(betAmount){
       updateDisplay();
       document.getElementById('spinBtn').disabled = false;
     }else{
-      // تكمل تلقائيًا للفة المجانية الجاية بعد ثانية
       updateDisplay();
       setTimeout(() => spin(), 1200);
     }
@@ -782,7 +744,6 @@ async function resolveSpin(betAmount){
   }
 }
 
-/* شراء الميزة: تكلفة ×100 الرهان الحالي، بتفعّل مباشرة 5 لفات مجانية */
 window.buyBonus = async function(){
   if(spinning || inFreeSpins) return;
   const betAmount = parseInt(document.getElementById('betAmount').value) || 10;
