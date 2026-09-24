@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Tree of Chronos</title>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@700&family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{--gold:#d4a437;--gold2:#ffd700;--emerald:#3ddc97;}
+body{min-height:100vh;font-family:'Cairo',sans-serif;color:#f2f2f2;overflow-x:hidden;
+  background:#170a33 url('images/bg.jpg') center top/cover no-repeat fixed;}
+/* ===== شاشة الدخول ===== */
+#splashScreen{position:fixed;inset:0;z-index:999;background:#170a33 url('images/splash.jpg') center/cover no-repeat;
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:14%;}
+.game-title{font-family:'Amiri',serif;font-size:34px;color:var(--gold2);margin-bottom:22px;text-shadow:0 0 12px rgba(255,215,0,.6),0 3px 6px #000;}
+.loading-bar-wrap{width:78%;max-width:320px;height:16px;background:rgba(0,0,0,.5);border-radius:20px;overflow:hidden;border:2px solid var(--gold2);}
+#loadingBar{height:100%;width:0;background:linear-gradient(90deg,#3ddc97,#ffd700);transition:width .12s linear;}
+#loadingPct{margin-top:10px;color:var(--gold2);font-weight:700;text-shadow:0 2px 4px #000;}
+/* ===== اللعبة ===== */
+#gameScreen{display:none;}
+.container{max-width:420px;margin:0 auto;padding:12px 10px 30px;}
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;margin-bottom:10px;
+  background:rgba(0,0,0,.4);border:1.5px solid rgba(212,164,55,.5);border-radius:14px;}
+.topbar h2{font-family:'Amiri',serif;font-size:20px;color:var(--gold2);}
+.balance{font-weight:700;color:var(--gold2);}
+#freeSpinsBadge{display:none;text-align:center;color:var(--emerald);font-weight:700;margin-bottom:6px;}
+.logo{text-align:center;font-family:'Amiri',serif;font-size:38px;color:#ffd700;margin:6px 0 10px;
+  text-shadow:0 0 14px rgba(255,215,0,.7),0 3px 0 #8a5a00;}
+/* الشبكة: LTR دائماً حتى يطابق الربح من اليسار */
+.reels{direction:ltr;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;align-items:start;}
+.reel{display:flex;flex-direction:column;gap:2px;padding:3px;border-radius:8px;min-width:0;background:linear-gradient(180deg,#1a1450,#0f0a35);border:2px solid #b8862b;box-shadow:0 0 8px rgba(184,134,43,.35);}
+.cell{width:100%;aspect-ratio:1/1;min-height:0;overflow:hidden;position:relative;border-radius:6px;font-size:30px;display:flex;align-items:center;justify-content:center;}
+.cell img{position:absolute;inset:6%;width:88%;height:88%;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,.6));}
+.cell.win{background:rgba(61,220,151,.18);box-shadow:0 0 10px var(--emerald);animation:pulse .6s ease-in-out infinite;}
+@keyframes pulse{50%{transform:scale(1.08);}}
+.badge{position:absolute;bottom:0;right:0;background:var(--gold2);color:#111;font-size:10px;font-weight:800;padding:0 4px;border-radius:6px;}
+/* أزرار الرهان */
+.suits{direction:ltr;display:flex;gap:5px;margin-bottom:10px;}
+.suit{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:4px;padding:6px 4px;border-radius:18px;
+  background:rgba(10,4,30,.55);border:1.5px solid #8a6a2a;font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;}
+.suit b{font-size:16px;line-height:1;} .suit .k{color:#e8e0ff;} .suit .r{color:#ff3b4f;}
+.balbar{margin-top:14px;padding:11px;border-radius:14px;text-align:center;background:rgba(10,4,30,.6);border:1.5px solid rgba(212,164,55,.45);font-weight:700;}
+.balbar b{color:var(--gold2);font-size:19px;margin:0 6px;}
+.balbar small{color:#ccc;font-weight:400;}
+.chips{direction:ltr;display:flex;gap:6px;justify-content:center;margin:16px 0 12px;}
+.chip{flex:1;padding:9px 0;border-radius:22px;border:1.5px solid #6b5a8f;background:rgba(255,255,255,.08);color:#fff;font-weight:700;font-size:14px;cursor:pointer;}
+.chip.active{border-color:var(--gold2);box-shadow:0 0 8px rgba(255,215,0,.5);}
+.actions{direction:ltr;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.buy{padding:12px 14px;border-radius:12px;border:2px solid var(--gold2);cursor:pointer;
+  background:linear-gradient(180deg,#7a3ff0,#4b1fa8);color:var(--gold2);font-weight:800;font-family:'Cairo',sans-serif;line-height:1.1;}
+.buy small{display:block;font-size:11px;color:#fff;}
+.spin{width:84px;height:84px;padding:0;overflow:hidden;border-radius:50%;border:4px solid #cfcfe8;cursor:pointer;background:#0d0820;display:flex;align-items:center;justify-content:center;box-shadow:0 0 16px rgba(160,140,255,.5);}
+.spin img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.spin.spinning img{animation:rot .5s linear infinite;}
+@keyframes rot{to{transform:rotate(360deg);}}
+.actions{position:relative;}
+.autocnt{position:absolute;left:calc(50% - 104px);width:44px;text-align:center;font-size:22px;font-weight:800;color:var(--gold2);text-shadow:0 2px 6px #000;pointer-events:none;}
+.tools{direction:ltr;display:flex;gap:10px;margin-top:10px;}
+.rbtn{width:52px;height:52px;border-radius:50%;border:2px solid #cfcfe8;background:rgba(20,10,50,.7);color:#fff;font-size:18px;cursor:pointer;flex:none;}
+.rbtn.on{border-color:var(--gold2);color:var(--gold2);}
+.levels{direction:ltr;display:none;gap:8px;justify-content:center;margin-bottom:10px;}
+.lv{width:40px;height:40px;border-radius:50%;border:1.5px solid #6b5a8f;background:rgba(255,255,255,.1);color:#fff;font-weight:700;cursor:pointer;}
+.lv.active{border-color:var(--gold2);}
+button:disabled{opacity:.5;cursor:not-allowed;}
+.result{margin-top:16px;min-height:26px;text-align:center;font-weight:700;font-size:16px;}
+.win-t{color:#00ff88;} .lose-t{color:#ff6b6b;}
+.stats,.pay{margin-top:14px;padding:12px;background:rgba(0,0,0,.35);border-radius:10px;font-size:13px;}
+.pay summary{cursor:pointer;font-weight:700;color:var(--gold2);}
+.prow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;}
+.prow .ic{width:28px;height:28px;display:flex;align-items:center;justify-content:center;}
+.prow img{width:26px;height:26px;object-fit:contain;}
+.prow .v{color:#ccc;font-size:12px;}
+</style>
+</head>
+<body>
+
+<div id="splashScreen">
+  <div class="game-title">Tree of Chronos</div>
+  <div class="loading-bar-wrap"><div id="loadingBar"></div></div>
+  <div id="loadingPct">0%</div>
+</div>
+
+<div id="gameScreen">
+  <div class="container">
+    <div id="freeSpinsBadge"></div>
+    <div class="suits">
+      <div class="suit"><b class="k">♣</b><span>2,087,245</span></div>
+      <div class="suit"><b class="r">♦</b><span>3,736,579</span></div>
+      <div class="suit"><b class="r">♥</b><span>40,275,162</span></div>
+      <div class="suit"><b class="k">♠</b><span>4,303,948,751</span></div>
+    </div>
+    <div class="logo">TREE OF CHRONOS</div>
+
+    <div class="reels" id="reels"></div>
+
+    <div class="chips" id="chips"></div>
+    <div class="levels" id="levels"></div>
+    <div class="actions">
+      <div class="autocnt" id="autoCnt"></div>
+      <button class="buy" id="buyBtn" onclick="buyBonus()">BUY<small>BONUS</small></button>
+      <button class="spin" id="spinBtn" onclick="spin()"><img src="images/spin-icon.jpg" alt="" onerror="this.replaceWith(document.createTextNode('🔄'))"></button>
+      <button class="rbtn" id="coinBtn" onclick="toggleLevels()">🪙</button>
+    </div>
+
+    <div class="tools">
+      <button class="rbtn" id="autoBtn" onclick="startAuto()">▶</button>
+      <button class="rbtn" id="speedBtn" onclick="cycleSpeed()">⚡</button>
+    </div>
+
+    <div class="balbar">NSP <b id="balance">...</b></div>
+    <div class="result" id="result"></div>
+  </div>
+</div>
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script>
+/* العدّاد: سكربت عادي مستقل، يشتغل حتى لو فشل باقي الكود */
+window.__dataReady=false;
+(function(){
+  var p=0, t0=Date.now(), bar=document.getElementById('loadingBar'), pct=document.getElementById('loadingPct');
+  function done(){
+    document.getElementById('splashScreen').style.display='none';
+    document.getElementById('gameScreen').style.display='block';
+  }
+  window.addEventListener('error',function(e){ pct.textContent='خطأ: '+e.message; console.error(e); });
+  var iv=setInterval(function(){
+    p+=Math.random()*15+5;
+    var late=Date.now()-t0>9000;
+    if(!window.__dataReady && !late) p=Math.min(p,90);
+    if(p>=100){ p=100; clearInterval(iv); setTimeout(done,300); }
+    bar.style.width=p+'%'; pct.textContent=Math.floor(p)+'%';
+  },130);
+})();
+</script>
+<script type="module">
+let dbApi = null;
+
+
+const tg = window.Telegram?.WebApp;
+try { tg?.expand(); tg?.ready(); } catch(e){}
+
+/* 👇 للتجربة خارج تيليجرام: حطي هون id حقيقي من users بقاعدة البيانات */
+const TEST_ID = '123456789';
+const userId = String(tg?.initDataUnsafe?.user?.id || TEST_ID);
+const userName = tg?.initDataUnsafe?.user?.first_name || 'ضيف';
+
+/* ===== الرموز (emoji احتياطي إذا الصورة مو موجودة) ===== */
+const SYMS = [
+  {key:'wild',    weight:2},
+  {key:'scatter', weight:3},
+  {key:'seven',   img:'images/seven.png',      e:'7️⃣', weight:5},
+  {key:'grape',   img:'images/grape.png',      e:'🍇', weight:7},
+  {key:'melon',   img:'images/watermelon.png', e:'🍉', weight:7},
+  {key:'bell',    img:'images/bell.png',       e:'🔔', weight:9},
+  {key:'cherry',  img:'images/cherry.png',     e:'🍒', weight:13},
+  {key:'orange',  img:'images/orange.png',     e:'🍊', weight:13},
+  {key:'lemon',   img:'images/lemon.png',      e:'🍋', weight:13},
+  {key:'plum',    img:'images/eggplant.png',   e:'🍆', weight:13}
+];
+const WILD_IMG = {2:'images/wild-x2.png',3:'images/wild-x3.png',5:'images/wild-x5.png',10:'images/wild-base.png'};
+const SCAT_IMG = ['images/scatter-dollar.png','images/scatter-star.png'];
+const PAY = {
+  wild:{2:.6,3:3,4:15,5:300}, seven:{2:.6,3:3,4:15,5:300},
+  grape:{3:2.4,4:7.2,5:42}, melon:{3:2.4,4:7.2,5:42}, bell:{3:1.2,4:2.4,5:12},
+  cherry:{3:.6,4:1.8,5:9}, orange:{3:.6,4:1.8,5:9}, lemon:{3:.6,4:1.8,5:9}, plum:{3:.6,4:1.8,5:9}
+};
+const LINES = [[1,1,1,1,1],[0,0,0,0,0],[2,2,2,2,2],[0,1,2,1,0],[2,1,0,1,2],[0,0,1,0,0],[2,2,1,2,2],[1,0,0,0,1],[1,2,2,2,1],[0,1,1,1,0]];
+const WMULTS = [{val:2,weight:10},{val:3,weight:6},{val:5,weight:3},{val:10,weight:1}];
+const LEVELS = [
+  [300,600,1000,1500,3000],
+  [6000,10000,15000,30000,60000],
+  [90000,100000,150000,250000,300000],
+  [400000,450000,550000,600000,750000],
+  [500000,600000,650000,700000,800000]  // المستوى 5: مؤقت لحد ما تبعتي صورته
+];
+let BETS = LEVELS[0];
+let lvl=0, betIdx=0, speed=0, autoLeft=0;
+const SPD = [[8,90],[5,60],[3,35]];
+const REELS=5, ROWS=3;
+
+const pick = l => { let r=Math.random()*l.reduce((s,x)=>s+x.weight,0); for(const i of l){ r-=i.weight; if(r<=0) return i; } return l[l.length-1]; };
+
+let balance=0, bet=300, spinning=false, totalSpins=0, totalWins=0;
+let inFree=false, freeLeft=0, freeWin=0;
+const $ = id => document.getElementById(id);
+
+function makeGrid(){
+  return Array.from({length:REELS},()=>Array.from({length:ROWS},()=>{
+    const key = pick(SYMS).key, c={key};
+    if(key==='wild') c.mult = pick(WMULTS).val;
+    if(key==='scatter') c.v = SCAT_IMG[Math.floor(Math.random()*2)];
+    return c;
+  }));
+}
+function imgOf(c){
+  if(c.key==='wild') return WILD_IMG[c.mult];
+  if(c.key==='scatter') return c.v;
+  return SYMS.find(s=>s.key===c.key).img;
+}
+function emojiOf(c){
+  if(c.key==='wild') return '🌳';
+  if(c.key==='scatter') return '⭐';
+  return SYMS.find(s=>s.key===c.key).e;
+}
+function render(grid, wins=[]){
+  let html='';
+  for(let r=0;r<REELS;r++){
+    html += '<div class="reel">';
+    for(let row=0;row<ROWS;row++){
+      const c = grid[r][row];
+      const isWin = wins.some(([a,b])=>a===r&&b===row);
+      const badge = c.key==='wild' && c.mult===10 ? '<span class="badge">x10</span>' : '';
+      html += `<div class="cell ${isWin?'win':''}"><img src="${imgOf(c)}" alt="" onerror="this.replaceWith(document.createTextNode('${emojiOf(c)}'))">${badge}</div>`;
+    }
+    html += '</div>';
+  }
+  $('reels').innerHTML = html;
+}
+
+function evaluate(grid, b){
+  let total=0; const wins=[];
+  LINES.forEach(line=>{
+    const seq = line.map((row,r)=>grid[r][row]);
+    let target=null;
+    for(const s of seq){ if(s.key!=='wild' && s.key!=='scatter'){ target=s.key; break; } }
+    if(!target) target='wild';
+    let count=0; const cells=[];
+    for(let i=0;i<seq.length;i++){
+      if(seq[i].key===target || seq[i].key==='wild'){ count++; cells.push([i,line[i]]); } else break;
+    }
+    const t = PAY[target];
+    if(t && t[count]){
+      let w = b*t[count];
+      const m = cells.reduce((s,[r,row])=>grid[r][row].key==='wild' ? s+grid[r][row].mult : s, 0);
+      if(m>0) w *= m;
+      total += w; wins.push(...cells);
+    }
+  });
+  let sc=0;
+  grid.forEach(col=>col.forEach(c=>{ if(c.key==='scatter') sc++; }));
+  return {total, wins, sc};
+}
+
+function update(){
+  $('balance').textContent = Math.floor(balance*100)/100;
+  const b=$('freeSpinsBadge');
+  b.style.display = inFree ? 'block' : 'none';
+  b.textContent = `🎁 لفات مجانية متبقية: ${freeLeft}`;
+}
+function renderChips(){
+  $('chips').innerHTML = BETS.map(v=>`<button class="chip ${v===bet?'active':''}" onclick="setBet(${v})">${fmt(v)}</button>`).join('');
+}
+window.setBet = v => { if(spinning) return; betIdx=BETS.indexOf(v); bet=v; renderChips(); };
+function fmt(v){ return v>=1000 ? (v/1000)+'K' : String(v); }
+function renderLevels(){ $('levels').innerHTML=[0,1,2,3,4].map(i=>`<button class="lv ${i===lvl?'active':''}" onclick="setLevel(${i})">${i+1}</button>`).join(''); }
+window.toggleLevels = () => { const l=$('levels'); l.style.display = l.style.display==='flex' ? 'none' : 'flex'; renderLevels(); };
+window.setLevel = i => { if(spinning) return; lvl=i; BETS=LEVELS[i]; bet=BETS[betIdx]; renderChips(); renderLevels(); };
+function showAuto(){ $('autoCnt').textContent = autoLeft>0 ? autoLeft : ''; $('autoBtn').classList.toggle('on', autoLeft>0); }
+window.startAuto = () => {
+  if(autoLeft>0){ autoLeft=0; showAuto(); return; }
+  if(spinning || inFree) return;
+  autoLeft=10; showAuto(); spin();
+  if(!spinning){ autoLeft=0; showAuto(); }
+};
+function autoNext(){
+  if(autoLeft<=0) return;
+  autoLeft--; showAuto();
+  if(autoLeft<=0) return;
+  setTimeout(()=>{
+    if(autoLeft<=0) return;
+    if(!inFree && balance<bet){ autoLeft=0; showAuto(); return; }
+    spin();
+  }, 600);
+}
+window.cycleSpeed = () => { speed=(speed+1)%3; $('speedBtn').textContent='⚡'.repeat(speed+1); };
+
+function renderPay(){
+  $('paytable').innerHTML = Object.entries(PAY).map(([k,vals])=>{
+    const src = k==='wild' ? WILD_IMG[2] : SYMS.find(s=>s.key===k).img;
+    const em = k==='wild' ? '🌳' : SYMS.find(s=>s.key===k).e;
+    const txt = Object.entries(vals).map(([c,v])=>`${c}x=${v}×`).join(' | ');
+    return `<div class="prow"><span class="ic"><img src="${src}" alt="" onerror="this.replaceWith(document.createTextNode('${em}'))"></span><span class="v">${txt}</span></div>`;
+  }).join('') + `<div class="prow"><span class="ic">⭐</span><span class="v">3 سكاتر أو أكتر = 5 لفات مجانية</span></div>`;
+}
+
+async function save(){
+  if(!dbApi) return;
+  try{ await dbApi.saveBalance(userId,{balance,totalSpins,totalWins}); }
+  catch(e){ console.error('خطأ بالحفظ:', e); }
+}
+
+async function loadUser(){
+  renderChips(); render(makeGrid()); update();
+  try{
+    try{ dbApi = await import('./db.js'); }
+    catch(e){ throw new Error('فشل تحميل ملف db.js (تأكدي إنو جنب index.html): '+(e.message||e)); }
+    let d;
+    try{ d = await dbApi.loadBalance(userId, userName); }
+    catch(e){ throw new Error('فشلت قراءة الرصيد من Firebase: '+(e.message||e)); }
+    balance = d.balance; totalSpins = d.totalSpins; totalWins = d.totalWins;
+    update();
+  }catch(e){
+    console.error(e);
+    $('result').innerHTML = '<span class="lose-t">⚠️ '+(e.message||e)+'</span>';
+  }
+}
+
+window.spin = function(){
+  if(spinning) return;
+  if(!inFree && balance < bet){ $('result').innerHTML='<span class="lose-t">❌ رصيدك غير كافي!</span>'; return; }
+  spinning = true;
+  $('spinBtn').disabled = true; $('spinBtn').classList.add('spinning'); $('buyBtn').disabled = true;
+  $('result').textContent = '';
+  if(!inFree){ balance -= bet; totalSpins++; }
+  update();
+  let t=0;
+  const sp=SPD[speed]; const iv = setInterval(()=>{ render(makeGrid()); if(++t>=sp[0]){ clearInterval(iv); resolve(); } }, sp[1]);
+};
+
+async function resolve(){
+  const grid = makeGrid();
+  const {total, wins, sc} = evaluate(grid, bet);
+  render(grid, wins);
+  let msg='';
+  if(total>0){
+    balance += total; totalWins += total; if(inFree) freeWin += total;
+    msg += `<span class="win-t">🎉 ربحت ${total} نقطة!</span>`;
+    if(navigator.vibrate) navigator.vibrate([100,50,100]);
+  }
+  if(sc>=3 && !inFree){
+    inFree=true; freeLeft=5; freeWin=total;
+    msg += `<br><span class="win-t">🎁 فزت بـ 5 لفات مجانية!</span>`;
+  }
+  if(total===0 && sc<3) msg = '<span class="lose-t">😔 حاول مرة أخرى</span>';
+  $('result').innerHTML = msg;
+  update();
+  await save();
+
+  spinning=false;
+  $('spinBtn').classList.remove('spinning');
+  $('buyBtn').disabled=false;
+  if(inFree){
+    freeLeft--;
+    if(freeLeft<=0){
+      inFree=false;
+      $('result').innerHTML += `<br><span class="win-t">🏆 انتهت اللفات المجانية — ربحها: ${freeWin}</span>`;
+      update(); $('spinBtn').disabled=false; autoNext();
+    } else { update(); setTimeout(()=>spin(),1200); }
+  } else { $('spinBtn').disabled=false; autoNext(); }
+}
+
+window.buyBonus = async function(){
+  if(spinning || inFree) return;
+  const cost = bet*100;
+  if(balance < cost){ $('result').innerHTML=`<span class="lose-t">❌ رصيدك غير كافي (${cost})</span>`; return; }
+  balance -= cost; inFree=true; freeLeft=5; freeWin=0;
+  $('result').innerHTML='<span class="win-t">✨ بدأت 5 لفات مجانية</span>';
+  update(); await save(); spin();
+};
+
+loadUser().finally(()=>{ window.__dataReady=true; });
+</script>
+</body>
+</html>
