@@ -9,7 +9,7 @@
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 :root{--gold:#d4a437;--gold2:#ffd700;--emerald:#3ddc97;}
 body{min-height:100vh;font-family:'Cairo',sans-serif;color:#f2f2f2;overflow-x:hidden;
-  background:#170a33 url('images/bg.jpg') center top/cover no-repeat fixed;}
+  background:#170a33 url('images/bg.jpg') center top/cover no-repeat;}
 /* ===== شاشة الدخول ===== */
 #splashScreen{position:fixed;inset:0;z-index:999;background:#170a33 url('images/splash.jpg') center/cover no-repeat;
   display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:14%;}
@@ -19,7 +19,8 @@ body{min-height:100vh;font-family:'Cairo',sans-serif;color:#f2f2f2;overflow-x:hi
 #loadingPct{margin-top:10px;color:var(--gold2);font-weight:700;text-shadow:0 2px 4px #000;}
 /* ===== اللعبة ===== */
 #gameScreen{display:none;}
-.container{max-width:420px;margin:0 auto;padding:12px 10px 30px;}
+.container{max-width:420px;margin:0 auto;padding:12px 10px calc(16px + env(safe-area-inset-bottom));min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;}
+.bottom{margin-top:auto;}
 .topbar{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;margin-bottom:10px;
   background:rgba(0,0,0,.4);border:1.5px solid rgba(212,164,55,.5);border-radius:14px;}
 .topbar h2{font-family:'Amiri',serif;font-size:20px;color:var(--gold2);}
@@ -31,7 +32,7 @@ body{min-height:100vh;font-family:'Cairo',sans-serif;color:#f2f2f2;overflow-x:hi
 .reels{direction:ltr;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;align-items:start;}
 .reel{display:flex;flex-direction:column;gap:2px;padding:3px;border-radius:8px;min-width:0;background:linear-gradient(180deg,#1a1450,#0f0a35);border:2px solid #b8862b;box-shadow:0 0 8px rgba(184,134,43,.35);}
 .cell{width:100%;aspect-ratio:1/1;min-height:0;overflow:hidden;position:relative;border-radius:6px;font-size:30px;display:flex;align-items:center;justify-content:center;}
-.cell img{position:absolute;inset:6%;width:88%;height:88%;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,.6));}
+.cell img{position:absolute;inset:6%;width:88%;height:88%;object-fit:contain;}
 .cell.win{background:rgba(61,220,151,.18);box-shadow:0 0 10px var(--emerald);animation:pulse .6s ease-in-out infinite;}
 @keyframes pulse{50%{transform:scale(1.08);}}
 .badge{position:absolute;bottom:0;right:0;background:var(--gold2);color:#111;font-size:10px;font-weight:800;padding:0 4px;border-radius:6px;}
@@ -62,6 +63,7 @@ body{min-height:100vh;font-family:'Cairo',sans-serif;color:#f2f2f2;overflow-x:hi
 .levels{direction:ltr;display:none;gap:8px;justify-content:center;margin-bottom:10px;}
 .lv{width:40px;height:40px;border-radius:50%;border:1.5px solid #6b5a8f;background:rgba(255,255,255,.1);color:#fff;font-weight:700;cursor:pointer;}
 .lv.active{border-color:var(--gold2);}
+#result{min-height:64px;margin:12px 0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
 button:disabled{opacity:.5;cursor:not-allowed;}
 .result{margin-top:16px;min-height:26px;text-align:center;font-weight:700;font-size:16px;}
 .win-t{color:#00ff88;} .lose-t{color:#ff6b6b;}
@@ -94,6 +96,10 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 
     <div class="reels" id="reels"></div>
 
+    <div class="result" id="result"></div>
+
+    <div class="bottom">
+
     <div class="chips" id="chips"></div>
     <div class="levels" id="levels"></div>
     <div class="actions">
@@ -109,7 +115,7 @@ button:disabled{opacity:.5;cursor:not-allowed;}
     </div>
 
     <div class="balbar">NSP <b id="balance">...</b></div>
-    <div class="result" id="result"></div>
+    </div>
   </div>
 </div>
 
