@@ -19,98 +19,53 @@ body{min-height:100vh;font-family:'Cairo',sans-serif;color:#f2f2f2;overflow-x:hi
 #loadingPct{margin-top:10px;color:var(--gold2);font-weight:700;text-shadow:0 2px 4px #000;}
 /* ===== اللعبة ===== */
 #gameScreen{display:none;}
-.container{max-width:430px;margin:0 auto;padding:14px 12px 34px;}
+.container{max-width:420px;margin:0 auto;padding:12px 10px 30px;}
 .topbar{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;margin-bottom:10px;
   background:rgba(0,0,0,.4);border:1.5px solid rgba(212,164,55,.5);border-radius:14px;}
 .topbar h2{font-family:'Amiri',serif;font-size:20px;color:var(--gold2);}
 .balance{font-weight:700;color:var(--gold2);}
-#freeSpinsBadge{display:none;text-align:center;color:var(--emerald);font-weight:700;margin-bottom:10px;}
-.logo{text-align:center;font-family:'Amiri',serif;font-size:40px;color:#ffd700;margin:10px 0 16px;
-  text-shadow:0 0 18px rgba(255,215,0,.8),0 3px 0 #8a5a00;
-  letter-spacing:1px;}
-
-/* لوحة العرض: توهج خفيف خلف كل المنطقة عشان إحساس عمق/فخامة */
-.stage{
-  position:relative;padding:10px;border-radius:22px;margin-bottom:14px;
-  background:radial-gradient(circle at 50% 20%, rgba(255,215,0,.10), transparent 65%),
-             linear-gradient(180deg, rgba(20,10,50,.35), rgba(10,5,30,.15));
-  border:1px solid rgba(212,164,55,.25);
-}
-
+#freeSpinsBadge{display:none;text-align:center;color:var(--emerald);font-weight:700;margin-bottom:6px;}
+.logo{text-align:center;font-family:'Amiri',serif;font-size:38px;color:#ffd700;margin:6px 0 10px;
+  text-shadow:0 0 14px rgba(255,215,0,.7),0 3px 0 #8a5a00;}
 /* الشبكة: LTR دائماً حتى يطابق الربح من اليسار */
-.reels{direction:ltr;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;align-items:start;}
-.reel{display:flex;flex-direction:column;gap:5px;padding:5px;border-radius:10px;min-width:0;
-  background:linear-gradient(180deg,#221a5c,#120c3e);border:2px solid #c99a3b;
-  box-shadow:0 0 14px rgba(201,154,59,.4), inset 0 0 10px rgba(0,0,0,.4);}
-.cell{width:100%;aspect-ratio:1/1;min-height:0;overflow:hidden;position:relative;border-radius:8px;
-  font-size:30px;display:flex;align-items:center;justify-content:center;
-  background:radial-gradient(circle at 50% 30%, rgba(255,255,255,.05), transparent 70%);}
-.cell img{position:absolute;inset:5%;width:90%;height:90%;object-fit:contain;
-  filter:drop-shadow(0 3px 5px rgba(0,0,0,.7)) drop-shadow(0 0 6px rgba(255,215,0,.15));}
-.cell.win{background:rgba(61,220,151,.2);box-shadow:0 0 14px var(--emerald);animation:pulse .6s ease-in-out infinite;}
-@keyframes pulse{50%{transform:scale(1.1);}}
+.reels{direction:ltr;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;align-items:start;}
+.reel{display:flex;flex-direction:column;gap:2px;padding:3px;border-radius:8px;min-width:0;background:linear-gradient(180deg,#1a1450,#0f0a35);border:2px solid #b8862b;box-shadow:0 0 8px rgba(184,134,43,.35);}
+.cell{width:100%;aspect-ratio:1/1;min-height:0;overflow:hidden;position:relative;border-radius:6px;font-size:30px;display:flex;align-items:center;justify-content:center;}
+.cell img{position:absolute;inset:6%;width:88%;height:88%;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,.6));}
+.cell.win{background:rgba(61,220,151,.18);box-shadow:0 0 10px var(--emerald);animation:pulse .6s ease-in-out infinite;}
+@keyframes pulse{50%{transform:scale(1.08);}}
 .badge{position:absolute;bottom:0;right:0;background:var(--gold2);color:#111;font-size:10px;font-weight:800;padding:0 4px;border-radius:6px;}
-
-/* ===== شريط "آخر مكسب" الجديد — فوق البكرات مباشرة، فخم وواضح ===== */
-.lastwin{
-  text-align:center;margin-bottom:12px;padding:8px 0;
-}
-.lastwin .lw-label{
-  display:block;font-size:12px;color:#c9b98a;letter-spacing:1px;margin-bottom:2px;
-}
-.lastwin .lw-amount{
-  font-family:'Amiri',serif;font-size:30px;font-weight:700;
-  background:linear-gradient(180deg,#fff6cf,#ffd700 45%,#c9a227);
-  -webkit-background-clip:text;background-clip:text;color:transparent;
-  text-shadow:0 2px 10px rgba(255,215,0,.35);
-  letter-spacing:0.5px;
-}
-.lastwin .lw-unit{font-size:13px;color:#c9b98a;margin-right:4px;}
-.lastwin.pop{animation:winPop .5s ease;}
-@keyframes winPop{0%{transform:scale(1);}30%{transform:scale(1.18);}100%{transform:scale(1);}}
-
 /* أزرار الرهان */
-.suits{direction:ltr;display:flex;gap:5px;margin-bottom:14px;}
-.suit{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:4px;padding:7px 4px;border-radius:18px;
+.suits{direction:ltr;display:flex;gap:5px;margin-bottom:10px;}
+.suit{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:4px;padding:6px 4px;border-radius:18px;
   background:rgba(10,4,30,.55);border:1.5px solid #8a6a2a;font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;}
 .suit b{font-size:16px;line-height:1;} .suit .k{color:#e8e0ff;} .suit .r{color:#ff3b4f;}
-.suit span{font-variant-numeric:tabular-nums;letter-spacing:.3px;}
-.balbar{margin-top:16px;padding:12px;border-radius:14px;text-align:center;
-  background:linear-gradient(180deg,rgba(20,10,50,.65),rgba(10,4,30,.65));
-  border:1.5px solid rgba(212,164,55,.5);font-weight:700;
-  box-shadow:0 0 12px rgba(212,164,55,.15) inset;}
-.balbar b{font-family:'Amiri',serif;color:var(--gold2);font-size:21px;margin:0 8px;font-variant-numeric:tabular-nums;}
+.balbar{margin-top:14px;padding:11px;border-radius:14px;text-align:center;background:rgba(10,4,30,.6);border:1.5px solid rgba(212,164,55,.45);font-weight:700;}
+.balbar b{color:var(--gold2);font-size:19px;margin:0 6px;}
 .balbar small{color:#ccc;font-weight:400;}
-.chips{direction:ltr;display:flex;gap:6px;justify-content:center;margin:6px 0 16px;}
-.chip{flex:1;padding:10px 0;border-radius:22px;border:1.5px solid #6b5a8f;background:rgba(255,255,255,.08);color:#fff;font-weight:700;font-size:14px;cursor:pointer;}
-.chip.active{border-color:var(--gold2);box-shadow:0 0 10px rgba(255,215,0,.55);background:rgba(255,215,0,.08);}
-.actions{direction:ltr;display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px;}
-.buy{padding:13px 14px;border-radius:12px;border:2px solid var(--gold2);cursor:pointer;
-  background:linear-gradient(180deg,#8a4ff5,#4b1fa8);color:var(--gold2);font-weight:800;font-family:'Cairo',sans-serif;line-height:1.15;
-  box-shadow:0 4px 14px rgba(122,63,240,.4);}
+.chips{direction:ltr;display:flex;gap:6px;justify-content:center;margin:16px 0 12px;}
+.chip{flex:1;padding:9px 0;border-radius:22px;border:1.5px solid #6b5a8f;background:rgba(255,255,255,.08);color:#fff;font-weight:700;font-size:14px;cursor:pointer;}
+.chip.active{border-color:var(--gold2);box-shadow:0 0 8px rgba(255,215,0,.5);}
+.actions{direction:ltr;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.buy{padding:12px 14px;border-radius:12px;border:2px solid var(--gold2);cursor:pointer;
+  background:linear-gradient(180deg,#7a3ff0,#4b1fa8);color:var(--gold2);font-weight:800;font-family:'Cairo',sans-serif;line-height:1.1;}
 .buy small{display:block;font-size:11px;color:#fff;}
-.spin{width:88px;height:88px;padding:0;overflow:hidden;border-radius:50%;border:4px solid #e4dfff;cursor:pointer;background:#0d0820;
-  display:flex;align-items:center;justify-content:center;box-shadow:0 0 22px rgba(160,140,255,.6), 0 0 0 6px rgba(160,140,255,.08);}
+.spin{width:84px;height:84px;padding:0;overflow:hidden;border-radius:50%;border:4px solid #cfcfe8;cursor:pointer;background:#0d0820;display:flex;align-items:center;justify-content:center;box-shadow:0 0 16px rgba(160,140,255,.5);}
 .spin img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
 .spin.spinning img{animation:rot .5s linear infinite;}
 @keyframes rot{to{transform:rotate(360deg);}}
 .actions{position:relative;}
-.autocnt{position:absolute;left:calc(50% - 108px);width:44px;text-align:center;font-size:22px;font-weight:800;color:var(--gold2);text-shadow:0 2px 6px #000;pointer-events:none;}
-.tools{direction:ltr;display:flex;gap:10px;margin-top:14px;}
+.autocnt{position:absolute;left:calc(50% - 104px);width:44px;text-align:center;font-size:22px;font-weight:800;color:var(--gold2);text-shadow:0 2px 6px #000;pointer-events:none;}
+.tools{direction:ltr;display:flex;gap:10px;margin-top:10px;}
 .rbtn{width:52px;height:52px;border-radius:50%;border:2px solid #cfcfe8;background:rgba(20,10,50,.7);color:#fff;font-size:18px;cursor:pointer;flex:none;}
 .rbtn.on{border-color:var(--gold2);color:var(--gold2);}
-.levels{direction:ltr;display:none;gap:8px;justify-content:center;margin-bottom:14px;}
+.levels{direction:ltr;display:none;gap:8px;justify-content:center;margin-bottom:10px;}
 .lv{width:40px;height:40px;border-radius:50%;border:1.5px solid #6b5a8f;background:rgba(255,255,255,.1);color:#fff;font-weight:700;cursor:pointer;}
 .lv.active{border-color:var(--gold2);}
 button:disabled{opacity:.5;cursor:not-allowed;}
-.result{margin-top:18px;min-height:26px;text-align:center;font-weight:700;font-size:16px;}
+.result{margin-top:16px;min-height:26px;text-align:center;font-weight:700;font-size:16px;}
 .win-t{color:#00ff88;} .lose-t{color:#ff6b6b;}
-.retry-btn{
-  display:none;margin:10px auto 0;padding:10px 22px;border-radius:30px;
-  border:1.5px solid var(--gold2);background:rgba(255,215,0,.12);color:var(--gold2);
-  font-weight:700;font-size:14px;cursor:pointer;
-}
-.stats,.pay{margin-top:16px;padding:12px;background:rgba(0,0,0,.35);border-radius:10px;font-size:13px;}
+.stats,.pay{margin-top:14px;padding:12px;background:rgba(0,0,0,.35);border-radius:10px;font-size:13px;}
 .pay summary{cursor:pointer;font-weight:700;color:var(--gold2);}
 .prow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;}
 .prow .ic{width:28px;height:28px;display:flex;align-items:center;justify-content:center;}
@@ -137,14 +92,7 @@ button:disabled{opacity:.5;cursor:not-allowed;}
     </div>
     <div class="logo">TREE OF CHRONOS</div>
 
-    <div class="stage">
-      <div class="reels" id="reels"></div>
-    </div>
-
-    <div class="lastwin" id="lastwinBox">
-      <span class="lw-label">آخر مكسب</span>
-      <span class="lw-amount" id="lastWin">0.00</span><span class="lw-unit">NSP</span>
-    </div>
+    <div class="reels" id="reels"></div>
 
     <div class="chips" id="chips"></div>
     <div class="levels" id="levels"></div>
@@ -162,7 +110,6 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 
     <div class="balbar">NSP <b id="balance">...</b></div>
     <div class="result" id="result"></div>
-    <button class="retry-btn" id="retryBtn" onclick="retryLoad()">🔄 إعادة المحاولة</button>
   </div>
 </div>
 
@@ -179,7 +126,7 @@ window.__dataReady=false;
   window.addEventListener('error',function(e){ pct.textContent='خطأ: '+e.message; console.error(e); });
   var iv=setInterval(function(){
     p+=Math.random()*15+5;
-    var late=Date.now()-t0>14000;
+    var late=Date.now()-t0>9000;
     if(!window.__dataReady && !late) p=Math.min(p,90);
     if(p>=100){ p=100; clearInterval(iv); setTimeout(done,300); }
     bar.style.width=p+'%'; pct.textContent=Math.floor(p)+'%';
@@ -189,13 +136,16 @@ window.__dataReady=false;
 <script type="module">
 let dbApi = null;
 
+
 const tg = window.Telegram?.WebApp;
 try { tg?.expand(); tg?.ready(); } catch(e){}
 
+/* 👇 للتجربة خارج تيليجرام: حطي هون id حقيقي من users بقاعدة البيانات */
 const TEST_ID = '123456789';
 const userId = String(tg?.initDataUnsafe?.user?.id || TEST_ID);
 const userName = tg?.initDataUnsafe?.user?.first_name || 'ضيف';
 
+/* ===== الرموز (emoji احتياطي إذا الصورة مو موجودة) ===== */
 const SYMS = [
   {key:'wild',    weight:2},
   {key:'scatter', weight:3},
@@ -222,7 +172,7 @@ const LEVELS = [
   [6000,10000,15000,30000,60000],
   [90000,100000,150000,250000,300000],
   [400000,450000,550000,600000,750000],
-  [500000,600000,650000,700000,800000]
+  [500000,600000,650000,700000,800000]  // المستوى 5: مؤقت لحد ما تبعتي صورته
 ];
 let BETS = LEVELS[0];
 let lvl=0, betIdx=0, speed=0, autoLeft=0;
@@ -298,16 +248,6 @@ function update(){
   b.style.display = inFree ? 'block' : 'none';
   b.textContent = `🎁 لفات مجانية متبقية: ${freeLeft}`;
 }
-
-/* ✅ جديد: تحديث شريط "آخر مكسب" فوق البكرات مع نبضة بصرية عند الفوز */
-function updateLastWin(amount){
-  $('lastWin').textContent = (Math.round(amount*100)/100).toFixed(2);
-  const box = $('lastwinBox');
-  if(amount>0){
-    box.classList.remove('pop'); void box.offsetWidth; box.classList.add('pop');
-  }
-}
-
 function renderChips(){
   $('chips').innerHTML = BETS.map(v=>`<button class="chip ${v===bet?'active':''}" onclick="setBet(${v})">${fmt(v)}</button>`).join('');
 }
@@ -336,9 +276,7 @@ function autoNext(){
 window.cycleSpeed = () => { speed=(speed+1)%3; $('speedBtn').textContent='⚡'.repeat(speed+1); };
 
 function renderPay(){
-  const el = document.getElementById('paytable');
-  if(!el) return;
-  el.innerHTML = Object.entries(PAY).map(([k,vals])=>{
+  $('paytable').innerHTML = Object.entries(PAY).map(([k,vals])=>{
     const src = k==='wild' ? WILD_IMG[2] : SYMS.find(s=>s.key===k).img;
     const em = k==='wild' ? '🌳' : SYMS.find(s=>s.key===k).e;
     const txt = Object.entries(vals).map(([c,v])=>`${c}x=${v}×`).join(' | ');
@@ -354,30 +292,19 @@ async function save(){
 
 async function loadUser(){
   renderChips(); render(makeGrid()); update();
-  $('retryBtn').style.display = 'none';
-  $('result').innerHTML = '';
   try{
-    if(!dbApi){
-      try{ dbApi = await import('./db.js'); }
-      catch(e){ throw new Error('فشل تحميل ملف db.js (تأكدي إنو جنب index.html): '+(e.message||e)); }
-    }
+    try{ dbApi = await import('./db.js'); }
+    catch(e){ throw new Error('فشل تحميل ملف db.js (تأكدي إنو جنب index.html): '+(e.message||e)); }
     let d;
-    try{
-      d = await Promise.race([
-        dbApi.loadBalance(userId, userName),
-        new Promise((_,reject)=>setTimeout(()=>reject(new Error('انتهت المهلة')), 12000))
-      ]);
-    }catch(e){ throw new Error('تعذّر الاتصال بالخادم (شبكة بطيئة). '+(e.message||e)); }
+    try{ d = await dbApi.loadBalance(userId, userName); }
+    catch(e){ throw new Error('فشلت قراءة الرصيد من Firebase: '+(e.message||e)); }
     balance = d.balance; totalSpins = d.totalSpins; totalWins = d.totalWins;
     update();
   }catch(e){
     console.error(e);
     $('result').innerHTML = '<span class="lose-t">⚠️ '+(e.message||e)+'</span>';
-    $('retryBtn').style.display = 'block';
   }
 }
-
-window.retryLoad = function(){ loadUser(); };
 
 window.spin = function(){
   if(spinning) return;
@@ -396,7 +323,6 @@ async function resolve(){
   const {total, wins, sc} = evaluate(grid, bet);
   render(grid, wins);
   let msg='';
-  updateLastWin(total);
   if(total>0){
     balance += total; totalWins += total; if(inFree) freeWin += total;
     msg += `<span class="win-t">🎉 ربحت ${total} نقطة!</span>`;
