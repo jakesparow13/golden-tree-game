@@ -71,6 +71,11 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 .prow .ic{width:28px;height:28px;display:flex;align-items:center;justify-content:center;}
 .prow img{width:26px;height:26px;object-fit:contain;}
 .prow .v{color:#ccc;font-size:12px;}
+.retry-btn{
+  display:none;margin:10px auto 0;padding:10px 22px;border-radius:30px;
+  border:1.5px solid var(--gold2);background:rgba(255,215,0,.12);color:var(--gold2);
+  font-weight:700;font-size:14px;cursor:pointer;
+}
 </style>
 </head>
 <body>
@@ -110,6 +115,7 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 
     <div class="balbar">NSP <b id="balance">...</b></div>
     <div class="result" id="result"></div>
+    <button class="retry-btn" id="retryBtn" onclick="retryLoad()">🔄 إعادة المحاولة</button>
   </div>
 </div>
 
@@ -126,7 +132,7 @@ window.__dataReady=false;
   window.addEventListener('error',function(e){ pct.textContent='خطأ: '+e.message; console.error(e); });
   var iv=setInterval(function(){
     p+=Math.random()*15+5;
-    var late=Date.now()-t0>9000;
+    var late=Date.now()-t0>14000;
     if(!window.__dataReady && !late) p=Math.min(p,90);
     if(p>=100){ p=100; clearInterval(iv); setTimeout(done,300); }
     bar.style.width=p+'%'; pct.textContent=Math.floor(p)+'%';
@@ -290,21 +296,36 @@ async function save(){
   catch(e){ console.error('خطأ بالحفظ:', e); }
 }
 
+/* ✅ إصلاح: مهلة أطول (12 ثانية بدل 6)، وزر إعادة محاولة واضح عند الفشل
+   بدل ما تضل الشاشة عالقة على رسالة خطأ بلا أي حل */
 async function loadUser(){
   renderChips(); render(makeGrid()); update();
+  $('retryBtn').style.display = 'none';
+  $('result').innerHTML = '';
   try{
-    try{ dbApi = await import('./db.js'); }
-    catch(e){ throw new Error('فشل تحميل ملف db.js (تأكدي إنو جنب index.html): '+(e.message||e)); }
+    if(!dbApi){
+      try{ dbApi = await import('./db.js'); }
+      catch(e){ throw new Error('فشل تحميل ملف db.js (تأكدي إنو جنب index.html): '+(e.message||e)); }
+    }
     let d;
-    try{ d = await dbApi.loadBalance(userId, userName); }
-    catch(e){ throw new Error('فشلت قراءة الرصيد من Firebase: '+(e.message||e)); }
+    try{
+      d = await Promise.race([
+        dbApi.loadBalance(userId, userName),
+        new Promise((_,reject)=>setTimeout(()=>reject(new Error('انتهت المهلة')), 12000))
+      ]);
+    }catch(e){ throw new Error('تعذّر الاتصال بالخادم (شبكة بطيئة). '+(e.message||e)); }
     balance = d.balance; totalSpins = d.totalSpins; totalWins = d.totalWins;
     update();
   }catch(e){
     console.error(e);
     $('result').innerHTML = '<span class="lose-t">⚠️ '+(e.message||e)+'</span>';
+    $('retryBtn').style.display = 'block';
   }
 }
+
+window.retryLoad = function(){
+  loadUser();
+};
 
 window.spin = function(){
   if(spinning) return;
