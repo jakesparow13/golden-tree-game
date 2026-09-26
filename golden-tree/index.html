@@ -7,61 +7,142 @@
 <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@700&family=Cairo:wght@400;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;}
 :root{--gold:#d4a437;--gold2:#ffd700;--emerald:#3ddc97;}
 body{min-height:100vh;font-family:'Cairo',sans-serif;color:#f2f2f2;overflow-x:hidden;
-  background:#170a33 url('images/bg.jpg') center top/cover no-repeat fixed;}
-/* ===== شاشة الدخول ===== */
+  background:#170a33 url('images/bg.jpg') center top/cover no-repeat;}
 #splashScreen{position:fixed;inset:0;z-index:999;background:#170a33 url('images/splash.jpg') center/cover no-repeat;
   display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:14%;}
 .game-title{font-family:'Amiri',serif;font-size:34px;color:var(--gold2);margin-bottom:22px;text-shadow:0 0 12px rgba(255,215,0,.6),0 3px 6px #000;}
 .loading-bar-wrap{width:78%;max-width:320px;height:16px;background:rgba(0,0,0,.5);border-radius:20px;overflow:hidden;border:2px solid var(--gold2);}
 #loadingBar{height:100%;width:0;background:linear-gradient(90deg,#3ddc97,#ffd700);transition:width .12s linear;}
 #loadingPct{margin-top:10px;color:var(--gold2);font-weight:700;text-shadow:0 2px 4px #000;}
-/* ===== اللعبة ===== */
-#gameScreen{display:none;}
-.container{max-width:420px;margin:0 auto;padding:12px 10px 30px;}
-.topbar{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;margin-bottom:10px;
-  background:rgba(0,0,0,.4);border:1.5px solid rgba(212,164,55,.5);border-radius:14px;}
-.topbar h2{font-family:'Amiri',serif;font-size:20px;color:var(--gold2);}
+#gameScreen{display:none;position:fixed;inset:0;overflow:hidden;}
+#stage{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);transform-origin:center center;}
+.container{width:380px;padding:10px 10px calc(10px + env(safe-area-inset-bottom));}
+.bottom{margin-top:12px;}
 .balance{font-weight:700;color:var(--gold2);}
 #freeSpinsBadge{display:none;text-align:center;color:var(--emerald);font-weight:700;margin-bottom:6px;}
-.logo{text-align:center;font-family:'Amiri',serif;font-size:38px;color:#ffd700;margin:6px 0 10px;
-  text-shadow:0 0 14px rgba(255,215,0,.7),0 3px 0 #8a5a00;}
-/* الشبكة: LTR دائماً حتى يطابق الربح من اليسار */
-.reels{direction:ltr;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;align-items:start;}
-.reel{display:flex;flex-direction:column;gap:2px;padding:3px;border-radius:8px;min-width:0;background:linear-gradient(180deg,#1a1450,#0f0a35);border:2px solid #b8862b;box-shadow:0 0 8px rgba(184,134,43,.35);}
+.logo{text-align:center;font-family:'Amiri',serif;font-size:32px;color:#ffd700;margin:4px 0 8px;
+  text-shadow:0 0 14px rgba(255,215,0,.7),0 3px 0 #8a5a00;user-select:none;cursor:default;}
+.reels{position:relative;direction:ltr;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;align-items:start;}
+.reel{position:relative;display:flex;flex-direction:column;gap:2px;padding:3px;border-radius:8px;min-width:0;background:linear-gradient(180deg,#1a1450,#0f0a35);border:2px solid #b8862b;box-shadow:0 0 8px rgba(184,134,43,.35);}
 .cell{width:100%;aspect-ratio:1/1;min-height:0;overflow:hidden;position:relative;border-radius:6px;font-size:30px;display:flex;align-items:center;justify-content:center;}
-.cell img{position:absolute;inset:6%;width:88%;height:88%;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,.6));}
-.cell.win{background:rgba(61,220,151,.18);box-shadow:0 0 10px var(--emerald);animation:pulse .6s ease-in-out infinite;}
-@keyframes pulse{50%{transform:scale(1.08);}}
-.badge{position:absolute;bottom:0;right:0;background:var(--gold2);color:#111;font-size:10px;font-weight:800;padding:0 4px;border-radius:6px;}
-/* أزرار الرهان */
+.cell img{position:absolute;inset:6%;width:88%;height:88%;object-fit:contain;}
+.cell.win{background:rgba(61,220,151,.18);z-index:2;animation:winCelebrate 1s ease-in-out infinite;box-shadow:0 0 14px var(--gold2);}
+@keyframes winCelebrate{
+  0%{transform:scale(1);}
+  30%{transform:scale(1.32);}
+  55%{transform:scale(1.08);}
+  75%{transform:scale(1.2);}
+  100%{transform:scale(1.08);}
+}
+.cell.win.wild-win{box-shadow:0 0 22px var(--gold2), 0 0 40px rgba(255,215,0,.6);}
+.cell.win.wild-win img{filter:drop-shadow(0 0 8px rgba(255,215,0,.9));}
+.badge{position:absolute;bottom:0;right:0;background:var(--gold2);color:#111;font-size:10px;font-weight:800;padding:0 4px;border-radius:6px;z-index:3;}
+/* ✅ تمدد الشجرة (Expanding Wild): طبقة فوق البكرة كلها، صورة وحدة كبيرة بدل ٣ خانات منفصلة */
+.expand-wild{
+  position:absolute;inset:0;z-index:10;pointer-events:none;
+  display:flex;align-items:center;justify-content:center;
+  overflow:visible;border-radius:8px;
+  background:rgba(255,215,0,.06);
+  transform-origin:center;
+  animation:expandWildBurst .6s cubic-bezier(.2,.9,.3,1.3) forwards;
+}
+.expand-wild img{width:88%;height:88%;object-fit:contain;filter:drop-shadow(0 0 14px rgba(255,215,0,.95));position:relative;z-index:2;}
+@keyframes expandWildBurst{
+  0%{ transform:scaleY(.28) rotate(-2deg); opacity:.55; filter:brightness(1.9); }
+  40%{ transform:scaleY(1.14) rotate(1.5deg); opacity:1; filter:brightness(2.1); }
+  65%{ transform:scaleY(.94) rotate(-.8deg); filter:brightness(1.3); }
+  100%{ transform:scaleY(1) rotate(0); filter:brightness(1); }
+}
+/* توهج ذهبي متفجر خلف الشجرة لحظة التمدد */
+.expand-wild::before{
+  content:'';
+  position:absolute; inset:-25%;
+  border-radius:50%;
+  background:radial-gradient(circle, rgba(255,215,0,.65) 0%, rgba(255,215,0,.15) 45%, transparent 72%);
+  z-index:1;
+  animation:wildGlowPulse .75s ease-out forwards;
+}
+@keyframes wildGlowPulse{
+  0%{ opacity:0; transform:scale(.35); }
+  45%{ opacity:1; transform:scale(1.25); }
+  100%{ opacity:0; transform:scale(1.7); }
+}
+/* شرر ذهبي متطاير */
+.spark{
+  position:absolute; width:6px; height:6px; border-radius:50%;
+  background:radial-gradient(circle, #fff, var(--gold2) 55%, transparent 100%);
+  pointer-events:none; z-index:12;
+  box-shadow:0 0 6px 2px rgba(255,215,0,.85);
+  animation:sparkFly .8s ease-out forwards;
+}
+@keyframes sparkFly{
+  0%{ transform:translate(0,0) scale(1); opacity:1; }
+  100%{ transform:translate(var(--sx), var(--sy)) scale(0); opacity:0; }
+}
+/* اهتزاز خفيف للبكرات كلها لحظة التمدد */
+.reels.shake{ animation:reelShake .35s ease-in-out; }
+@keyframes reelShake{
+  0%,100%{ transform:translate(0,0); }
+  20%{ transform:translate(-6px,-3px); }
+  40%{ transform:translate(5px,3px); }
+  60%{ transform:translate(-4px,-2px); }
+  80%{ transform:translate(3px,1px); }
+}
+/* ومضة ذهبية خفيفة على كامل الشاشة */
+#goldFlash{
+  position:fixed; inset:0; z-index:120; pointer-events:none; opacity:0;
+  background:radial-gradient(circle, rgba(255,215,0,.32), transparent 65%);
+}
+#goldFlash.on{ animation:goldFlashAnim .5s ease-out forwards; }
+@keyframes goldFlashAnim{
+  0%{ opacity:0; } 30%{ opacity:1; } 100%{ opacity:0; }
+}
+#lineOverlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:5;}
+.win-line{
+  stroke:var(--gold2);
+  stroke-width:2.2;
+  fill:none;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  filter:drop-shadow(0 0 3px rgba(255,215,0,.95)) drop-shadow(0 0 6px rgba(255,215,0,.6));
+  stroke-dasharray:250;
+  stroke-dashoffset:250;
+  animation:drawLine .45s ease-out forwards;
+  vector-effect:non-scaling-stroke;
+}
+@keyframes drawLine{ to{ stroke-dashoffset:0; } }
 .suits{direction:ltr;display:flex;gap:5px;margin-bottom:10px;}
 .suit{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:4px;padding:6px 4px;border-radius:18px;
   background:rgba(10,4,30,.55);border:1.5px solid #8a6a2a;font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;}
 .suit b{font-size:16px;line-height:1;} .suit .k{color:#e8e0ff;} .suit .r{color:#ff3b4f;}
-.balbar{margin-top:14px;padding:11px;border-radius:14px;text-align:center;background:rgba(10,4,30,.6);border:1.5px solid rgba(212,164,55,.45);font-weight:700;}
+.balbar{margin-top:10px;padding:10px;border-radius:14px;text-align:center;background:rgba(10,4,30,.6);border:1.5px solid rgba(212,164,55,.45);font-weight:700;}
 .balbar b{color:var(--gold2);font-size:19px;margin:0 6px;}
 .balbar small{color:#ccc;font-weight:400;}
-.chips{direction:ltr;display:flex;gap:6px;justify-content:center;margin:16px 0 12px;}
+.chips{direction:ltr;display:flex;gap:6px;justify-content:center;margin:12px 0 10px;}
 .chip{flex:1;padding:9px 0;border-radius:22px;border:1.5px solid #6b5a8f;background:rgba(255,255,255,.08);color:#fff;font-weight:700;font-size:14px;cursor:pointer;}
 .chip.active{border-color:var(--gold2);box-shadow:0 0 8px rgba(255,215,0,.5);}
-.actions{direction:ltr;display:flex;align-items:center;justify-content:space-between;gap:10px;}
-.buy{padding:12px 14px;border-radius:12px;border:2px solid var(--gold2);cursor:pointer;
-  background:linear-gradient(180deg,#7a3ff0,#4b1fa8);color:var(--gold2);font-weight:800;font-family:'Cairo',sans-serif;line-height:1.1;}
+.actions{direction:ltr;position:relative;display:flex;align-items:center;justify-content:center;gap:8px;min-height:90px;}
+.buy{width:60px;height:60px;padding:4px;border-radius:14px;border:2px solid var(--gold2);cursor:pointer;
+  background:linear-gradient(180deg,#7a3ff0,#4b1fa8);color:var(--gold2);font-weight:800;font-family:'Cairo',sans-serif;line-height:1.15;font-size:11px;flex:none;}
 .buy small{display:block;font-size:11px;color:#fff;}
-.spin{width:84px;height:84px;padding:0;overflow:hidden;border-radius:50%;border:4px solid #cfcfe8;cursor:pointer;background:#0d0820;display:flex;align-items:center;justify-content:center;box-shadow:0 0 16px rgba(160,140,255,.5);}
+.spin-wrap{position:relative;display:inline-flex;flex:none;}
+.spin{width:78px;height:78px;padding:0;overflow:hidden;border-radius:50%;border:4px solid #cfcfe8;cursor:pointer;background:#0d0820;display:flex;align-items:center;justify-content:center;box-shadow:0 0 16px rgba(160,140,255,.5);}
 .spin img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
 .spin.spinning img{animation:rot .5s linear infinite;}
 @keyframes rot{to{transform:rotate(360deg);}}
-.actions{position:relative;}
-.autocnt{position:absolute;left:calc(50% - 104px);width:44px;text-align:center;font-size:22px;font-weight:800;color:var(--gold2);text-shadow:0 2px 6px #000;pointer-events:none;}
-.tools{direction:ltr;display:flex;gap:10px;margin-top:10px;}
-.rbtn{width:52px;height:52px;border-radius:50%;border:2px solid #cfcfe8;background:rgba(20,10,50,.7);color:#fff;font-size:18px;cursor:pointer;flex:none;}
+.rbtn{position:relative;width:42px;height:42px;border-radius:50%;border:2px solid #cfcfe8;background:rgba(20,10,50,.7);color:#fff;font-size:14px;cursor:pointer;flex:none;}
 .rbtn.on{border-color:var(--gold2);color:var(--gold2);}
+.cnt{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;padding:0 4px;border-radius:10px;
+  background:var(--gold2);color:#111;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 4px rgba(0,0,0,.5);z-index:5;}
+.cnt.emerald{background:var(--emerald);}
 .levels{direction:ltr;display:none;gap:8px;justify-content:center;margin-bottom:10px;}
 .lv{width:40px;height:40px;border-radius:50%;border:1.5px solid #6b5a8f;background:rgba(255,255,255,.1);color:#fff;font-weight:700;cursor:pointer;}
 .lv.active{border-color:var(--gold2);}
+#result{min-height:48px;margin:8px 0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
 button:disabled{opacity:.5;cursor:not-allowed;}
 .result{margin-top:16px;min-height:26px;text-align:center;font-weight:700;font-size:16px;}
 .win-t{color:#00ff88;} .lose-t{color:#ff6b6b;}
@@ -71,11 +152,65 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 .prow .ic{width:28px;height:28px;display:flex;align-items:center;justify-content:center;}
 .prow img{width:26px;height:26px;object-fit:contain;}
 .prow .v{color:#ccc;font-size:12px;}
-.retry-btn{
-  display:none;margin:10px auto 0;padding:10px 22px;border-radius:30px;
-  border:1.5px solid var(--gold2);background:rgba(255,215,0,.12);color:var(--gold2);
-  font-weight:700;font-size:14px;cursor:pointer;
+.auto-menu{
+  display:none;position:absolute;bottom:52px;left:calc(50% - 116px);
+  flex-direction:column;gap:6px;background:rgba(10,4,30,.92);
+  border:1.5px solid rgba(212,164,55,.6);border-radius:14px;padding:8px;z-index:20;
+  box-shadow:0 8px 20px rgba(0,0,0,.5);
 }
+.auto-menu button{
+  width:56px;padding:9px 0;border-radius:10px;border:1.5px solid #6b5a8f;
+  background:rgba(255,255,255,.08);color:#fff;font-weight:700;font-size:14px;cursor:pointer;
+}
+.auto-menu button:hover,.auto-menu button:active{border-color:var(--gold2);background:rgba(255,215,0,.12);}
+.modal-overlay{
+  display:none;position:fixed;inset:0;z-index:200;
+  background:rgba(0,0,0,.7);align-items:center;justify-content:center;padding:16px;
+}
+.modal-card{
+  width:100%;max-width:340px;background:linear-gradient(180deg,#1c1050,#100a30);
+  border:2px solid var(--gold2);border-radius:18px;padding:16px;
+  box-shadow:0 0 30px rgba(255,215,0,.25);
+}
+.modal-title{text-align:center;font-family:'Amiri',serif;font-size:20px;color:var(--gold2);margin-bottom:2px;
+  text-shadow:0 0 10px rgba(255,215,0,.5);}
+.modal-title span{display:block;font-size:14px;color:#c9a5ff;margin-top:2px;}
+.bet-stepper{direction:ltr;display:flex;align-items:center;justify-content:center;gap:10px;margin:12px 0 4px;}
+.bet-stepper button{
+  width:38px;height:38px;border-radius:10px;border:1.5px solid var(--gold2);
+  background:rgba(255,215,0,.12);color:var(--gold2);font-size:20px;font-weight:800;cursor:pointer;
+}
+.bet-stepper button:disabled{opacity:.4;cursor:not-allowed;}
+.bet-disp{
+  min-width:120px;text-align:center;padding:9px 14px;border-radius:12px;
+  background:rgba(255,255,255,.08);border:1.5px solid #6b5a8f;font-weight:800;color:var(--gold2);font-size:15px;
+}
+.pkg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0 14px;}
+.pkg{
+  border:1.5px solid #6b5a8f;border-radius:12px;padding:8px;text-align:center;cursor:pointer;
+  background:rgba(255,255,255,.04);
+}
+.pkg.sel{border-color:var(--gold2);box-shadow:0 0 12px rgba(255,215,0,.4);background:rgba(255,215,0,.08);}
+.pkg-icons{display:flex;align-items:center;justify-content:center;gap:2px;height:54px;margin-bottom:4px;}
+.pkg-icons img{height:44px;object-fit:contain;}
+.pkg-icons.double img{height:38px;}
+.pkg-icons.triple img{height:32px;}
+.pkg-icons.quad{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px;height:54px;}
+.pkg-icons.quad img{height:22px;width:100%;object-fit:contain;}
+.pkg-icons.quad span{display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--gold2);font-size:16px;
+  background:rgba(255,255,255,.06);border-radius:4px;}
+.pkg-cost{font-weight:800;color:var(--gold2);font-size:14px;}
+.pkg-sub{font-size:11px;color:#c9c3e8;margin-top:2px;}
+.modal-actions{display:flex;gap:10px;margin-top:6px;}
+.modal-actions button{flex:1;padding:11px 0;border-radius:12px;border:none;font-weight:800;cursor:pointer;font-size:14px;}
+.modal-actions .cancel{background:rgba(255,255,255,.1);color:#fff;}
+.modal-actions .confirm{background:linear-gradient(180deg,#7ee89a,#2e9e57);color:#062;}
+.modal-actions .confirm:disabled{opacity:.5;cursor:not-allowed;}
+.fs-intro{display:none;position:fixed;inset:0;z-index:150;align-items:center;justify-content:center;background:rgba(0,0,0,.55);}
+.fs-intro-text{font-family:'Amiri',serif;font-size:24px;color:var(--gold2);background:rgba(20,10,50,.92);
+  border:2px solid var(--gold2);border-radius:20px;padding:22px 30px;text-align:center;
+  box-shadow:0 0 30px rgba(255,215,0,.4);line-height:1.6;}
+.fs-intro-text b{font-size:34px;display:block;margin-top:4px;}
 </style>
 </head>
 <body>
@@ -87,6 +222,7 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 </div>
 
 <div id="gameScreen">
+  <div id="stage">
   <div class="container">
     <div id="freeSpinsBadge"></div>
     <div class="suits">
@@ -95,44 +231,97 @@ button:disabled{opacity:.5;cursor:not-allowed;}
       <div class="suit"><b class="r">♥</b><span>40,275,162</span></div>
       <div class="suit"><b class="k">♠</b><span>4,303,948,751</span></div>
     </div>
-    <div class="logo">TREE OF CHRONOS</div>
+    <div class="logo" id="logoTitle">TREE OF CHRONOS</div>
 
     <div class="reels" id="reels"></div>
+
+    <div class="result" id="result"></div>
+
+    <div class="bottom">
 
     <div class="chips" id="chips"></div>
     <div class="levels" id="levels"></div>
     <div class="actions">
-      <div class="autocnt" id="autoCnt"></div>
-      <button class="buy" id="buyBtn" onclick="buyBonus()">BUY<small>BONUS</small></button>
-      <button class="spin" id="spinBtn" onclick="spin()"><img src="images/spin-icon.jpg" alt="" onerror="this.replaceWith(document.createTextNode('🔄'))"></button>
+      <div class="auto-menu" id="autoMenu">
+        <button onclick="chooseAuto(10)">10</button>
+        <button onclick="chooseAuto(20)">20</button>
+        <button onclick="chooseAuto(50)">50</button>
+        <button onclick="chooseAuto(100)">100</button>
+        <button onclick="chooseAuto('inf')">∞</button>
+      </div>
+      <button class="buy" id="buyBtn" onclick="openBuyModal()">BUY<small>BONUS</small></button>
+      <button class="rbtn" id="autoBtn" onclick="startAuto()">▶<span class="cnt" id="autoCnt" style="display:none"></span></button>
+      <div class="spin-wrap">
+        <span class="cnt emerald" id="freeCnt" style="display:none;"></span>
+        <button class="spin" id="spinBtn" onclick="spin()"><img src="images/spin-icon.jpg" alt="" onerror="this.replaceWith(document.createTextNode('🔄'))"></button>
+      </div>
+      <button class="rbtn" id="speedBtn" onclick="cycleSpeed()">⚡</button>
       <button class="rbtn" id="coinBtn" onclick="toggleLevels()">🪙</button>
     </div>
 
-    <div class="tools">
-      <button class="rbtn" id="autoBtn" onclick="startAuto()">▶</button>
-      <button class="rbtn" id="speedBtn" onclick="cycleSpeed()">⚡</button>
+    <div class="balbar">NSP <b id="balance">...</b></div>
+    </div>
+  </div>
+  </div>
+</div>
+
+<div class="fs-intro" id="fsIntro">
+  <div class="fs-intro-text">لديك<b id="fsIntroCount">5</b>لفات مجانية</div>
+</div>
+
+<div class="modal-overlay" id="buyModal">
+  <div class="modal-card">
+    <div class="modal-title">BUY BONUS<span>الحد الأقصى ×20,000</span></div>
+
+    <div class="bet-stepper">
+      <button onclick="bonusStepBet(1)">+</button>
+      <div class="bet-disp" id="bonusBetDisplay">300 NSP</div>
+      <button onclick="bonusStepBet(-1)">−</button>
     </div>
 
-    <div class="balbar">NSP <b id="balance">...</b></div>
-    <div class="result" id="result"></div>
-    <button class="retry-btn" id="retryBtn" onclick="retryLoad()">🔄 إعادة المحاولة</button>
+    <div class="pkg-grid">
+      <div class="pkg" onclick="selectPkg(this,'1')">
+        <div class="pkg-icons single"><img src="images/wild-base.png" alt=""></div>
+        <div class="pkg-cost" id="pkgCost1">-</div>
+        <div class="pkg-sub">Wild واحد مضمون</div>
+      </div>
+      <div class="pkg" onclick="selectPkg(this,'2')">
+        <div class="pkg-icons double"><img src="images/wild-base.png" alt=""><img src="images/wild-base.png" alt=""></div>
+        <div class="pkg-cost" id="pkgCost2">-</div>
+        <div class="pkg-sub">Wild اثنان مضمونان</div>
+      </div>
+      <div class="pkg" onclick="selectPkg(this,'3')">
+        <div class="pkg-icons triple"><img src="images/wild-base.png" alt=""><img src="images/wild-base.png" alt=""><img src="images/wild-base.png" alt=""></div>
+        <div class="pkg-cost" id="pkgCost3">-</div>
+        <div class="pkg-sub">3 Wild مضمونة</div>
+      </div>
+      <div class="pkg" onclick="selectPkg(this,'r')">
+        <div class="pkg-icons quad"><img src="images/wild-base.png" alt=""><span>؟</span><span>؟</span><span>؟</span></div>
+        <div class="pkg-cost" id="pkgCostR">-</div>
+        <div class="pkg-sub">عشوائي (1-4 Wild)</div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="cancel" onclick="closeBuyModal()">إلغاء</button>
+      <button class="confirm" id="confirmBuyBtn" onclick="confirmBuy()" disabled>شراء</button>
+    </div>
   </div>
 </div>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
-/* العدّاد: سكربت عادي مستقل، يشتغل حتى لو فشل باقي الكود */
 window.__dataReady=false;
 (function(){
   var p=0, t0=Date.now(), bar=document.getElementById('loadingBar'), pct=document.getElementById('loadingPct');
   function done(){
     document.getElementById('splashScreen').style.display='none';
     document.getElementById('gameScreen').style.display='block';
+    if(window.__fitStage) window.__fitStage();
   }
   window.addEventListener('error',function(e){ pct.textContent='خطأ: '+e.message; console.error(e); });
   var iv=setInterval(function(){
     p+=Math.random()*15+5;
-    var late=Date.now()-t0>14000;
+    var late=Date.now()-t0>20000;
     if(!window.__dataReady && !late) p=Math.min(p,90);
     if(p>=100){ p=100; clearInterval(iv); setTimeout(done,300); }
     bar.style.width=p+'%'; pct.textContent=Math.floor(p)+'%';
@@ -142,16 +331,13 @@ window.__dataReady=false;
 <script type="module">
 let dbApi = null;
 
-
 const tg = window.Telegram?.WebApp;
 try { tg?.expand(); tg?.ready(); } catch(e){}
 
-/* 👇 للتجربة خارج تيليجرام: حطي هون id حقيقي من users بقاعدة البيانات */
 const TEST_ID = '123456789';
 const userId = String(tg?.initDataUnsafe?.user?.id || TEST_ID);
 const userName = tg?.initDataUnsafe?.user?.first_name || 'ضيف';
 
-/* ===== الرموز (emoji احتياطي إذا الصورة مو موجودة) ===== */
 const SYMS = [
   {key:'wild',    weight:2},
   {key:'scatter', weight:3},
@@ -171,6 +357,72 @@ const PAY = {
   grape:{3:2.4,4:7.2,5:42}, melon:{3:2.4,4:7.2,5:42}, bell:{3:1.2,4:2.4,5:12},
   cherry:{3:.6,4:1.8,5:9}, orange:{3:.6,4:1.8,5:9}, lemon:{3:.6,4:1.8,5:9}, plum:{3:.6,4:1.8,5:9}
 };
+const BONUS_COST_MULT = { '1':75, '2':175, '3':500, 'r':150 };
+
+/* ✅ محرك أصوات مولّدة بالكود مباشرة (Web Audio API) - بدون أي ملف صوتي خارجي */
+const SoundEngine = (() => {
+  let ctx = null;
+  function ac(){
+    if(!ctx){
+      try{ ctx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ ctx=null; }
+    }
+    if(ctx && ctx.state === 'suspended') ctx.resume().catch(()=>{});
+    return ctx;
+  }
+  function tone(freq, dur, type='sine', vol=0.25, startDelay=0, freqEnd=null){
+    const c = ac(); if(!c) return;
+    const t0 = c.currentTime + startDelay;
+    const osc = c.createOscillator();
+    const gain = c.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t0);
+    if(freqEnd) osc.frequency.exponentialRampToValueAtTime(freqEnd, t0+dur);
+    gain.gain.setValueAtTime(0, t0);
+    gain.gain.linearRampToValueAtTime(vol, t0+0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+    osc.connect(gain); gain.connect(c.destination);
+    osc.start(t0); osc.stop(t0+dur+0.02);
+  }
+  function noiseBurst(dur, vol=0.2, startDelay=0, filterFreq=2500){
+    const c = ac(); if(!c) return;
+    const t0 = c.currentTime + startDelay;
+    const bufferSize = Math.max(1, Math.floor(c.sampleRate * dur));
+    const buffer = c.createBuffer(1, bufferSize, c.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0;i<bufferSize;i++) data[i] = (Math.random()*2-1) * (1 - i/bufferSize);
+    const src = c.createBufferSource();
+    src.buffer = buffer;
+    const filt = c.createBiquadFilter();
+    filt.type='lowpass'; filt.frequency.value = filterFreq;
+    const gain = c.createGain();
+    gain.gain.setValueAtTime(vol, t0);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+    src.connect(filt); filt.connect(gain); gain.connect(c.destination);
+    src.start(t0);
+  }
+  return {
+    unlock(){ ac(); },
+    click(){ noiseBurst(0.05,0.18,0,4000); tone(900,0.04,'square',0.05); },
+    reelTick(){ tone(500 + Math.random()*150, 0.035, 'square', 0.05); },
+    reelStop(){ noiseBurst(0.06,0.15,0,1800); tone(180,0.08,'sine',0.15); },
+    wildDrop(){
+      tone(90,0.25,'sine',0.3);
+      [660,880,1320].forEach((f,i)=> tone(f,0.35,'triangle',0.12,0.04+i*0.05));
+    },
+    win(){ [523,659,784].forEach((f,i)=> tone(f,0.22,'triangle',0.18,i*0.09)); },
+    bigWin(){
+      [523,659,784,1047].forEach((f,i)=> tone(f,0.3,'triangle',0.2,i*0.11));
+      noiseBurst(0.3,0.08,0.3,6000);
+    },
+    megaWin(){
+      [392,523,659,784,988,1175,1568].forEach((f,i)=> tone(f,0.4,'triangle',0.22,i*0.09));
+      noiseBurst(0.5,0.12,0.5,7000);
+      tone(1568,0.6,'sawtooth',0.06,0.55);
+    },
+    freeSpins(){ [660,880,1100,1320].forEach((f,i)=> tone(f,0.25,'triangle',0.16,i*0.08)); }
+  };
+})();
+
 const LINES = [[1,1,1,1,1],[0,0,0,0,0],[2,2,2,2,2],[0,1,2,1,0],[2,1,0,1,2],[0,0,1,0,0],[2,2,1,2,2],[1,0,0,0,1],[1,2,2,2,1],[0,1,1,1,0]];
 const WMULTS = [{val:2,weight:10},{val:3,weight:6},{val:5,weight:3},{val:10,weight:1}];
 const LEVELS = [
@@ -178,26 +430,43 @@ const LEVELS = [
   [6000,10000,15000,30000,60000],
   [90000,100000,150000,250000,300000],
   [400000,450000,550000,600000,750000],
-  [500000,600000,650000,700000,800000]  // المستوى 5: مؤقت لحد ما تبعتي صورته
+  [500000,600000,650000,700000,800000]
 ];
 let BETS = LEVELS[0];
-let lvl=0, betIdx=0, speed=0, autoLeft=0;
+let lvl=0, betIdx=0, speed=0;
+let autoLeft=0, autoInfinite=false;
 const SPD = [[8,90],[5,60],[3,35]];
+const STAGGER_TICKS = 3;
 const REELS=5, ROWS=3;
 
 const pick = l => { let r=Math.random()*l.reduce((s,x)=>s+x.weight,0); for(const i of l){ r-=i.weight; if(r<=0) return i; } return l[l.length-1]; };
 
 let balance=0, bet=300, spinning=false, totalSpins=0, totalWins=0;
 let inFree=false, freeLeft=0, freeWin=0;
+let guaranteedWildsPerSpin=0;
+let pendingPkg=null;
 const $ = id => document.getElementById(id);
 
+function randomCell(){
+  const key = pick(SYMS).key, c={key};
+  if(key==='wild') c.mult = pick(WMULTS).val;
+  if(key==='scatter') c.v = SCAT_IMG[Math.floor(Math.random()*2)];
+  return c;
+}
+function randomColumn(){ return Array.from({length:ROWS}, randomCell); }
+
 function makeGrid(){
-  return Array.from({length:REELS},()=>Array.from({length:ROWS},()=>{
-    const key = pick(SYMS).key, c={key};
-    if(key==='wild') c.mult = pick(WMULTS).val;
-    if(key==='scatter') c.v = SCAT_IMG[Math.floor(Math.random()*2)];
-    return c;
-  }));
+  const grid = Array.from({length:REELS}, randomColumn);
+  if(guaranteedWildsPerSpin>0){
+    const positions=[];
+    for(let r=0;r<REELS;r++) for(let row=0;row<ROWS;row++) positions.push([r,row]);
+    positions.sort(()=>Math.random()-0.5);
+    for(let i=0;i<Math.min(guaranteedWildsPerSpin,positions.length);i++){
+      const [r,row]=positions[i];
+      grid[r][row] = { key:'wild', mult: pick(WMULTS).val };
+    }
+  }
+  return grid;
 }
 function imgOf(c){
   if(c.key==='wild') return WILD_IMG[c.mult];
@@ -209,23 +478,81 @@ function emojiOf(c){
   if(c.key==='scatter') return '⭐';
   return SYMS.find(s=>s.key===c.key).e;
 }
+
+function cellHTML(c, isWin){
+  const badge = c.key==='wild' && c.mult===10 ? '<span class="badge">x10</span>' : '';
+  const wildClass = (isWin && c.key==='wild') ? ' wild-win' : '';
+  return `<div class="cell ${isWin?'win'+wildClass:''}"><img src="${imgOf(c)}" alt="" onerror="this.replaceWith(document.createTextNode('${emojiOf(c)}'))">${badge}</div>`;
+}
+function renderReelColumn(r, cells, winRowsForReel){
+  const el = document.getElementById('reelCol'+r);
+  if(!el) return;
+  el.innerHTML = cells.map((c,row)=> cellHTML(c, winRowsForReel.includes(row))).join('');
+}
 function render(grid, wins=[]){
   let html='';
-  for(let r=0;r<REELS;r++){
-    html += '<div class="reel">';
-    for(let row=0;row<ROWS;row++){
-      const c = grid[r][row];
-      const isWin = wins.some(([a,b])=>a===r&&b===row);
-      const badge = c.key==='wild' && c.mult===10 ? '<span class="badge">x10</span>' : '';
-      html += `<div class="cell ${isWin?'win':''}"><img src="${imgOf(c)}" alt="" onerror="this.replaceWith(document.createTextNode('${emojiOf(c)}'))">${badge}</div>`;
-    }
-    html += '</div>';
-  }
+  for(let r=0;r<REELS;r++) html += `<div class="reel" id="reelCol${r}"></div>`;
   $('reels').innerHTML = html;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.id = 'lineOverlay';
+  svg.setAttribute('viewBox','0 0 100 100');
+  svg.setAttribute('preserveAspectRatio','none');
+  $('reels').appendChild(svg);
+  for(let r=0;r<REELS;r++){
+    const winRows = wins.filter(([wr])=>wr===r).map(([,wrow])=>wrow);
+    renderReelColumn(r, grid[r], winRows);
+  }
+}
+
+function cellCenterPct(r,row){ return { x:(r+0.5)/REELS*100, y:(row+0.5)/ROWS*100 }; }
+function drawWinLines(winLinesCells){
+  const svg = document.getElementById('lineOverlay');
+  if(!svg) return;
+  svg.innerHTML = '';
+  winLinesCells.forEach(cells=>{
+    if(cells.length<2) return;
+    const pts = cells.map(([r,row])=>{ const p=cellCenterPct(r,row); return `${p.x},${p.y}`; }).join(' ');
+    const poly = document.createElementNS('http://www.w3.org/2000/svg','polyline');
+    poly.setAttribute('points', pts);
+    poly.setAttribute('class','win-line');
+    svg.appendChild(poly);
+  });
+}
+function clearWinLines(){
+  const svg = document.getElementById('lineOverlay');
+  if(svg) svg.innerHTML='';
+}
+
+/* ✅ شرر ذهبي متطاير حوالين الشجرة المتمددة */
+function spawnSparks(container, count){
+  for(let i=0;i<count;i++){
+    const s = document.createElement('span');
+    s.className = 'spark';
+    const angle = Math.random()*Math.PI*2;
+    const dist = 35 + Math.random()*45;
+    s.style.setProperty('--sx', Math.cos(angle)*dist+'px');
+    s.style.setProperty('--sy', Math.sin(angle)*dist+'px');
+    s.style.left = (38 + Math.random()*24)+'%';
+    s.style.top = (30 + Math.random()*40)+'%';
+    container.appendChild(s);
+    setTimeout(()=> s.remove(), 850);
+  }
+}
+/* ✅ ومضة ذهبية على كامل الشاشة */
+function triggerGoldFlash(){
+  let fl = document.getElementById('goldFlash');
+  if(!fl){
+    fl = document.createElement('div');
+    fl.id = 'goldFlash';
+    document.body.appendChild(fl);
+  }
+  fl.classList.remove('on');
+  void fl.offsetWidth; // إعادة تشغيل الأنيميشن
+  fl.classList.add('on');
 }
 
 function evaluate(grid, b){
-  let total=0; const wins=[];
+  let total=0; const wins=[]; const winLinesCells=[];
   LINES.forEach(line=>{
     const seq = line.map((row,r)=>grid[r][row]);
     let target=null;
@@ -241,18 +568,21 @@ function evaluate(grid, b){
       const m = cells.reduce((s,[r,row])=>grid[r][row].key==='wild' ? s+grid[r][row].mult : s, 0);
       if(m>0) w *= m;
       total += w; wins.push(...cells);
+      winLinesCells.push(cells);
     }
   });
   let sc=0;
   grid.forEach(col=>col.forEach(c=>{ if(c.key==='scatter') sc++; }));
-  return {total, wins, sc};
+  return {total, wins, sc, winLinesCells};
 }
 
 function update(){
   $('balance').textContent = Math.floor(balance*100)/100;
   const b=$('freeSpinsBadge');
   b.style.display = inFree ? 'block' : 'none';
-  b.textContent = `🎁 لفات مجانية متبقية: ${freeLeft}`;
+  b.textContent = `لفات مجانية متبقية: ${freeLeft}`;
+  const fc=$('freeCnt');
+  if(inFree){ fc.style.display='flex'; fc.textContent=freeLeft; } else { fc.style.display='none'; }
 }
 function renderChips(){
   $('chips').innerHTML = BETS.map(v=>`<button class="chip ${v===bet?'active':''}" onclick="setBet(${v})">${fmt(v)}</button>`).join('');
@@ -260,34 +590,95 @@ function renderChips(){
 window.setBet = v => { if(spinning) return; betIdx=BETS.indexOf(v); bet=v; renderChips(); };
 function fmt(v){ return v>=1000 ? (v/1000)+'K' : String(v); }
 function renderLevels(){ $('levels').innerHTML=[0,1,2,3,4].map(i=>`<button class="lv ${i===lvl?'active':''}" onclick="setLevel(${i})">${i+1}</button>`).join(''); }
-window.toggleLevels = () => { const l=$('levels'); l.style.display = l.style.display==='flex' ? 'none' : 'flex'; renderLevels(); };
+window.toggleLevels = () => { const l=$('levels'); l.style.display = l.style.display==='flex' ? 'none' : 'flex'; renderLevels(); fitStage(); };
 window.setLevel = i => { if(spinning) return; lvl=i; BETS=LEVELS[i]; bet=BETS[betIdx]; renderChips(); renderLevels(); };
-function showAuto(){ $('autoCnt').textContent = autoLeft>0 ? autoLeft : ''; $('autoBtn').classList.toggle('on', autoLeft>0); }
+
+function showAuto(){
+  const c=$('autoCnt');
+  if(autoInfinite){ c.textContent='∞'; c.style.display='flex'; }
+  else if(autoLeft>0){ c.textContent=autoLeft; c.style.display='flex'; }
+  else { c.style.display='none'; }
+  $('autoBtn').classList.toggle('on', autoInfinite || autoLeft>0);
+}
+function toggleAutoMenu(force){
+  const m=$('autoMenu');
+  const show = force!==undefined ? force : (m.style.display!=='flex');
+  m.style.display = show ? 'flex' : 'none';
+}
 window.startAuto = () => {
-  if(autoLeft>0){ autoLeft=0; showAuto(); return; }
+  if(autoInfinite || autoLeft>0){ autoInfinite=false; autoLeft=0; showAuto(); toggleAutoMenu(false); return; }
   if(spinning || inFree) return;
-  autoLeft=10; showAuto(); spin();
-  if(!spinning){ autoLeft=0; showAuto(); }
+  toggleAutoMenu();
+};
+window.chooseAuto = (n) => {
+  toggleAutoMenu(false);
+  if(spinning || inFree) return;
+  if(n==='inf'){ autoInfinite=true; autoLeft=0; }
+  else { autoInfinite=false; autoLeft=n; }
+  showAuto();
+  spin();
 };
 function autoNext(){
-  if(autoLeft<=0) return;
-  autoLeft--; showAuto();
-  if(autoLeft<=0) return;
+  if(!autoInfinite && autoLeft<=0) return;
+  if(!autoInfinite){ autoLeft--; showAuto(); if(autoLeft<=0) return; }
   setTimeout(()=>{
-    if(autoLeft<=0) return;
-    if(!inFree && balance<bet){ autoLeft=0; showAuto(); return; }
+    if(!autoInfinite && autoLeft<=0) return;
+    if(!inFree && balance<bet){ autoInfinite=false; autoLeft=0; showAuto(); return; }
     spin();
   }, 600);
 }
 window.cycleSpeed = () => { speed=(speed+1)%3; $('speedBtn').textContent='⚡'.repeat(speed+1); };
 
-function renderPay(){
-  $('paytable').innerHTML = Object.entries(PAY).map(([k,vals])=>{
-    const src = k==='wild' ? WILD_IMG[2] : SYMS.find(s=>s.key===k).img;
-    const em = k==='wild' ? '🌳' : SYMS.find(s=>s.key===k).e;
-    const txt = Object.entries(vals).map(([c,v])=>`${c}x=${v}×`).join(' | ');
-    return `<div class="prow"><span class="ic"><img src="${src}" alt="" onerror="this.replaceWith(document.createTextNode('${em}'))"></span><span class="v">${txt}</span></div>`;
-  }).join('') + `<div class="prow"><span class="ic">⭐</span><span class="v">3 سكاتر أو أكتر = 5 لفات مجانية</span></div>`;
+function updateBonusCosts(){
+  $('bonusBetDisplay').textContent = bet.toLocaleString()+' NSP';
+  $('pkgCost1').textContent = (bet*BONUS_COST_MULT['1']).toLocaleString()+' NSP';
+  $('pkgCost2').textContent = (bet*BONUS_COST_MULT['2']).toLocaleString()+' NSP';
+  $('pkgCost3').textContent = (bet*BONUS_COST_MULT['3']).toLocaleString()+' NSP';
+  $('pkgCostR').textContent = (bet*BONUS_COST_MULT['r']).toLocaleString()+' NSP';
+}
+window.bonusStepBet = (dir) => {
+  let idx = BETS.indexOf(bet);
+  if(idx===-1) idx=0;
+  idx = Math.max(0, Math.min(BETS.length-1, idx+dir));
+  betIdx=idx; bet=BETS[idx];
+  renderChips();
+  updateBonusCosts();
+};
+window.openBuyModal = () => {
+  if(spinning || inFree) return;
+  updateBonusCosts();
+  pendingPkg = null;
+  document.querySelectorAll('.pkg').forEach(p=>p.classList.remove('sel'));
+  $('confirmBuyBtn').disabled = true;
+  $('buyModal').style.display = 'flex';
+};
+window.closeBuyModal = () => { $('buyModal').style.display = 'none'; };
+window.selectPkg = (el, key) => {
+  document.querySelectorAll('.pkg').forEach(p=>p.classList.remove('sel'));
+  el.classList.add('sel');
+  pendingPkg = key;
+  $('confirmBuyBtn').disabled = false;
+};
+window.confirmBuy = async () => {
+  if(!pendingPkg) return;
+  const cost = bet * BONUS_COST_MULT[pendingPkg];
+  if(balance < cost){
+    $('result').innerHTML = `<span class="lose-t">رصيدك غير كافي (${cost.toLocaleString()})</span>`;
+    closeBuyModal();
+    return;
+  }
+  balance -= cost;
+  guaranteedWildsPerSpin = pendingPkg==='1' ? 1 : pendingPkg==='2' ? 2 : pendingPkg==='3' ? 3 : (1+Math.floor(Math.random()*4));
+  inFree=true; freeLeft=5; freeWin=0;
+  closeBuyModal();
+  showFreeSpinsIntro(5);
+  update(); await save(); spin();
+};
+
+function showFreeSpinsIntro(n){
+  $('fsIntroCount').textContent = n;
+  $('fsIntro').style.display = 'flex';
+  setTimeout(()=>{ $('fsIntro').style.display = 'none'; }, 1600);
 }
 
 async function save(){
@@ -296,64 +687,105 @@ async function save(){
   catch(e){ console.error('خطأ بالحفظ:', e); }
 }
 
-/* ✅ إصلاح: مهلة أطول (12 ثانية بدل 6)، وزر إعادة محاولة واضح عند الفشل
-   بدل ما تضل الشاشة عالقة على رسالة خطأ بلا أي حل */
 async function loadUser(){
   renderChips(); render(makeGrid()); update();
-  $('retryBtn').style.display = 'none';
-  $('result').innerHTML = '';
   try{
-    if(!dbApi){
-      try{ dbApi = await import('./db.js'); }
-      catch(e){ throw new Error('فشل تحميل ملف db.js (تأكدي إنو جنب index.html): '+(e.message||e)); }
-    }
+    try{ dbApi = await import('./db.js'); }
+    catch(e){ throw new Error('فشل تحميل ملف db.js (تأكدي إنو جنب index.html): '+(e.message||e)); }
     let d;
-    try{
-      d = await Promise.race([
-        dbApi.loadBalance(userId, userName),
-        new Promise((_,reject)=>setTimeout(()=>reject(new Error('انتهت المهلة')), 12000))
-      ]);
-    }catch(e){ throw new Error('تعذّر الاتصال بالخادم (شبكة بطيئة). '+(e.message||e)); }
+    try{ d = await dbApi.loadBalance(userId, userName); }
+    catch(e){ throw new Error('فشلت قراءة الرصيد من Firebase: '+(e.message||e)); }
     balance = d.balance; totalSpins = d.totalSpins; totalWins = d.totalWins;
     update();
   }catch(e){
     console.error(e);
-    $('result').innerHTML = '<span class="lose-t">⚠️ '+(e.message||e)+'</span>';
-    $('retryBtn').style.display = 'block';
+    $('result').innerHTML = '<span class="lose-t">'+(e.message||e)+'</span>';
   }
 }
 
-window.retryLoad = function(){
-  loadUser();
-};
-
 window.spin = function(){
   if(spinning) return;
-  if(!inFree && balance < bet){ $('result').innerHTML='<span class="lose-t">❌ رصيدك غير كافي!</span>'; return; }
+  if(!inFree && balance < bet){ $('result').innerHTML='<span class="lose-t">رصيدك غير كافي</span>'; return; }
   spinning = true;
+  clearWinLines();
+  document.querySelectorAll('.expand-wild').forEach(el=>el.remove());
+  SoundEngine.unlock();
+  SoundEngine.click();
   $('spinBtn').disabled = true; $('spinBtn').classList.add('spinning'); $('buyBtn').disabled = true;
   $('result').textContent = '';
   if(!inFree){ balance -= bet; totalSpins++; }
   update();
-  let t=0;
-  const sp=SPD[speed]; const iv = setInterval(()=>{ render(makeGrid()); if(++t>=sp[0]){ clearInterval(iv); resolve(); } }, sp[1]);
+
+  const finalGrid = makeGrid();
+  const sp = SPD[speed];
+  const stopTicks = Array.from({length:REELS}, (_,r)=> sp[0] + r*STAGGER_TICKS);
+  const tickCounters = new Array(REELS).fill(0);
+  const stillSpinning = new Array(REELS).fill(true);
+
+  const iv = setInterval(()=>{
+    let allStopped = true;
+    for(let r=0;r<REELS;r++){
+      if(!stillSpinning[r]) continue;
+      allStopped = false;
+      tickCounters[r]++;
+      if(tickCounters[r] % 2 === 0) SoundEngine.reelTick();
+      if(tickCounters[r] >= stopTicks[r]){
+        stillSpinning[r] = false;
+        SoundEngine.reelStop();
+        renderReelColumn(r, finalGrid[r], []);
+      }else{
+        renderReelColumn(r, randomColumn(), []);
+      }
+    }
+    if(allStopped){ clearInterval(iv); resolveWithGrid(finalGrid); }
+  }, sp[1]);
 };
 
-async function resolve(){
-  const grid = makeGrid();
-  const {total, wins, sc} = evaluate(grid, bet);
-  render(grid, wins);
+async function resolveWithGrid(grid){
+  const {total, wins, sc, winLinesCells} = evaluate(grid, bet);
+  for(let r=0;r<REELS;r++){
+    const winRows = wins.filter(([wr])=>wr===r).map(([,wrow])=>wrow);
+    if(winRows.length) renderReelColumn(r, grid[r], winRows);
+  }
+  drawWinLines(winLinesCells);
+
+  // ✅ الشجرة الفايزة تتمدد لتغطي البكرة كاملة
+  const wildReels = new Set();
+  winLinesCells.forEach(cells=>{
+    cells.forEach(([r,row])=>{ if(grid[r][row].key==='wild') wildReels.add(r); });
+  });
+  wildReels.forEach(r=>{
+    const col = document.getElementById('reelCol'+r);
+    if(!col) return;
+    const overlay = document.createElement('div');
+    overlay.className = 'expand-wild';
+    overlay.innerHTML = `<img src="${WILD_IMG[10]}" alt="" onerror="this.replaceWith(document.createTextNode('🌳'))">`;
+    col.appendChild(overlay);
+    spawnSparks(col, 10);
+    setTimeout(()=>{ overlay.remove(); }, 1400);
+  });
+  if(wildReels.size>0){
+    SoundEngine.wildDrop();
+    triggerGoldFlash();
+    $('reels').classList.add('shake');
+    setTimeout(()=> $('reels').classList.remove('shake'), 400);
+  }
+
   let msg='';
   if(total>0){
     balance += total; totalWins += total; if(inFree) freeWin += total;
-    msg += `<span class="win-t">🎉 ربحت ${total} نقطة!</span>`;
+    msg = `<span class="win-t">مكسب: ${total}</span>`;
+    if(total >= bet*50) SoundEngine.megaWin();
+    else if(total >= bet*20) SoundEngine.bigWin();
+    else SoundEngine.win();
     if(navigator.vibrate) navigator.vibrate([100,50,100]);
   }
   if(sc>=3 && !inFree){
     inFree=true; freeLeft=5; freeWin=total;
-    msg += `<br><span class="win-t">🎁 فزت بـ 5 لفات مجانية!</span>`;
+    msg += (msg?'<br>':'') + `<span class="win-t">لفات مجانية: 5</span>`;
+    SoundEngine.freeSpins();
+    showFreeSpinsIntro(5);
   }
-  if(total===0 && sc<3) msg = '<span class="lose-t">😔 حاول مرة أخرى</span>';
   $('result').innerHTML = msg;
   update();
   await save();
@@ -363,24 +795,61 @@ async function resolve(){
   $('buyBtn').disabled=false;
   if(inFree){
     freeLeft--;
+    update();
     if(freeLeft<=0){
       inFree=false;
-      $('result').innerHTML += `<br><span class="win-t">🏆 انتهت اللفات المجانية — ربحها: ${freeWin}</span>`;
+      guaranteedWildsPerSpin=0;
+      $('result').innerHTML += (msg?'<br>':'') + `<span class="win-t">مجموع اللفات المجانية: ${freeWin}</span>`;
       update(); $('spinBtn').disabled=false; autoNext();
-    } else { update(); setTimeout(()=>spin(),1200); }
+    } else { setTimeout(()=>spin(),1200); }
   } else { $('spinBtn').disabled=false; autoNext(); }
 }
 
-window.buyBonus = async function(){
-  if(spinning || inFree) return;
-  const cost = bet*100;
-  if(balance < cost){ $('result').innerHTML=`<span class="lose-t">❌ رصيدك غير كافي (${cost})</span>`; return; }
-  balance -= cost; inFree=true; freeLeft=5; freeWin=0;
-  $('result').innerHTML='<span class="win-t">✨ بدأت 5 لفات مجانية</span>';
-  update(); await save(); spin();
-};
+function preloadAll(){
+  const urls=[...SYMS.filter(x=>x.img).map(x=>x.img),...Object.values(WILD_IMG),...SCAT_IMG,'images/spin-icon.jpg','images/bg.jpg'];
+  return Promise.all(urls.map(u=>new Promise(res=>{
+    const im=new Image(); const t=setTimeout(res,10000);
+    im.onload=()=>{ clearTimeout(t); (im.decode?im.decode():Promise.resolve()).catch(()=>{}).then(res); };
+    im.onerror=()=>{ clearTimeout(t); res(); };
+    im.src=u;
+  })));
+}
 
-loadUser().finally(()=>{ window.__dataReady=true; });
+if(!tg?.initDataUnsafe?.user){
+  const addTestBonus = () => {
+    balance += 10000; update();
+    $('result').innerHTML = '<span class="win-t">+10000 (اختبار)</span>';
+  };
+  const isTestKey = k => { k=(k||'').toLowerCase(); return k==='m' || k==='p' || k==='t'; };
+  document.addEventListener('keydown', e=>{ if(isTestKey(e.key)) addTestBonus(); });
+  window.addEventListener('keydown', e=>{ if(isTestKey(e.key)) addTestBonus(); });
+
+  let tapCount=0, tapTimer=null;
+  $('logoTitle').addEventListener('click', ()=>{
+    tapCount++;
+    clearTimeout(tapTimer);
+    tapTimer=setTimeout(()=>{ tapCount=0; },600);
+    if(tapCount>=3){ tapCount=0; addTestBonus(); }
+  });
+}
+
+function fitStage(){
+  const stage = document.getElementById('stage');
+  const cont = document.querySelector('.container');
+  if(!stage || !cont) return;
+  const cw = cont.offsetWidth, ch = cont.offsetHeight;
+  if(!cw || !ch) return;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const scale = Math.min(vw/cw, vh/ch);
+  stage.style.width = cw+'px';
+  stage.style.height = ch+'px';
+  stage.style.transform = `translate(-50%,-50%) scale(${scale})`;
+}
+window.__fitStage = fitStage;
+window.addEventListener('resize', fitStage);
+window.addEventListener('orientationchange', fitStage);
+
+Promise.all([loadUser(), preloadAll()]).finally(()=>{ window.__dataReady=true; setTimeout(fitStage,0); requestAnimationFrame(fitStage); });
 </script>
 </body>
 </html>
