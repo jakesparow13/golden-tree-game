@@ -349,7 +349,7 @@
 
 <!-- ===== فيديو المقدمة (جديد): بيشتغل أول ما تنفتح اللعبة وبعدين بيظهر اللوبي ===== -->
 <div class="intro-overlay" id="introOverlay">
-  <video id="introVideo" src="intro.mp4" playsinline webkit-playsinline preload="auto" disablepictureinpicture></video>
+  <video id="introVideo" src="intro.mp4?v=2" playsinline webkit-playsinline preload="auto" disablepictureinpicture></video>
   <button class="intro-skip" id="introSkip" type="button">تخطي ⏭</button>
   <button class="intro-sound" id="introSound" type="button" style="display:none">🔊 اضغط لتشغيل الصوت</button>
 </div>
@@ -359,13 +359,13 @@
   var v = document.getElementById('introVideo');
   var snd = document.getElementById('introSound');
   var done = false, seen = false, startTimer = null;
-  try { seen = sessionStorage.getItem('introSeen') === '1'; } catch(e) {}
+  // بيتخطى الفيديو بس لما نرجع للصفحة بزر الرجوع؛ أي فتح جديد من البوت بيعرضه
+  try { var nav = performance.getEntriesByType('navigation')[0]; seen = !!nav && nav.type === 'back_forward'; } catch(e) {}
 
   function finish(){
     if (done) return;
     done = true;
     clearTimeout(startTimer);
-    try { sessionStorage.setItem('introSeen', '1'); } catch(e) {}
     ov.classList.add('hide');
     setTimeout(function(){ try { v.pause(); } catch(e) {} if (ov.parentNode) ov.parentNode.removeChild(ov); }, 600);
   }
@@ -383,8 +383,8 @@
   });
   v.addEventListener('ended', finish);
   v.addEventListener('error', finish);
-  // أمان: إذا الفيديو ما بدأ خلال 6 ثواني (نت ضعيف أو الملف مو موجود) منكمّل عالوبي
-  startTimer = setTimeout(finish, 6000);
+  // أمان: إذا الفيديو ما بدأ خلال 15 ثانية (نت ضعيف أو الملف مو موجود) منكمّل عالوبي
+  startTimer = setTimeout(finish, 15000);
   v.addEventListener('playing', function(){
     clearTimeout(startTimer);
     var d = (v.duration && isFinite(v.duration)) ? v.duration : 5;
