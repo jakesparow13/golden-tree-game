@@ -82,16 +82,15 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 .buy-stepper button{width:36px;height:36px;border-radius:10px;border:1.5px solid var(--gold);background:rgba(224,178,74,.12);color:var(--gold);font-size:18px;font-weight:800;}
 .buy-stepper button:disabled{opacity:.4;}
 .buy-bet-disp{min-width:110px;text-align:center;padding:8px 0;border-radius:12px;background:rgba(255,255,255,.08);border:1.5px solid #6a5a3a;font-weight:800;color:var(--gold);font-size:14px;}
-.pkg-grid{display:flex;flex-direction:column;gap:10px;margin:10px 0 6px;}
-.pkg{border:1.5px solid #6a5a3a;border-radius:12px;padding:10px;text-align:center;cursor:pointer;background:rgba(255,255,255,.03);}
+.pkg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0 6px;}
+.pkg{border:1.5px solid #6a5a3a;border-radius:12px;padding:8px 6px;text-align:center;cursor:pointer;background:rgba(255,255,255,.03);}
 .pkg.sel{border-color:var(--gold);box-shadow:0 0 12px rgba(224,178,74,.4);background:rgba(224,178,74,.08);}
-.pkg-name{font-weight:800;color:var(--green);font-size:15px;}
-.pkg-desc{font-size:11px;color:#c9c3b8;margin-top:2px;}
-.pkg-cost{margin-top:4px;font-weight:800;color:var(--gold);font-size:15px;}
-/* 🆕 صور شراء البونص (صغيرة ← متوسطة ← كاملة) */
-.pkg-img{display:flex;align-items:flex-end;justify-content:center;height:130px;margin-bottom:6px;overflow:hidden;}
-.pkg-img img{object-fit:contain;filter:drop-shadow(0 4px 6px rgba(0,0,0,.6));}
-.pkg-img.s img{height:64px;}.pkg-img.m img{height:96px;}.pkg-img.l img{height:130px;}
+.pkg-name{font-weight:800;color:var(--green);font-size:12px;line-height:1.2;}
+.pkg-desc{font-size:9.5px;color:#c9c3b8;margin-top:3px;line-height:1.35;}
+.pkg-cost{margin-top:4px;font-weight:800;color:var(--gold);font-size:13px;}
+.pkg-img{display:flex;align-items:flex-end;justify-content:center;height:70px;margin-bottom:4px;overflow:hidden;}
+.pkg-img img{object-fit:contain;filter:drop-shadow(0 4px 6px rgba(0,0,0,.6));height:66px;}
+.frozen-wild{display:flex;align-items:center;justify-content:center;background:rgba(10,22,18,.92);border-radius:6px;}
 </style>
 </head>
 <body>
@@ -142,21 +141,21 @@ button:disabled{opacity:.5;cursor:not-allowed;}
   </div>
   <div class="pkg-grid">
     <div class="pkg" onclick="selectPkg(this,'sticky')">
-      <div class="pkg-img s"><img src="images/count-small.png" alt="" onerror="this.onerror=null;this.src='images/wild-base.png'"></div>
+      <div class="pkg-img"><img src="images/count-small.png" alt="" onerror="this.onerror=null;this.src='images/wild-base.png'"></div>
       <div class="pkg-name">STICKY WILD</div>
-      <div class="pkg-desc">10 لفات مجانية — الكونت يلتصق بمكانه لحد ما تخلص اللفات</div>
+      <div class="pkg-desc">10 لفات — الكونت يلتصق لحد ما تخلص اللفات</div>
       <div class="pkg-cost" id="pkgCostSticky">-</div>
     </div>
     <div class="pkg" onclick="selectPkg(this,'sliding')">
-      <div class="pkg-img m"><img src="images/count-medium.png" alt="" onerror="this.onerror=null;this.src='images/wild-base.png'"></div>
+      <div class="pkg-img"><img src="images/count-medium.png" alt="" onerror="this.onerror=null;this.src='images/wild-base.png'"></div>
       <div class="pkg-name">SLIDING WILD</div>
-      <div class="pkg-desc">10 لفات مجانية — الكونت بينزلق خانة لتحت كل لفة</div>
+      <div class="pkg-desc">10 لفات — الكونت بينزلق لتحت كل لفة</div>
       <div class="pkg-cost" id="pkgCostSliding">-</div>
     </div>
     <div class="pkg" onclick="selectPkg(this,'expanded')">
-      <div class="pkg-img l"><img src="images/count-full.png" alt="" onerror="this.onerror=null;this.src='images/wild-base.png'"></div>
-      <div class="pkg-name">EXPANDED &amp; STICKY WILD</div>
-      <div class="pkg-desc">10 لفات مجانية — الكونت يتمدد على البكرة كلها ويلتصق</div>
+      <div class="pkg-img"><img src="images/count-full.png" alt="" onerror="this.onerror=null;this.src='images/wild-base.png'"></div>
+      <div class="pkg-name">EXPANDED &amp; STICKY</div>
+      <div class="pkg-desc">10 لفات — يتمدد على البكرة كلها ويلتصق</div>
       <div class="pkg-cost" id="pkgCostExpanded">-</div>
     </div>
   </div>
@@ -189,14 +188,13 @@ window.__dataReady=false;
     if(window.__fitStage) window.__fitStage();
   }
 
-  /* الشريط ما يبلش يتحرك إلا بعد ما الفيديو يخلص ويثبت على آخر فريم (أو لو فشل/اتأخر) */
   function beginProgress(){
     if(started) return;
     started = true;
     t0 = Date.now();
     iv = setInterval(function(){
       p += Math.random()*15+5;
-      var late = Date.now()-t0 > 90000; /* سقف أمان 1.5 دقيقة */
+      var late = Date.now()-t0 > 90000;
       if(!window.__dataReady && !late) p = Math.min(p,90);
       if(p>=100){ p=100; clearInterval(iv); setTimeout(done,300); }
       bar.style.width=p+'%'; pct.textContent=Math.floor(p)+'%';
@@ -204,11 +202,11 @@ window.__dataReady=false;
   }
 
   if(vid){
-    vid.addEventListener('ended', beginProgress);   /* الحالة الطبيعية: خلص الفيديو */
-    vid.addEventListener('error', beginProgress);    /* الفيديو مش موجود/تعطّل */
+    vid.addEventListener('ended', beginProgress);
+    vid.addEventListener('error', beginProgress);
     var playPromise = vid.play();
-    if(playPromise && playPromise.catch) playPromise.catch(beginProgress); /* المتصفح منع التشغيل التلقائي */
-    setTimeout(beginProgress, 8000); /* صمام أمان لو الفيديو طويل جدًا أو حدث انحشر */
+    if(playPromise && playPromise.catch) playPromise.catch(beginProgress);
+    setTimeout(beginProgress, 8000);
   } else {
     beginProgress();
   }
@@ -226,13 +224,10 @@ const R=n=>Math.round(n);
 const pick=l=>{let r=Math.random()*l.reduce((s,x)=>s+x.weight,0);for(const i of l){r-=i.weight;if(r<=0)return i;}return l[l.length-1];};
 
 const REELS=5,ROWS=4,FREE_SPINS=10,DC_MULT=1.25;
-/* 💰 أسعار شراء البونص الثلاثة = أضعاف الرهان (من صور اللعبة الحقيقية عند رهان 5): 100× / 200× / 300× */
 const BUY_COST_MULT={sticky:100,sliding:200,expanded:300};
-const IMG={wild:'images/wild-base.png',scatter:'images/scatter.png',blank:'images/bat.png', /* 🆕 الخفاش = الرمز الفاضي */
+const IMG={wild:'images/wild-base.png',scatter:'images/scatter.png',blank:'images/bat.png',
   syringe:'images/syringe.png',shackle:'images/shackle.png',scalpel:'images/scalpel.png',potion:'images/potion.png',
   bloodbag:'images/blood-bag.png',brain:'images/brain.png',lungs:'images/lungs.png',eyes:'images/eyes-jar.png'};
-/* 🆕 جدول الدفع مطابق 100% للعبة المرجعية (أضعاف الرهان). الربح/الخسارة بيتحكم فيه الخفاش (الرمز الفاضي)
-   + الموازن تحت، ومحسوب بمحاكاة: RTP كلي ≈ 86-87%، فوز كل ~5 لفات. */
 const PAY_MULT=1;
 const PAY={
   brain:{3:5*PAY_MULT,4:15*PAY_MULT,5:50*PAY_MULT},
@@ -244,13 +239,12 @@ const PAY={
   potion:{3:3*PAY_MULT,4:5*PAY_MULT,5:10*PAY_MULT},
   shackle:{3:3*PAY_MULT,4:5*PAY_MULT,5:10*PAY_MULT}
 };
-/* الكونت (wild) خفيف الوزن (0.5) وممنوع كلياً من العمود الثاني (index1) — stripWild بتشيله من قائمة ذاك العمود. */
 const BASE_SYMS=[{key:'syringe',weight:12},{key:'shackle',weight:8},{key:'scalpel',weight:11},{key:'potion',weight:8},
   {key:'bloodbag',weight:10},{key:'brain',weight:6},{key:'lungs',weight:8},{key:'eyes',weight:9}];
 function buildPool(wildW,scatW){ return [...BASE_SYMS,{key:'wild',weight:wildW},{key:'scatter',weight:scatW}]; }
 const stripWild = pool => pool.filter(s=>s.key!=='wild');
 const POOL_BASE=buildPool(.5,2), POOL_BASE_NOWILD=stripWild(POOL_BASE);
-const POOL_DC=buildPool(.5,2.2), POOL_DC_NOWILD=stripWild(POOL_DC); /* 🆕 2.45 ← 2.2 */
+const POOL_DC=buildPool(.5,2.2), POOL_DC_NOWILD=stripWild(POOL_DC);
 const POOL_FREE=buildPool(.4,2), POOL_FREE_NOWILD=stripWild(POOL_FREE);
 const WMULTS=[{val:2,weight:75},{val:3,weight:17},{val:5,weight:6},{val:10,weight:2}];
 const LINES=[[1,1,1,1,1],[0,0,0,0,0],[2,2,2,2,2],[3,3,3,3,3],[0,1,2,1,0],[3,2,1,2,3],[1,0,0,0,1],[2,3,3,3,2],[0,0,1,0,0],[3,3,2,3,3],
@@ -259,48 +253,74 @@ const BETS=[300,600,1000,1500,3000];
 
 let balance=0,bet=300,betIdx=0,spinning=false,totalSpins=0,totalWins=0;
 let inFree=false,freeLeft=0,freeWin=0,currentGrid=null,dc=false,speed=0,autoLeft=0,autoInfinite=false;
-/* حالة أنواع ويلد اللفات المجانية الثلاثة */
-let freeMode=null;                 // 'sticky' | 'sliding' | 'expanded' | null
-let stickyWilds={};                // "r,row" -> mult  (sticky + expanded)
-let slidingWilds=[];               // [{r,row,mult}]   (sliding)
-let expandedReels={};              // r -> mult        (expanded: بكرة كاملة ثابتة)
+let freeMode=null;
+let stickyWilds={};
+let slidingWilds=[];
+let expandedReels={};
 let pendingPkg=null, buyBet=300, buyBetIdx=0;
 
-/* ===== الأصوات (مولّدة + ملفات اختيارية بمجلد images) ===== */
+/* ===== 🆕 أصوات رعب أصلية — ما عاد نستخدم نغمات الشجرة. نغمات منخفضة/ناقصة (minor)
+   بدل الماجور الفرحة، خلفية مستمرة بمستوى متوسط (مو قوية)، وصوت بكرات أعمق. ===== */
 const Sound=(()=>{
-  let ctx=null,on=true,amb=null,musicBroken=false;
+  let ctx=null,on=true,amb=null,musicBroken=false,started=false;
   const ac=()=>{if(!ctx){try{ctx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}if(ctx&&ctx.state==='suspended')ctx.resume().catch(()=>{});return ctx;};
-  function tone(f,d,type='sine',v=.2,delay=0){if(!on)return;const c=ac();if(!c)return;const t=c.currentTime+delay,o=c.createOscillator(),g=c.createGain();
-    o.type=type;o.frequency.setValueAtTime(f,t);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.012);g.gain.exponentialRampToValueAtTime(.0001,t+d);
-    o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+d+.02);}
-  function noise(d,v=.1,filt=2500){if(!on)return;const c=ac();if(!c)return;const n=Math.floor(c.sampleRate*d),b=c.createBuffer(1,n,c.sampleRate),a=b.getChannelData(0);
-    for(let i=0;i<n;i++)a[i]=(Math.random()*2-1)*(1-i/n);const s=c.createBufferSource();s.buffer=b;const f=c.createBiquadFilter();f.type='lowpass';f.frequency.value=filt;
-    const g=c.createGain();g.gain.setValueAtTime(v,c.currentTime);g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+d);s.connect(f);f.connect(g);g.connect(c.destination);s.start();}
+  function tone(f,d,type='sine',v=.2,delay=0,fEnd=null){
+    if(!on)return;const c=ac();if(!c)return;const t=c.currentTime+delay,o=c.createOscillator(),g=c.createGain();
+    o.type=type;o.frequency.setValueAtTime(f,t);
+    if(fEnd)o.frequency.exponentialRampToValueAtTime(fEnd,t+d);
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.015);g.gain.exponentialRampToValueAtTime(.0001,t+d);
+    o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+d+.02);
+  }
+  function noise(d,v=.1,filt=2500,hp=0){
+    if(!on)return;const c=ac();if(!c)return;const n=Math.floor(c.sampleRate*d),b=c.createBuffer(1,n,c.sampleRate),a=b.getChannelData(0);
+    for(let i=0;i<n;i++)a[i]=(Math.random()*2-1)*(1-i/n);
+    const s=c.createBufferSource();s.buffer=b;
+    const f=c.createBiquadFilter();f.type='lowpass';f.frequency.value=filt;
+    const g=c.createGain();g.gain.setValueAtTime(v,c.currentTime);g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+d);
+    if(hp){const hf=c.createBiquadFilter();hf.type='highpass';hf.frequency.value=hp;s.connect(hf);hf.connect(f);}
+    else s.connect(f);
+    f.connect(g);g.connect(c.destination);s.start();
+  }
   const bg=$('bgMusic'),sS=$('sfxSpin'),sW=$('sfxWild');let sSb=false,sWb=false;
-  bg.volume=.22;bg.addEventListener('error',()=>{musicBroken=true;if(on&&started)ambient();});
-  sS.volume=.4;sS.addEventListener('error',()=>{sSb=true;});sW.volume=.6;sW.addEventListener('error',()=>{sWb=true;});
-  let started=false;
-  function ambient(){const c=ac();if(!c||amb)return;const m=c.createGain();m.gain.setValueAtTime(0,c.currentTime);m.gain.linearRampToValueAtTime(.03,c.currentTime+2);m.connect(c.destination);
-    const os=[110,164.8,220].map(f=>{const o=c.createOscillator();o.type='sine';o.frequency.value=f;o.connect(m);o.start();return o;});amb={m,os};}
-  function stopAmb(){if(!amb)return;const a=amb;amb=null;a.m.gain.linearRampToValueAtTime(0,ac().currentTime+.5);setTimeout(()=>a.os.forEach(o=>{try{o.stop();}catch(e){}}),600);}
+  bg.volume=.14;bg.addEventListener('error',()=>{musicBroken=true;if(on&&started)ambient();});
+  sS.volume=.35;sS.addEventListener('error',()=>{sSb=true;});sW.volume=.55;sW.addEventListener('error',()=>{sWb=true;});
+
+  /* درون رعب: نغمتين منخفضتين متنافرتين قليلاً (تريتون) بدل الأوكتاف المريح، بمستوى متوسط لا قوي */
+  function ambient(){
+    const c=ac();if(!c||amb)return;
+    const m=c.createGain();m.gain.setValueAtTime(0,c.currentTime);m.gain.linearRampToValueAtTime(.045,c.currentTime+2.5);m.connect(c.destination);
+    const os=[55,77.8,110].map((f,i)=>{
+      const o=c.createOscillator();o.type=i===1?'sawtooth':'sine';o.frequency.value=f;
+      const lfo=c.createOscillator();lfo.frequency.value=.07+i*.02;
+      const lfoGain=c.createGain();lfoGain.gain.value=1.5;
+      lfo.connect(lfoGain);lfoGain.connect(o.frequency);lfo.start();
+      o.connect(m);o.start();return o;
+    });
+    amb={m,os};
+  }
+  function stopAmb(){if(!amb)return;const a=amb;amb=null;a.m.gain.linearRampToValueAtTime(0,ac().currentTime+.6);setTimeout(()=>a.os.forEach(o=>{try{o.stop();}catch(e){}}),700);}
   function startMusic(){if(!on)return;if(musicBroken){ambient();return;}bg.play().catch(()=>ambient());}
   function stopMusic(){bg.pause();stopAmb();}
   return{
     unlock(){ac();if(!started){started=true;startMusic();}},
     toggle(){on=!on;if(on)startMusic();else stopMusic();return on;},
-    click(){if(!on)return;if(!sSb){try{sS.currentTime=0;sS.play().catch(()=>{});return;}catch(e){}}noise(.05,.1,4000);tone(900,.04,'square',.04);},
-    stop(){noise(.06,.08,1800);tone(180,.08,'sine',.08);},
-    wild(){if(!on)return;if(!sWb){try{sW.currentTime=0;sW.play().catch(()=>{});return;}catch(e){}}tone(90,.25,'sine',.3);[660,880,1320].forEach((f,i)=>tone(f,.35,'triangle',.12,.04+i*.05));},
-    win(){[523,659,784].forEach((f,i)=>tone(f,.22,'triangle',.18,i*.09));},
-    nice(){[587,740,880,987].forEach((f,i)=>tone(f,.25,'triangle',.19,i*.08));},
-    big(){[523,659,784,1047].forEach((f,i)=>tone(f,.3,'triangle',.2,i*.11));noise(.3,.08,6000);},
-    mega(){[392,523,659,784,988,1175,1568].forEach((f,i)=>tone(f,.4,'triangle',.22,i*.09));noise(.5,.12,7000);},
-    free(){[660,880,1100,1320].forEach((f,i)=>tone(f,.25,'triangle',.16,i*.08));}
+    /* نقرة سبين: طقة خشبية جافة (تابوت) بدل الطقة المعدنية */
+    click(){if(!on)return;if(!sSb){try{sS.currentTime=0;sS.play().catch(()=>{});return;}catch(e){}}noise(.07,.14,900,300);tone(140,.05,'square',.06);},
+    /* توقف البكرة: صوت احتكاك خشب خفيف */
+    stop(){noise(.08,.09,1100,250);tone(110,.1,'sine',.07);},
+    /* نزول الكونت: صوت رعد منخفض + جرس كنيسة متنافر خافت */
+    wild(){if(!on)return;if(!sWb){try{sW.currentTime=0;sW.play().catch(()=>{});return;}catch(e){}}
+      tone(55,.5,'sawtooth',.28,0,38);noise(.4,.12,500);
+      [233,311].forEach((f,i)=>tone(f,.4,'sine',.1,.08+i*.06));},
+    /* فوز عادي: نغمتين منخفضتين غامضتين (مو احتفالية ماجور) */
+    win(){[220,277].forEach((f,i)=>tone(f,.28,'triangle',.16,i*.1));},
+    nice(){[196,233,277,330].forEach((f,i)=>tone(f,.3,'triangle',.17,i*.09));},
+    big(){[165,196,233,294].forEach((f,i)=>tone(f,.35,'sawtooth',.16,i*.11));noise(.35,.1,2200);},
+    mega(){[110,165,220,277,330,415].forEach((f,i)=>tone(f,.45,'sawtooth',.18,i*.1));noise(.6,.14,2500);tone(55,.8,'sine',.12,.3);},
+    free(){[220,261,311,349].forEach((f,i)=>tone(f,.3,'triangle',.15,i*.09));}
   };
 })();
 
-/* 🆕 الخفاش (الرمز الفاضي): بس على البكرات 1،3،5 (index 0،2،4) باللعب العادي والـDouble Chance، مو باللفات المجانية.
-   وزنه الأساسي 16، والموازن بيغيّره حسب سير الربح/الخسارة (batFactor). */
 const BAT_W=16;
 let batFactor=1, lastBat=new Set();
 let sessSpins=0, sessBet=0, sessWin=0, coolLeft=0;
@@ -311,7 +331,6 @@ function poolFor(r,noBat){
   if(!noBat && r%2===0) pool=[...pool,{key:'blank',weight:BAT_W*batFactor}];
   return pool;
 }
-/* 🆕 موازن الربح/الخسارة: بعد ربح كبير (≥8× الرهان) لفتين الخفاش أكتر؛ وإذا الربح التراكمي أعلى من الدفع بيزيد، وإذا أقل من النص بيقل */
 function updateBalance(){
   if(coolLeft>0) batFactor=1.7;
   else if(sessSpins>=20){const r=sessWin/sessBet; batFactor=r>1?1.5:(r<0.5?0.6:1);}
@@ -323,7 +342,6 @@ function recordSpin(total){
   if(total>=cost*8) coolLeft=2; else if(coolLeft>0) coolLeft--;
 }
 function randomCell(pool){const key=pick(pool).key,c={key};if(key==='wild')c.mult=pick(WMULTS).val;return c;}
-/* 🆕 الخفاش ما بيعاود يطلع بنفس الخانة (نفس العمود + نفس الصف) باللفة اللي بعدها مباشرة */
 function makeGrid(){
   const newBat=new Set();
   const g=Array.from({length:REELS},(_,r)=>Array.from({length:ROWS},(_,row)=>{
@@ -347,7 +365,9 @@ function render(grid){
   $('reels').appendChild(svg);
   for(let r=0;r<REELS;r++)renderReelColumn(r,grid[r],[]);
 }
-function rollReel(r,oldCells,finalCells,ms){
+/* 🆕 frozenRows: صفوف فيها كونت "لاصق" (Sticky/Expanded) لازم يضل ثابت بمكانه
+   بينما باقي البكرة عم تلف حواليه — طبقة منفصلة فوق الشريط المتحرك، ما بتتحرك معه إطلاقاً. */
+function rollReel(r,oldCells,finalCells,ms,frozenRows=[]){
   return new Promise(res=>{
     const col=$('reelCol'+r);if(!col){res();return;}
     const mid=Array.from({length:8+r*3},()=>randomCell(poolFor(r,true)));
@@ -355,9 +375,26 @@ function rollReel(r,oldCells,finalCells,ms){
     col.style.height=col.offsetHeight+'px';
     col.innerHTML='<div class="strip">'+all.map(c=>cellHTML(c,false)).join('')+'</div>';
     const strip=col.firstChild,h=strip.children[0].offsetHeight+2;
+
+    const frozenEls=[];
+    frozenRows.forEach(row=>{
+      const fc=finalCells[row];
+      if(!fc||fc.key!=='wild')return;
+      const fe=document.createElement('div');
+      fe.className='cell wildc frozen-wild';
+      fe.style.position='absolute';
+      fe.style.left='0';fe.style.right='0';
+      fe.style.top=(row*h)+'px';
+      fe.style.height=(h-2)+'px';
+      fe.style.zIndex='6';
+      fe.innerHTML=`<img src="${IMG.wild}" alt="" onerror="this.style.display='none'"><span class="badge">x${fc.mult}</span>`;
+      col.appendChild(fe);
+      frozenEls.push(fe);
+    });
+
     strip.style.transform=`translateY(${-(all.length-ROWS)*h}px)`;strip.getBoundingClientRect();
     strip.style.transition=`transform ${ms}ms cubic-bezier(.15,.7,.25,1)`;strip.style.transform='translateY(0)';
-    setTimeout(()=>{Sound.stop();renderReelColumn(r,finalCells,[]);res();},ms+30);
+    setTimeout(()=>{Sound.stop();renderReelColumn(r,finalCells,[]);frozenEls.forEach(e=>e.remove());res();},ms+30);
   });
 }
 function drawWinLines(lines){
@@ -372,13 +409,13 @@ function evaluate(grid,b){
     const seq=line.map((row,r)=>grid[r][row]);let target=null,count=0;const cells=[];
     for(let i=0;i<seq.length;i++){
       const s=seq[i];
-      if(s.key==='scatter'||s.key==='blank')break; /* 🆕 الخفاش بيقطع الخط متل القلب */
+      if(s.key==='scatter'||s.key==='blank')break;
       if(s.key==='wild'){count++;cells.push([i,line[i]]);continue;}
       if(target===null){target=s.key;count++;cells.push([i,line[i]]);continue;}
       if(s.key===target){count++;cells.push([i,line[i]]);continue;}
       break;
     }
-    if(target===null)target='brain'; /* خط كله Wild يدفع مثل أعلى رمز */
+    if(target===null)target='brain';
     const t=PAY[target];
     if(t&&t[count]){
       let w=b*t[count];
@@ -419,7 +456,6 @@ function autoNext(){
   setTimeout(()=>{if(!autoInfinite&&autoLeft<=0)return;if(balance<spinCost()){autoInfinite=false;autoLeft=0;showAuto();return;}spin();},600);
 }
 
-/* ===== شراء البونص — ٣ أنواع حقيقية متل اللعبة الأصلية ===== */
 window.openBuy=()=>{
   if(spinning||inFree)return;
   buyBetIdx=betIdx;buyBet=bet;pendingPkg=null;
@@ -457,7 +493,6 @@ window.confirmBuy=async()=>{
   freeMode=pendingPkg;stickyWilds={};slidingWilds=[];expandedReels={};
   Sound.unlock();Sound.free();showFreeIntro(FREE_SPINS);update();await save();setTimeout(()=>spin(),1700);
 };
-/* جدول الأرباح */
 window.openInfo=()=>{
   const order=['brain','lungs','eyes','bloodbag','scalpel','syringe','potion','shackle'];
   $('payList').innerHTML=order.map(k=>`<div class="prow"><img src="${IMG[k]}" alt=""><div>5x ${R(bet*PAY[k][5]).toLocaleString()}<br>4x ${R(bet*PAY[k][4]).toLocaleString()}<br>3x ${R(bet*PAY[k][3]).toLocaleString()}</div></div>`).join('');
@@ -479,7 +514,6 @@ async function loadUser(){
   }
 }
 
-/* قبل توليد الشبكة العشوائية بوضع اللفات المجانية، منطبّق حالة الويلد الخاصة بكل نمط */
 function applyFreeModeWilds(grid){
   if(freeMode==='sticky'||freeMode==='expanded'){
     for(const k in stickyWilds){const [r,row]=k.split(',').map(Number);grid[r][row]={key:'wild',mult:stickyWilds[k]};}
@@ -495,13 +529,12 @@ function applyFreeModeWilds(grid){
   }
   return grid;
 }
-/* بعد ما تترسم اللفة: نسجّل أي ويلد جديد طلع عشوائياً حسب نمط اللفات المجانية الحالي */
 function harvestFreeModeWilds(grid){
   if(freeMode==='sticky'){
     grid.forEach((col,r)=>col.forEach((c,row)=>{ if(c.key==='wild') stickyWilds[r+','+row]=c.mult; }));
   } else if(freeMode==='expanded'){
     grid.forEach((col,r)=>{
-      if(expandedReels[r]!==undefined)return; // هاي البكرة أصلاً صارت ثابتة بالكامل
+      if(expandedReels[r]!==undefined)return;
       const w=col.find(c=>c.key==='wild');
       if(w){ expandedReels[r]=w.mult; for(let row=0;row<ROWS;row++)grid[r][row]={key:'wild',mult:w.mult}; }
       else { col.forEach((c,row)=>{ if(c.key==='wild') stickyWilds[r+','+row]=c.mult; }); }
@@ -511,9 +544,21 @@ function harvestFreeModeWilds(grid){
     grid.forEach((col,r)=>col.forEach((c,row)=>{
       if(c.key==='wild'&&!already.has(r+','+row)) slidingWilds.push({r,row,mult:c.mult});
     }));
-    // كل لفة الكونت بينزلق خانة لتحت؛ إذا طلع برّا الشبكة منشيله
     slidingWilds=slidingWilds.map(w=>({...w,row:w.row+1})).filter(w=>w.row<ROWS);
   }
+}
+
+/* 🆕 يحسب لكل بكرة أي صفوف لازم تضل ثابتة (ما بتشارك بدوران الشريط) هاي اللفة */
+function frozenRowsFor(r){
+  if(!inFree) return [];
+  if(freeMode==='sticky'){
+    return [0,1,2,3].filter(row=>stickyWilds[r+','+row]!==undefined);
+  }
+  if(freeMode==='expanded'){
+    if(expandedReels[r]!==undefined) return [0,1,2,3];
+    return [0,1,2,3].filter(row=>stickyWilds[r+','+row]!==undefined);
+  }
+  return [];
 }
 
 window.spin=function(){
@@ -524,11 +569,11 @@ window.spin=function(){
   $('result').textContent='';const sl=$('lineOverlay');if(sl)sl.innerHTML='';
   if(!inFree){balance=R(balance-cost);totalSpins++;}
   update();
-  if(!inFree) updateBalance(); /* 🆕 */
+  if(!inFree) updateBalance();
   let grid=makeGrid();const old=currentGrid||grid;
   if(inFree) grid=applyFreeModeWilds(grid);
   const base=[900,650,450][speed];
-  Promise.all(grid.map((_,r)=>rollReel(r,old[r],grid[r],base+r*220))).then(()=>{currentGrid=grid;resolveSpin(grid);});
+  Promise.all(grid.map((_,r)=>rollReel(r,old[r],grid[r],base+r*220,frozenRowsFor(r)))).then(()=>{currentGrid=grid;resolveSpin(grid);});
 };
 function showFreeIntro(n){$('fsCount').textContent=n;$('fsIntro').style.display='flex';setTimeout(()=>{$('fsIntro').style.display='none';},1600);}
 function showWinOverlay(amount,label){
@@ -540,7 +585,7 @@ function showWinOverlay(amount,label){
 async function resolveSpin(grid){
   const{total,wins,lines,sc}=evaluate(grid,bet);
   const wasFree=inFree;
-  if(!wasFree) recordSpin(total); /* 🆕 */
+  if(!wasFree) recordSpin(total);
   if(wasFree)harvestFreeModeWilds(grid);
   for(let r=0;r<REELS;r++){const rows=wins.filter(([wr])=>wr===r).map(([,row])=>row);if(rows.length)renderReelColumn(r,grid[r],rows);}
   drawWinLines(lines);
