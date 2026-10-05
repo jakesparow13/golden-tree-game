@@ -507,7 +507,7 @@ const ICONS = {
    قائمة الألعاب — القايمة النهائية (6 ألعاب)
    ===================================================================== */
 const GAMES = [
-  { id:'counts-curse',   name:"Count's Curse",             img:'counts-curse.jpg',           icon:ICONS.countsCurse,   tint:'rgba(61,220,151,0.3)',  tag:null,  ready:false },
+  { id:'counts-curse',   name:"Count's Curse",             img:'counts-curse.jpg',           icon:ICONS.countsCurse,   tint:'rgba(61,220,151,0.3)',  tag:null,  ready:true },
   { id:'aviator',        name:'Aviator',                    img:'aviator.jpg',                icon:ICONS.aviator,       tint:'rgba(230,57,70,0.3)',   tag:null,  ready:false },
   { id:'wild-bounty',    name:'Wild Bounty Showdown',       img:'wild-bounty-showdown.jpg',   icon:ICONS.wildBounty,    tint:'rgba(138,90,43,0.3)',   tag:null,  ready:false },
   { id:'spicy-eight',    name:'Spicy Eight',                img:'spicy-eight.jpg',            icon:ICONS.spicyEight,    tint:'rgba(255,140,26,0.3)',  tag:null,  ready:false },
@@ -571,11 +571,14 @@ function startLoading(onDone){
   }, 130);
 }
 
-/* ✅ التعديل الوحيد: زر "العب الآن" بيوجّه لمجلد اللعبة الجديدة
+/* ✅ زر "العب الآن" بيوجّه لمجلد اللعبة
    ومعو location.hash (فيه بيانات تيليجرام) عشان ما تنفقد */
 window.openGame = function(id){
   if(id === 'golden-tree'){
     location.href = 'golden-tree/index.html' + location.hash;
+  }
+  if(id === 'counts-curse'){ /* 🆕 */
+    location.href = 'counts-curse/index.html' + location.hash;
   }
 }
 
