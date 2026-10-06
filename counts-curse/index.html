@@ -175,6 +175,7 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 <audio id="sfxSpin" src="images/spin-click.mp3" preload="auto" style="display:none"></audio>
 <audio id="sfxReel" src="images/reel-stop.mp3" preload="auto" style="display:none"></audio>
 <audio id="sfxWild" src="images/wild-drop.mp3" preload="auto" style="display:none"></audio>
+<audio id="sfxHeart" src="images/heart-beep.mp3" preload="auto" style="display:none"></audio>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
 window.__dataReady=false;
@@ -303,12 +304,13 @@ const Sound=(()=>{
   }
   function stopAmb(){if(!amb)return;const a=amb;amb=null;a.m.gain.linearRampToValueAtTime(0,ac().currentTime+.6);setTimeout(()=>a.os.forEach(o=>{try{o.stop();}catch(e){}}),700);}
 
-  const bg=$('bgMusic'), sSpin=$('sfxSpin'), sReel=$('sfxReel'), sWild=$('sfxWild');
-  let bgBroken=false, spinBroken=false, reelBroken=false, wildBroken=false;
+  const bg=$('bgMusic'), sSpin=$('sfxSpin'), sReel=$('sfxReel'), sWild=$('sfxWild'), sHeart=$('sfxHeart');
+  let bgBroken=false, spinBroken=false, reelBroken=false, wildBroken=false, heartBroken=false;
   bg.volume=.40; bg.addEventListener('error',()=>{bgBroken=true;if(on&&started)ambient();});
   sSpin.volume=.45; sSpin.addEventListener('error',()=>{spinBroken=true;});
   sReel.volume=.32; sReel.loop=true; sReel.addEventListener('error',()=>{reelBroken=true;});
   sWild.volume=.60; sWild.addEventListener('error',()=>{wildBroken=true;});
+  sHeart.volume=.55; sHeart.addEventListener('error',()=>{heartBroken=true;});
 
   function startMusic(){if(!on)return;if(bgBroken){ambient();return;}bg.play().catch(()=>ambient());}
   function stopMusic(){bg.pause();stopAmb();}
@@ -340,6 +342,18 @@ const Sound=(()=>{
       if(!on)return;
       if(!wildBroken){try{sWild.currentTime=0;sWild.play().catch(()=>{});return;}catch(e){}}
       tone(55,.5,'sawtooth',.3,0,38);noise(.4,.14,500);[233,311].forEach((f,i)=>tone(f,.4,'sine',.11,.08+i*.06));
+    },
+    /* 🆕 نزول رمز القلب: صوت جهاز مراقبة القلب بالعناية المركزة (بيب نقي 3 مرات) — لو في ملف images/heart-beep.mp3 بينشغل هو، وإلا بيتولّد بالكود */
+    heart(){
+      if(!on)return;
+      if(!heartBroken){try{sHeart.currentTime=0;sHeart.play().catch(()=>{});return;}catch(e){}}
+      const c=ac();if(!c)return;
+      [0,.62,1.24].forEach(d=>{
+        const t=c.currentTime+d,o=c.createOscillator(),g=c.createGain();
+        o.type='sine';o.frequency.value=1000;
+        g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.2,t+.008);g.gain.setValueAtTime(.2,t+.11);g.gain.linearRampToValueAtTime(0,t+.13);
+        o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+.15);
+      });
     },
     win(){[220,277].forEach((f,i)=>tone(f,.28,'triangle',.17,i*.1));},
     nice(){[196,233,277,330].forEach((f,i)=>tone(f,.3,'triangle',.18,i*.09));},
@@ -618,6 +632,7 @@ async function resolveSpin(grid){
   for(let r=0;r<REELS;r++){const rows=wins.filter(([wr])=>wr===r).map(([,row])=>row);if(rows.length)renderReelColumn(r,grid[r],rows);}
   drawWinLines(lines);
   if(grid.some(col=>col.some(c=>c.key==='wild')))Sound.wild();
+  if(grid.some(col=>col.some(c=>c.key==='scatter')))Sound.heart();
   let msg='',big=false;
   if(total>0){
     balance=R(balance+total);totalWins=R(totalWins+total);if(inFree){freeWin=R(freeWin+total);if(freeNatural)sessWin+=total;}
