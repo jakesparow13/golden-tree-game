@@ -97,6 +97,9 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 .wpiece.win{box-shadow:0 0 12px var(--gold);}
 .cell.merged{box-shadow:none;background:none;animation:none;}
 .cell.merged img,.cell.merged .badge{visibility:hidden;}
+#fsPopup{display:none;position:fixed;inset:0;z-index:190;align-items:center;justify-content:center;background:rgba(0,0,0,.78);}
+#fsPopup img{max-width:92%;max-height:88%;object-fit:contain;border-radius:14px;box-shadow:0 0 30px rgba(0,0,0,.8);}
+#fsPopupFallback{display:none;font-family:'Amiri',serif;font-size:26px;color:var(--gold);background:rgba(20,6,10,.94);border:2px solid var(--gold);border-radius:20px;padding:24px 30px;text-align:center;line-height:1.7;}
 </style>
 </head>
 <body>
@@ -137,6 +140,7 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 
 <div class="fs-intro" id="fsIntro"><div>لديك<b id="fsCount">10</b>لفات مجانية</div></div>
 <div class="win-overlay" id="winOverlay"><div id="winTitle">BIG WIN</div><div id="winAmt">0</div></div>
+<div id="fsPopup"><img src="images/fs-popup.jpg" alt="" onerror="this.style.display='none';document.getElementById('fsPopupFallback').style.display='block'"><div id="fsPopupFallback">تهانينا<br>لقد فزت بـ 10 لفات مجانية<br>اضغط في أي مكان للبدء</div></div>
 
 <div class="modal" id="buyModal"><div class="card">
   <h3>BUY BONUS</h3>
@@ -163,6 +167,26 @@ button:disabled{opacity:.5;cursor:not-allowed;}
       <div class="pkg-name">EXPANDED &amp; STICKY</div>
       <div class="pkg-desc">10 لفات — يتمدد على البكرة كلها ويلتصق</div>
       <div class="pkg-cost" id="pkgCostExpanded">-</div>
+    </div>
+  </div>
+  <div class="pkg-grid">
+    <div class="pkg" onclick="selectPkg(this,'h3')">
+      <div class="pkg-img"><img src="images/scatter.png" alt=""></div>
+      <div class="pkg-name">3 قلوب</div>
+      <div class="pkg-desc">لفة فيها 3 قلوب مضمونة + 10 لفات مجانية</div>
+      <div class="pkg-cost" id="pkgCostH3">-</div>
+    </div>
+    <div class="pkg" onclick="selectPkg(this,'h4')">
+      <div class="pkg-img"><img src="images/scatter.png" alt=""></div>
+      <div class="pkg-name">4 قلوب</div>
+      <div class="pkg-desc">لفة فيها 4 قلوب مضمونة + 10 لفات مجانية</div>
+      <div class="pkg-cost" id="pkgCostH4">-</div>
+    </div>
+    <div class="pkg" onclick="selectPkg(this,'h5')">
+      <div class="pkg-img"><img src="images/scatter.png" alt=""></div>
+      <div class="pkg-name">5 قلوب</div>
+      <div class="pkg-desc">لفة فيها 5 قلوب مضمونة + 10 لفات مجانية</div>
+      <div class="pkg-cost" id="pkgCostH5">-</div>
     </div>
   </div>
   <div class="mbtns"><button class="c" onclick="closeBuy()">إلغاء</button><button class="ok" id="confirmBuyBtn" onclick="confirmBuy()" disabled>شراء</button></div>
@@ -199,8 +223,11 @@ window.__dataReady=false;
     if(window.__fitStage) window.__fitStage();
   }
 
+  var t0=Date.now(), gateT=null;
   function beginProgress(){
     if(started) return;
+    var wait=9000-(Date.now()-t0);
+    if(wait>0){ if(!gateT) gateT=setTimeout(beginProgress,wait); return; }
     started = true;
     iv = setInterval(function(){
       p += Math.random()*15+5;
@@ -237,7 +264,8 @@ const R=n=>Math.round(n);
 const pick=l=>{let r=Math.random()*l.reduce((s,x)=>s+x.weight,0);for(const i of l){r-=i.weight;if(r<=0)return i;}return l[l.length-1];};
 
 const REELS=5,ROWS=4,FREE_SPINS=10,DC_MULT=1.25;
-const BUY_COST_MULT={sticky:100,sliding:200,expanded:300};
+const BUY_COST_MULT={sticky:100,sliding:200,expanded:300,h3:10,h4:15,h5:8000/300};
+const SCATTER_PAY={3:10,4:15,5:8000/300};
 const IMG={wild:'images/wild-base.png',scatter:'images/scatter.png',blank:'images/bat.png',
   syringe:'images/syringe.png',shackle:'images/shackle.png',scalpel:'images/scalpel.png',potion:'images/potion.png',
   bloodbag:'images/blood-bag.png',brain:'images/brain.png',lungs:'images/lungs.png',eyes:'images/eyes-jar.png'};
@@ -275,6 +303,7 @@ let stickyWilds={};
 let slidingWilds=[];
 let expandedReels={};
 let pendingPkg=null, buyBet=300, buyBetIdx=0;
+let holdBadge=false, forceHearts=0, boughtSpin=false;
 
 const Sound=(()=>{
   let ctx=null,on=true,amb=null,started=false;
@@ -548,13 +577,14 @@ function evaluate(grid,b){
     }
   });
   let sc=0;grid.forEach(col=>col.forEach(c=>{if(c.key==='scatter')sc++;}));
-  return{total:R(total),wins,lines,sc};
+  const scWin=(!inFree&&sc>=3)?R(b*SCATTER_PAY[Math.min(sc,5)]):0;
+  return{total:R(total+scWin),wins,lines,sc};
 }
 
 const spinCost=()=>dc?R(bet*DC_MULT):bet;
 function update(){
   $('balance').textContent=R(balance).toLocaleString();
-  const b=$('freeBadge');b.style.display=inFree?'block':'none';b.textContent=`لفات مجانية متبقية: ${freeLeft}`;
+  const b=$('freeBadge');b.style.display=(inFree&&!holdBadge)?'block':'none';b.textContent=`لفات مجانية متبقية: ${freeLeft}`;
   $('betDisp').textContent=bet.toLocaleString();
   $('dcCost').textContent=R(bet*DC_MULT).toLocaleString()+' NSP';
   $('dcState').textContent=dc?'ON':'OFF';$('dcBtn').classList.toggle('on',dc);
@@ -593,6 +623,9 @@ function updateBuyCosts(){
   $('pkgCostSticky').textContent=R(buyBet*BUY_COST_MULT.sticky).toLocaleString()+' NSP';
   $('pkgCostSliding').textContent=R(buyBet*BUY_COST_MULT.sliding).toLocaleString()+' NSP';
   $('pkgCostExpanded').textContent=R(buyBet*BUY_COST_MULT.expanded).toLocaleString()+' NSP';
+  $('pkgCostH3').textContent=R(buyBet*BUY_COST_MULT.h3).toLocaleString()+' NSP';
+  $('pkgCostH4').textContent=R(buyBet*BUY_COST_MULT.h4).toLocaleString()+' NSP';
+  $('pkgCostH5').textContent=R(buyBet*BUY_COST_MULT.h5).toLocaleString()+' NSP';
 }
 window.buyStepBet=d=>{
   buyBetIdx=Math.max(0,Math.min(BETS.length-1,buyBetIdx+d));
@@ -612,6 +645,7 @@ window.confirmBuy=async()=>{
   if(balance<cost){$('result').innerHTML=`<span class="lose-t">رصيدك غير كافي (${cost.toLocaleString()})</span>`;return;}
   betIdx=buyBetIdx;bet=buyBet;
   balance=R(balance-cost);
+  if(/^h\d$/.test(pendingPkg)){forceHearts=+pendingPkg[1];Sound.unlock();update();await save();spin();return;}
   inFree=true;freeLeft=FREE_SPINS;freeWin=0;
   freeMode=pendingPkg;freeNatural=false;stickyWilds={};slidingWilds=[];expandedReels={};
   Sound.unlock();Sound.free();showFreeIntro(FREE_SPINS);update();await save();setTimeout(()=>spin(),1700);
@@ -706,17 +740,39 @@ function frozenRowsFor(r){
 window.spin=function(){
   if(spinning)return;
   const cost=spinCost();
-  if(!inFree&&balance<cost){$('result').innerHTML='<span class="lose-t">رصيدك غير كافي</span>';return;}
+  if(!inFree&&!forceHearts&&balance<cost){$('result').innerHTML='<span class="lose-t">رصيدك غير كافي</span>';return;}
   spinning=true;lockUI(true);Sound.unlock();Sound.click();Sound.reelsStart();
   $('result').textContent='';const sl=$('lineOverlay');if(sl)sl.innerHTML='';
-  if(!inFree){balance=R(balance-cost);totalSpins++;}
+  if(!inFree&&!forceHearts){balance=R(balance-cost);totalSpins++;}
   update();
   if(!inFree) updateBalance();
   let grid=makeGrid();const old=currentGrid||grid;
+  if(forceHearts){grid=forceHeartGrid(grid,forceHearts);boughtSpin=true;forceHearts=0;}
   if(inFree) grid=applyFreeModeWilds(grid);
   const base=[900,650,450][speed];
   Promise.all(grid.map((_,r)=>rollReel(r,old[r],grid[r],base+r*220,frozenRowsFor(r)))).then(()=>{Sound.reelsStop();currentGrid=grid;resolveSpin(grid);});
 };
+function waitFsPopup(){
+  return new Promise(res=>{
+    const pop=$('fsPopup');pop.style.display='flex';
+    const go=()=>{pop.removeEventListener('click',go);pop.style.display='none';holdBadge=false;update();res();};
+    pop.addEventListener('click',go);
+  });
+}
+function forceHeartGrid(grid,n){
+  const noSc=r=>poolFor(r,true).filter(x=>x.key!=='scatter');
+  const pos=[];
+  for(let r=0;r<REELS;r++)for(let row=0;row<ROWS;row++){
+    if(grid[r][row].key==='scatter')grid[r][row]=randomCell(noSc(r));
+    pos.push([r,row]);
+  }
+  for(let i=0;i<n;i++){
+    const k=Math.floor(Math.random()*pos.length);
+    const [r,row]=pos.splice(k,1)[0];
+    grid[r][row]={key:'scatter'};
+  }
+  return grid;
+}
 function showFreeIntro(n){$('fsCount').textContent=n;$('fsIntro').style.display='flex';setTimeout(()=>{$('fsIntro').style.display='none';},1600);}
 function showWinOverlay(amount,label){
   const ov=$('winOverlay');$('winTitle').textContent=label;$('winAmt').textContent='0';ov.classList.add('show');
@@ -728,7 +784,8 @@ async function resolveSpin(grid){
   const wasFree=inFree;
   if(wasFree)harvestFreeModeWilds(grid);
   const{total,wins,lines,sc}=evaluate(grid,bet);
-  if(!wasFree) recordSpin(total);
+  if(!wasFree&&!boughtSpin) recordSpin(total);
+  boughtSpin=false;
   for(let r=0;r<REELS;r++){const rows=wins.filter(([wr])=>wr===r).map(([,row])=>row);renderReelColumn(r,grid[r],rows);}
   drawWinLines(lines);
   if(grid.some(col=>col.some(c=>c.key==='wild')))Sound.wild();
@@ -744,13 +801,13 @@ async function resolveSpin(grid){
   }
   let started=false;
   if(sc>=3){
-    if(!inFree){inFree=true;freeLeft=FREE_SPINS;freeWin=total;freeMode='sticky';freeNatural=true;stickyWilds={};slidingWilds=[];expandedReels={};started=true;Sound.free();showFreeIntro(FREE_SPINS);}
+    if(!inFree){inFree=true;freeLeft=FREE_SPINS;freeWin=total;freeMode='sticky';freeNatural=true;stickyWilds={};slidingWilds=[];expandedReels={};started=true;Sound.free();holdBadge=true;}
     else{freeLeft+=5;msg+=(msg?'<br>':'')+'<span class="win-t">+5 لفات مجانية</span>';Sound.free();}
   }
   $('result').innerHTML=msg;update();await save();
   setTimeout(()=>{
     spinning=false;
-    if(started){update();setTimeout(()=>spin(),1800);return;}
+    if(started){update();waitFsPopup().then(()=>setTimeout(()=>spin(),300));return;}
     if(inFree){
       freeLeft--;update();
       if(freeLeft<=0){
