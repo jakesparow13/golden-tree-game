@@ -169,26 +169,6 @@ button:disabled{opacity:.5;cursor:not-allowed;}
       <div class="pkg-cost" id="pkgCostExpanded">-</div>
     </div>
   </div>
-  <div class="pkg-grid">
-    <div class="pkg" onclick="selectPkg(this,'h3')">
-      <div class="pkg-img"><img src="images/scatter.png" alt=""></div>
-      <div class="pkg-name">3 قلوب</div>
-      <div class="pkg-desc">لفة فيها 3 قلوب مضمونة + 10 لفات مجانية</div>
-      <div class="pkg-cost" id="pkgCostH3">-</div>
-    </div>
-    <div class="pkg" onclick="selectPkg(this,'h4')">
-      <div class="pkg-img"><img src="images/scatter.png" alt=""></div>
-      <div class="pkg-name">4 قلوب</div>
-      <div class="pkg-desc">لفة فيها 4 قلوب مضمونة + 10 لفات مجانية</div>
-      <div class="pkg-cost" id="pkgCostH4">-</div>
-    </div>
-    <div class="pkg" onclick="selectPkg(this,'h5')">
-      <div class="pkg-img"><img src="images/scatter.png" alt=""></div>
-      <div class="pkg-name">5 قلوب</div>
-      <div class="pkg-desc">لفة فيها 5 قلوب مضمونة + 10 لفات مجانية</div>
-      <div class="pkg-cost" id="pkgCostH5">-</div>
-    </div>
-  </div>
   <div class="mbtns"><button class="c" onclick="closeBuy()">إلغاء</button><button class="ok" id="confirmBuyBtn" onclick="confirmBuy()" disabled>شراء</button></div>
 </div></div>
 <div class="modal" id="infoModal"><div class="card">
@@ -264,7 +244,8 @@ const R=n=>Math.round(n);
 const pick=l=>{let r=Math.random()*l.reduce((s,x)=>s+x.weight,0);for(const i of l){r-=i.weight;if(r<=0)return i;}return l[l.length-1];};
 
 const REELS=5,ROWS=4,FREE_SPINS=10,DC_MULT=1.25;
-const BUY_COST_MULT={sticky:100,sliding:200,expanded:300,h3:10,h4:15,h5:8000/300};
+const BUY_COST_MULT={sticky:100,sliding:200,expanded:300};
+const BUY_HEARTS={sticky:3,sliding:4,expanded:5};
 const SCATTER_PAY={3:10,4:15,5:8000/300};
 const IMG={wild:'images/wild-base.png',scatter:'images/scatter.png',blank:'images/bat.png',
   syringe:'images/syringe.png',shackle:'images/shackle.png',scalpel:'images/scalpel.png',potion:'images/potion.png',
@@ -303,7 +284,7 @@ let stickyWilds={};
 let slidingWilds=[];
 let expandedReels={};
 let pendingPkg=null, buyBet=300, buyBetIdx=0;
-let holdBadge=false, forceHearts=0, boughtSpin=false;
+let holdBadge=false, forceHearts=0, boughtSpin=false, boughtMode=null;
 
 const Sound=(()=>{
   let ctx=null,on=true,amb=null,started=false;
@@ -345,13 +326,13 @@ const Sound=(()=>{
   bg.volume=.40; bg.addEventListener('error',()=>{bgBroken=true;if(on&&started)ambient();});
   sSpin.volume=.45; sSpin.addEventListener('error',()=>{spinBroken=true;});
   sReel.volume=.32; sReel.loop=true; sReel.addEventListener('error',()=>{reelBroken=true;});
-  sWild.volume=.30; sWild.addEventListener('error',()=>{wildBroken=true;});
+  sWild.volume=.18; sWild.addEventListener('error',()=>{wildBroken=true;});
   sHeart.volume=.55; sHeart.addEventListener('error',()=>{heartBroken=true;});
 
   // كل المؤثرات صارت مفكوكة بالذاكرة وبتشتغل عبر نفس AudioContext مع الموسيقى
   // (بدل ما كل صوت يكون عنصر <audio> لحاله وبيتخانقوا مع بعض عالتلفون)
   const SRC={spin:'images/spin-click.mp3',reel:'images/reel-stop.mp3',wild:'images/wild-drop.mp3',heart:'images/heart-beep.mp3'};
-  const VOL={spin:.45,reel:.32,wild:.30,heart:.55};
+  const VOL={spin:.45,reel:.32,wild:.18,heart:.55};
   const bufs={};
   let bgNode=null, reelPlay=null;
   async function preload(){
@@ -577,7 +558,7 @@ function evaluate(grid,b){
     }
   });
   let sc=0;grid.forEach(col=>col.forEach(c=>{if(c.key==='scatter')sc++;}));
-  const scWin=(!inFree&&sc>=3)?R(b*SCATTER_PAY[Math.min(sc,5)]):0;
+  const scWin=(!inFree&&!boughtSpin&&sc>=3)?R(b*SCATTER_PAY[Math.min(sc,5)]):0;
   return{total:R(total+scWin),wins,lines,sc};
 }
 
@@ -623,9 +604,6 @@ function updateBuyCosts(){
   $('pkgCostSticky').textContent=R(buyBet*BUY_COST_MULT.sticky).toLocaleString()+' NSP';
   $('pkgCostSliding').textContent=R(buyBet*BUY_COST_MULT.sliding).toLocaleString()+' NSP';
   $('pkgCostExpanded').textContent=R(buyBet*BUY_COST_MULT.expanded).toLocaleString()+' NSP';
-  $('pkgCostH3').textContent=R(buyBet*BUY_COST_MULT.h3).toLocaleString()+' NSP';
-  $('pkgCostH4').textContent=R(buyBet*BUY_COST_MULT.h4).toLocaleString()+' NSP';
-  $('pkgCostH5').textContent=R(buyBet*BUY_COST_MULT.h5).toLocaleString()+' NSP';
 }
 window.buyStepBet=d=>{
   buyBetIdx=Math.max(0,Math.min(BETS.length-1,buyBetIdx+d));
@@ -645,7 +623,7 @@ window.confirmBuy=async()=>{
   if(balance<cost){$('result').innerHTML=`<span class="lose-t">رصيدك غير كافي (${cost.toLocaleString()})</span>`;return;}
   betIdx=buyBetIdx;bet=buyBet;
   balance=R(balance-cost);
-  if(/^h\d$/.test(pendingPkg)){forceHearts=+pendingPkg[1];Sound.unlock();update();await save();spin();return;}
+  forceHearts=BUY_HEARTS[pendingPkg];boughtMode=pendingPkg;Sound.unlock();update();await save();spin();return;
   inFree=true;freeLeft=FREE_SPINS;freeWin=0;
   freeMode=pendingPkg;freeNatural=false;stickyWilds={};slidingWilds=[];expandedReels={};
   Sound.unlock();Sound.free();showFreeIntro(FREE_SPINS);update();await save();setTimeout(()=>spin(),1700);
@@ -801,7 +779,7 @@ async function resolveSpin(grid){
   }
   let started=false;
   if(sc>=3){
-    if(!inFree){inFree=true;freeLeft=FREE_SPINS;freeWin=total;freeMode='sticky';freeNatural=true;stickyWilds={};slidingWilds=[];expandedReels={};started=true;Sound.free();holdBadge=true;}
+    if(!inFree){inFree=true;freeLeft=FREE_SPINS;freeWin=total;freeMode=boughtMode||'sticky';freeNatural=!boughtMode;stickyWilds={};slidingWilds=[];expandedReels={};started=true;Sound.free();holdBadge=true;boughtMode=null;}
     else{freeLeft+=5;msg+=(msg?'<br>':'')+'<span class="win-t">+5 لفات مجانية</span>';Sound.free();}
   }
   $('result').innerHTML=msg;update();await save();
