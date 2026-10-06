@@ -375,6 +375,19 @@
     var p2 = v.play();
     if (p2 && p2.catch) p2.catch(finish);
   });
+
+  // أول لمسة/نقرة بأي مكان عالشاشة بتفتح الصوت تلقائيًا بصمت (بدون أي زر ظاهر)
+  // لو كان الفيديو شغال صامت بسبب منع المتصفح للتشغيل التلقائي بالصوت
+  function unmuteOnFirstTouch(){
+    document.removeEventListener('pointerdown', unmuteOnFirstTouch, true);
+    document.removeEventListener('touchstart', unmuteOnFirstTouch, true);
+    if (done || !v.muted) return;
+    v.muted = false;
+    var q = v.play();
+    if (q && q.catch) q.catch(function(){});
+  }
+  document.addEventListener('pointerdown', unmuteOnFirstTouch, true);
+  document.addEventListener('touchstart', unmuteOnFirstTouch, true);
 })();
 </script>
 
