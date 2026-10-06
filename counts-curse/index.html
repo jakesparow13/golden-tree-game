@@ -91,8 +91,6 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 .pkg-img{display:flex;align-items:flex-end;justify-content:center;height:70px;margin-bottom:4px;overflow:hidden;}
 .pkg-img img{object-fit:contain;filter:drop-shadow(0 4px 6px rgba(0,0,0,.6));height:66px;}
 .frozen-wild{display:flex;align-items:center;justify-content:center;background:rgba(10,22,18,.92);border-radius:6px;}
-#retryBox{display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.8);align-items:center;justify-content:center;flex-direction:column;gap:14px;color:var(--gold);font-weight:700;text-align:center;padding:20px;}
-#retryBox button{padding:12px 30px;border-radius:12px;border:none;background:linear-gradient(180deg,#e0243a,#7a0a18);color:#fff;font-weight:800;font-size:16px;}
 .wpiece{position:absolute;left:3px;right:3px;z-index:4;border-radius:6px;overflow:hidden;background:rgba(10,22,18,.92);border:2px solid rgba(224,178,74,.85);}
 .wpiece img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 25%;}
 .wpiece .badge{bottom:3px;right:3px;}
@@ -109,7 +107,6 @@ button:disabled{opacity:.5;cursor:not-allowed;}
   <div class="loading-bar-wrap"><div id="loadingBar"></div></div>
   <div id="loadingPct">0%</div>
 </div>
-<div id="retryBox"><div>تعذّر تحميل اللعبة</div><button onclick="location.reload()">إعادة تحميل</button></div>
 
 <div id="gameScreen"><div id="stage"><div class="container">
   <div class="logo" id="logoTitle">COUNT'S CURSE</div>
@@ -175,26 +172,27 @@ button:disabled{opacity:.5;cursor:not-allowed;}
   <div id="payList"></div>
   <p><b>الكونت (Wild):</b> يعوّض كل الرموز ما عدا القلب، وله مضاعف ×2 ×3 ×5 ×10 (×5 و×10 نادرين).</p>
   <p><b>القلب (Scatter):</b> 3 قلوب أو أكثر بأي مكان = 10 لفات مجانية. 3 قلوب أثناء اللفات المجانية = +5 لفات.</p>
-  <p><b>الخفاش:</b> رمز لا يدفع ويقطع الخط.</p>
+  <p><b>الكأس:</b> رمز لا يدفع ويقطع الخط.</p>
   <p>20 خط دفع، تُحسب من اليسار لليمين.</p>
   <div class="mbtns"><button class="c" onclick="closeInfo()">إغلاق</button></div>
 </div></div>
 
 <audio id="bgMusic" src="images/bg-music.mp3" loop preload="auto" style="display:none"></audio>
-<audio id="sfxSpin" src="images/spin-click.mp3" preload="auto" style="display:none"></audio>
-<audio id="sfxReel" src="images/reel-stop.mp3" preload="auto" style="display:none"></audio>
-<audio id="sfxWild" src="images/wild-drop.mp3" preload="auto" style="display:none"></audio>
-<audio id="sfxHeart" src="images/heart-beep.mp3" preload="auto" style="display:none"></audio>
+<audio id="sfxSpin" src="images/spin-click.mp3" preload="none" style="display:none"></audio>
+<audio id="sfxReel" src="images/reel-stop.mp3" preload="none" style="display:none"></audio>
+<audio id="sfxWild" src="images/wild-drop.mp3" preload="none" style="display:none"></audio>
+<audio id="sfxHeart" src="images/heart-beep.mp3" preload="none" style="display:none"></audio>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
 window.__dataReady=false;
-window.__loadFailed=false;
 (function(){
   var vid=document.getElementById('splashVideo');
   var bar=document.getElementById('loadingBar'), pct=document.getElementById('loadingPct');
-  var started=false, playing=false, p=0, iv=null;
+  var started=false, playing=false, finished=false, p=0, iv=null;
 
   function done(){
+    if(finished) return;
+    finished=true; clearInterval(iv);
     document.getElementById('splashScreen').style.display='none';
     document.getElementById('gameScreen').style.display='block';
     if(window.__fitStage) window.__fitStage();
@@ -206,16 +204,13 @@ window.__loadFailed=false;
     iv = setInterval(function(){
       p += Math.random()*15+5;
       if(!window.__dataReady) p = Math.min(p,90);
-      if(p>=90 && window.__loadFailed && !window.__dataReady){
-        clearInterval(iv);
-        bar.style.width='90%'; pct.textContent='90%';
-        document.getElementById('retryBox').style.display='flex';
-        return;
-      }
       if(p>=100){ p=100; clearInterval(iv); setTimeout(done,300); }
       bar.style.width=p+'%'; pct.textContent=Math.floor(p)+'%';
     },130);
   }
+
+  // بعد دقيقتين بندخل اللعبة بأي حال، وأي شي ما تحمّل بيكمّل تحميل بالخلفية
+  setTimeout(done,120000);
 
   if(vid){
     vid.addEventListener('playing', function(){ playing=true; });
@@ -323,22 +318,66 @@ const Sound=(()=>{
   sWild.volume=.30; sWild.addEventListener('error',()=>{wildBroken=true;});
   sHeart.volume=.55; sHeart.addEventListener('error',()=>{heartBroken=true;});
 
-  function startMusic(){if(!on)return;if(bgBroken){ambient();return;}bg.play().catch(()=>ambient());}
+  // كل المؤثرات صارت مفكوكة بالذاكرة وبتشتغل عبر نفس AudioContext مع الموسيقى
+  // (بدل ما كل صوت يكون عنصر <audio> لحاله وبيتخانقوا مع بعض عالتلفون)
+  const SRC={spin:'images/spin-click.mp3',reel:'images/reel-stop.mp3',wild:'images/wild-drop.mp3',heart:'images/heart-beep.mp3'};
+  const VOL={spin:.45,reel:.32,wild:.30,heart:.55};
+  const bufs={};
+  let bgNode=null, reelPlay=null;
+  async function preload(){
+    const c=ac();if(!c)return;
+    await Promise.all(Object.keys(SRC).map(async k=>{
+      try{
+        const r=await fetch(SRC[k]);if(!r.ok)return;
+        const ab=await r.arrayBuffer();
+        bufs[k]=await new Promise((res,rej)=>{const p=c.decodeAudioData(ab,res,rej);if(p&&p.catch)p.catch(rej);});
+      }catch(e){}
+    }));
+  }
+  function playBuf(k,loop){
+    const c=ac(),b=bufs[k];if(!c||!b)return null;
+    const s=c.createBufferSource(),g=c.createGain();
+    s.buffer=b;s.loop=!!loop;g.gain.value=VOL[k];
+    s.connect(g);g.connect(c.destination);s.start(0);
+    return{s,g};
+  }
+  function routeBg(){
+    const c=ac();if(!c||bgNode)return;
+    try{
+      bgNode=c.createMediaElementSource(bg);
+      const g=c.createGain();g.gain.value=.40;
+      bgNode.connect(g);g.connect(c.destination);bg.volume=1;
+    }catch(e){bgNode=null;}
+  }
+  function endReel(){
+    if(!reelPlay)return;
+    const{s,g}=reelPlay;reelPlay=null;
+    const t=ctx.currentTime;
+    g.gain.cancelScheduledValues(t);g.gain.setValueAtTime(g.gain.value,t);g.gain.linearRampToValueAtTime(0,t+.25);
+    try{s.stop(t+.3);}catch(e){}
+  }
+
+  function startMusic(){if(!on)return;if(bgBroken){ambient();return;}routeBg();bg.play().catch(()=>ambient());}
   function stopMusic(){bg.pause();stopAmb();}
 
   return{
+    preload,
     unlock(){ac();if(!started){started=true;startMusic();}},
-    toggle(){on=!on;if(on)startMusic();else stopMusic();return on;},
+    toggle(){on=!on;if(on)startMusic();else{stopMusic();endReel();}return on;},
     click(){
       if(!on)return;
+      if(bufs.spin){playBuf('spin');return;}
       if(!spinBroken){try{sSpin.currentTime=0;sSpin.play().catch(()=>{});return;}catch(e){}}
       noise(.07,.16,900,300);tone(140,.05,'square',.07);
     },
     reelsStart(){
-      if(!on||reelBroken)return;
+      if(!on)return;
+      if(bufs.reel){endReel();reelPlay=playBuf('reel',true);return;}
+      if(reelBroken)return;
       try{sReel.volume=.32;sReel.currentTime=0;sReel.play().catch(()=>{});}catch(e){}
     },
     reelsStop(){
+      if(reelPlay){endReel();return;}
       if(reelBroken||sReel.paused)return;
       const fade=setInterval(()=>{
         sReel.volume=Math.max(0,sReel.volume-0.04);
@@ -347,6 +386,7 @@ const Sound=(()=>{
     },
     wild(){
       if(!on)return;
+      if(bufs.wild){playBuf('wild');return;}
       if(!wildBroken){try{sWild.currentTime=0;sWild.play().catch(()=>{});return;}catch(e){}}
       tone(55,.5,'sawtooth',.3,0,38);noise(.4,.14,500);[233,311].forEach((f,i)=>tone(f,.4,'sine',.11,.08+i*.06));
     },
@@ -355,6 +395,7 @@ const Sound=(()=>{
       for(let i=0;i<n;i++){
         setTimeout(()=>{
           if(!on)return;
+          if(bufs.heart){playBuf('heart');return;}
           if(!heartBroken){try{sHeart.currentTime=0;sHeart.play().catch(()=>{});return;}catch(e){}}
           const c=ac();if(!c)return;
           const t=c.currentTime,o=c.createOscillator(),g=c.createGain();
@@ -410,7 +451,7 @@ function cellHTML(c,isWin,merge=true){
   const m=merge&&c.pid;
   return `<div class="cell ${isWin?'win':''}${c.key==='wild'?' wildc':''}${m?' merged':''}"><img src="${IMG[c.key]}" alt="" onerror="this.style.display='none'">${badge}</div>`;
 }
-function addPieces(col,cells,base,h,winRows,only){
+function addPieces(col,cells,base,h,winRows,only,flat){
   const groups={};
   cells.forEach((c,row)=>{
     if(!c.pid||(only&&!only.includes(row)))return;
@@ -422,6 +463,7 @@ function addPieces(col,cells,base,h,winRows,only){
     const el=document.createElement('div');
     el.className='wpiece'+(g.rows.some(x=>winRows.includes(x))?' win':'');
     el.style.top=(base+a*h)+'px';el.style.height=((b-a+1)*h-2)+'px';
+    if(flat){el.style.left='0';el.style.right='0';}
     const src=g.c.kind==='full'?IMG_PIECE.full:IMG_PIECE.mid;
     el.innerHTML=`<img src="${src}" alt="" onerror="this.onerror=null;this.src='${IMG.wild}'"><span class="badge">x${g.c.mult}</span>`;
     col.appendChild(el);els.push(el);
@@ -447,8 +489,13 @@ function rollReel(r,oldCells,finalCells,ms,frozenRows=[]){
     const mid=Array.from({length:8+r*3},()=>randomCell(poolFor(r,true)));
     const all=[...finalCells,...mid,...oldCells];
     col.style.height=col.offsetHeight+'px';
-    col.innerHTML='<div class="strip">'+all.map(c=>cellHTML(c,false,false)).join('')+'</div>';
+    // الخانات اللي فيها قطعة كونت (Sliding/Expanded) بتنخفي، والقطعة الكاملة بتنزل مع الشريط
+    col.innerHTML='<div class="strip">'+all.map(c=>cellHTML(c,false)).join('')+'</div>';
     const strip=col.firstChild,h=strip.children[0].offsetHeight+2;
+    strip.style.position='relative';
+    const notFrozen=[0,1,2,3].filter(x=>!frozenRows.includes(x));
+    addPieces(strip,finalCells,0,h,[],notFrozen,true);
+    addPieces(strip,oldCells,(finalCells.length+mid.length)*h,h,[],null,true);
 
     const frozenEls=[];
     frozenRows.forEach(row=>{
@@ -585,8 +632,20 @@ async function loadUser(){
   }catch(e){
     console.error(e);
     if(isLocal){dbApi=null;balance=100000;update();$('result').innerHTML='<span class="lose-t">وضع تجريبي محلي (بدون قاعدة بيانات)</span>';return true;}
-    $('result').innerHTML='<span class="lose-t">تعذّر جلب الرصيد: '+(e.message||e)+'</span>';return false;
+    $('result').innerHTML='<span class="lose-t">تعذّر جلب الرصيد، عم نعيد المحاولة...</span>';
+    retryBalance();
+    return false;
   }
+}
+function retryBalance(){
+  const t=setInterval(async()=>{
+    try{
+      dbApi=await import('./db.js?r='+Date.now());
+      const d=await dbApi.loadBalance(userId,userName);
+      balance=R(d.balance);totalSpins=d.totalSpins;totalWins=R(d.totalWins);
+      $('result').textContent='';update();clearInterval(t);
+    }catch(e){}
+  },5000);
 }
 
 function applyFreeModeWilds(grid){
@@ -703,13 +762,13 @@ async function resolveSpin(grid){
 }
 
 function preloadAll(){
-  const urls=[...Object.values(IMG),'images/bg.jpg'];let ok=true;
+  const urls=[...Object.values(IMG),'images/bg.jpg',IMG_PIECE.full,IMG_PIECE.mid];
   return Promise.all(urls.map(u=>new Promise(res=>{
-    const im=new Image(),t=setTimeout(()=>{ok=false;res();},15000);
+    const im=new Image(),t=setTimeout(res,15000);
     im.onload=()=>{clearTimeout(t);(im.decode?im.decode():Promise.resolve()).catch(()=>{}).then(res);};
-    im.onerror=()=>{clearTimeout(t);ok=false;console.warn('ما تحمّلت:',u);res();};
+    im.onerror=()=>{clearTimeout(t);console.warn('ما تحمّلت:',u);res();};
     im.src=u;
-  }))).then(()=>ok);
+  })));
 }
 if(!tg?.initDataUnsafe?.user){document.addEventListener('keydown',e=>{if((e.key||'').toLowerCase()==='m'){balance=R(balance+10000);update();}});}
 function fitStage(){
@@ -719,7 +778,10 @@ function fitStage(){
   stage.style.width=cw+'px';stage.style.height=ch+'px';stage.style.transform=`translate(-50%,-50%) scale(${s})`;
 }
 window.__fitStage=fitStage;addEventListener('resize',fitStage);addEventListener('orientationchange',fitStage);
-Promise.all([loadUser(),preloadAll()]).then(([dataOk,imgsOk])=>{if(dataOk&&imgsOk)window.__dataReady=true;else window.__loadFailed=true;setTimeout(fitStage,0);requestAnimationFrame(fitStage);}).catch(()=>{window.__loadFailed=true;});
+const capped=(p,ms)=>Promise.race([p,new Promise(r=>setTimeout(r,ms))]);
+Promise.all([loadUser().catch(()=>false),preloadAll(),capped(Sound.preload(),20000)])
+  .catch(()=>{})
+  .then(()=>{window.__dataReady=true;setTimeout(fitStage,0);requestAnimationFrame(fitStage);});
 </script>
 </body>
 </html>
