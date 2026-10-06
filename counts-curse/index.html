@@ -318,7 +318,7 @@ const Sound=(()=>{
   bg.volume=.40; bg.addEventListener('error',()=>{bgBroken=true;if(on&&started)ambient();});
   sSpin.volume=.45; sSpin.addEventListener('error',()=>{spinBroken=true;});
   sReel.volume=.32; sReel.loop=true; sReel.addEventListener('error',()=>{reelBroken=true;});
-  sWild.volume=.60; sWild.addEventListener('error',()=>{wildBroken=true;});
+  sWild.volume=.20; sWild.addEventListener('error',()=>{wildBroken=true;});
   sHeart.volume=.55; sHeart.addEventListener('error',()=>{heartBroken=true;});
 
   function startMusic(){if(!on)return;if(bgBroken){ambient();return;}bg.play().catch(()=>ambient());}
