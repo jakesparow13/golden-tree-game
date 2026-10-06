@@ -246,7 +246,10 @@ function buildPool(wildW,scatW){ return [...BASE_SYMS,{key:'wild',weight:wildW},
 const stripWild = pool => pool.filter(s=>s.key!=='wild');
 const POOL_BASE=buildPool(.5,2), POOL_BASE_NOWILD=stripWild(POOL_BASE);
 const POOL_DC=buildPool(.5,2.2), POOL_DC_NOWILD=stripWild(POOL_DC);
-const POOL_FREE=buildPool(.4,2), POOL_FREE_NOWILD=stripWild(POOL_FREE);
+/* 🆕 وزن الكونت باللفات المجانية حسب النوع (معايَر بمحاكاة): نزلة طبيعية (قلوب) بقيت .4، والباقات المشتراة أعلى بكتير */
+const FREE_WILD_W={nat:.4,sticky:1.2,sliding:5.3,expanded:.65};
+const POOL_FREE_BY={};for(const k in FREE_WILD_W)POOL_FREE_BY[k]=buildPool(FREE_WILD_W[k],2);
+const POOL_FREE_NOWILD=stripWild(buildPool(.4,2));
 const WMULTS=[{val:2,weight:75},{val:3,weight:17},{val:5,weight:6},{val:10,weight:2}];
 const LINES=[[1,1,1,1,1],[0,0,0,0,0],[2,2,2,2,2],[3,3,3,3,3],[0,1,2,1,0],[3,2,1,2,3],[1,0,0,0,1],[2,3,3,3,2],[0,0,1,0,0],[3,3,2,3,3],
   [1,2,3,2,1],[2,1,0,1,2],[0,1,1,1,0],[3,2,2,2,3],[1,0,1,0,1],[2,3,2,3,2],[0,1,0,1,0],[3,2,3,2,3],[1,1,0,1,1],[2,2,3,2,2]];
@@ -254,7 +257,7 @@ const BETS=[300,600,1000,1500,3000];
 
 let balance=0,bet=300,betIdx=0,spinning=false,totalSpins=0,totalWins=0;
 let inFree=false,freeLeft=0,freeWin=0,currentGrid=null,dc=false,speed=0,autoLeft=0,autoInfinite=false;
-let freeMode=null;
+let freeMode=null, freeNatural=false;
 let stickyWilds={};
 let slidingWilds=[];
 let expandedReels={};
@@ -346,18 +349,18 @@ const Sound=(()=>{
   };
 })();
 
-const BAT_W=16;
+const BAT_W=12;
 let batFactor=1, lastBat=new Set();
 let sessSpins=0, sessBet=0, sessWin=0, coolLeft=0;
 function poolFor(r,noBat){
   const noWild=(r===1);
-  if(inFree) return noWild?POOL_FREE_NOWILD:POOL_FREE;
+  if(inFree) return noWild?POOL_FREE_NOWILD:POOL_FREE_BY[freeNatural?'nat':freeMode];
   let pool = dc ? (noWild?POOL_DC_NOWILD:POOL_DC) : (noWild?POOL_BASE_NOWILD:POOL_BASE);
   if(!noBat && r%2===0) pool=[...pool,{key:'blank',weight:BAT_W*batFactor}];
   return pool;
 }
 function updateBalance(){
-  if(coolLeft>0) batFactor=1.7;
+  if(coolLeft>0) batFactor=1.25;
   else if(sessSpins>=20){const r=sessWin/sessBet; batFactor=r>1?1.5:(r<0.5?0.6:1);}
   else batFactor=1;
 }
@@ -515,7 +518,7 @@ window.confirmBuy=async()=>{
   betIdx=buyBetIdx;bet=buyBet;
   balance=R(balance-cost);
   inFree=true;freeLeft=FREE_SPINS;freeWin=0;
-  freeMode=pendingPkg;stickyWilds={};slidingWilds=[];expandedReels={};
+  freeMode=pendingPkg;freeNatural=false;stickyWilds={};slidingWilds=[];expandedReels={};
   Sound.unlock();Sound.free();showFreeIntro(FREE_SPINS);update();await save();setTimeout(()=>spin(),1700);
 };
 window.openInfo=()=>{
@@ -617,7 +620,7 @@ async function resolveSpin(grid){
   if(grid.some(col=>col.some(c=>c.key==='wild')))Sound.wild();
   let msg='',big=false;
   if(total>0){
-    balance=R(balance+total);totalWins=R(totalWins+total);if(inFree)freeWin=R(freeWin+total);
+    balance=R(balance+total);totalWins=R(totalWins+total);if(inFree){freeWin=R(freeWin+total);if(freeNatural)sessWin+=total;}
     msg=`<span class="win-t">مكسب: ${total.toLocaleString()}</span>`;
     if(total>=bet*50){big=true;Sound.mega();showWinOverlay(total,'MEGA WIN');}
     else if(total>=bet*20){big=true;Sound.big();showWinOverlay(total,'BIG WIN');}
@@ -626,7 +629,7 @@ async function resolveSpin(grid){
   }
   let started=false;
   if(sc>=3){
-    if(!inFree){inFree=true;freeLeft=FREE_SPINS;freeWin=total;freeMode='sticky';stickyWilds={};slidingWilds=[];expandedReels={};started=true;Sound.free();showFreeIntro(FREE_SPINS);}
+    if(!inFree){inFree=true;freeLeft=FREE_SPINS;freeWin=total;freeMode='sticky';freeNatural=true;stickyWilds={};slidingWilds=[];expandedReels={};started=true;Sound.free();showFreeIntro(FREE_SPINS);}
     else{freeLeft+=5;msg+=(msg?'<br>':'')+'<span class="win-t">+5 لفات مجانية</span>';Sound.free();}
   }
   $('result').innerHTML=msg;update();await save();
@@ -636,7 +639,7 @@ async function resolveSpin(grid){
     if(inFree){
       freeLeft--;update();
       if(freeLeft<=0){
-        inFree=false;freeMode=null;stickyWilds={};slidingWilds=[];expandedReels={};
+        inFree=false;freeMode=null;freeNatural=false;stickyWilds={};slidingWilds=[];expandedReels={};
         $('result').innerHTML+=(msg?'<br>':'')+`<span class="win-t">مجموع اللفات المجانية: ${freeWin.toLocaleString()}</span>`;
         update();lockUI(false);autoNext();
       }else setTimeout(()=>spin(),1200);
