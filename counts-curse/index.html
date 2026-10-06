@@ -93,6 +93,12 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 .frozen-wild{display:flex;align-items:center;justify-content:center;background:rgba(10,22,18,.92);border-radius:6px;}
 #retryBox{display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.8);align-items:center;justify-content:center;flex-direction:column;gap:14px;color:var(--gold);font-weight:700;text-align:center;padding:20px;}
 #retryBox button{padding:12px 30px;border-radius:12px;border:none;background:linear-gradient(180deg,#e0243a,#7a0a18);color:#fff;font-weight:800;font-size:16px;}
+.wpiece{position:absolute;left:3px;right:3px;z-index:4;border-radius:6px;overflow:hidden;background:rgba(10,22,18,.92);border:2px solid rgba(224,178,74,.85);}
+.wpiece img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 25%;}
+.wpiece .badge{bottom:3px;right:3px;}
+.wpiece.win{box-shadow:0 0 12px var(--gold);}
+.cell.merged{box-shadow:none;background:none;animation:none;}
+.cell.merged img,.cell.merged .badge{visibility:hidden;}
 </style>
 </head>
 <body>
@@ -239,6 +245,8 @@ const BUY_COST_MULT={sticky:100,sliding:200,expanded:300};
 const IMG={wild:'images/wild-base.png',scatter:'images/scatter.png',blank:'images/bat.png',
   syringe:'images/syringe.png',shackle:'images/shackle.png',scalpel:'images/scalpel.png',potion:'images/potion.png',
   bloodbag:'images/blood-bag.png',brain:'images/brain.png',lungs:'images/lungs.png',eyes:'images/eyes-jar.png'};
+const IMG_PIECE={full:'images/count-full.png',mid:'images/count-medium.png'};
+let pieceId=0;
 const PAY_MULT=1;
 const PAY={
   brain:{3:5*PAY_MULT,4:15*PAY_MULT,5:50*PAY_MULT},
@@ -256,7 +264,6 @@ function buildPool(wildW,scatW){ return [...BASE_SYMS,{key:'wild',weight:wildW},
 const stripWild = pool => pool.filter(s=>s.key!=='wild');
 const POOL_BASE=buildPool(.5,2), POOL_BASE_NOWILD=stripWild(POOL_BASE);
 const POOL_DC=buildPool(.5,2.2), POOL_DC_NOWILD=stripWild(POOL_DC);
-/* 🆕 وزن الكونت باللفات المجانية حسب النوع (معايَر بمحاكاة): نزلة طبيعية (قلوب) بقيت .4، والباقات المشتراة أعلى بكتير */
 const FREE_WILD_W={nat:.4,sticky:1.2,sliding:5.3,expanded:.65};
 const POOL_FREE_BY={};for(const k in FREE_WILD_W)POOL_FREE_BY[k]=buildPool(FREE_WILD_W[k],2);
 const POOL_FREE_NOWILD=stripWild(buildPool(.4,2));
@@ -273,10 +280,6 @@ let slidingWilds=[];
 let expandedReels={};
 let pendingPkg=null, buyBet=300, buyBetIdx=0;
 
-/* ===== 🆕 الأصوات: 4 ملفات حقيقية (خلفية/سبين/بكرات/كونت) بمستويات متوازنة،
-   وكل صوت إله fallback تلقائي بـ WebAudio لو الملف ما تحمّل (منفصل لكل صوت،
-   فعطل بملف وحد ما بيأثر عالباقي). صوت البكرات مستمر طول الدوران وبيخفت
-   ويوقف بالضبط لما آخر بكرة توقف. أصوات الفوز تضل WebAudio متل ما كانت. ===== */
 const Sound=(()=>{
   let ctx=null,on=true,amb=null,started=false;
   const ac=()=>{if(!ctx){try{ctx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}if(ctx&&ctx.state==='suspended')ctx.resume().catch(()=>{});return ctx;};
@@ -297,7 +300,6 @@ const Sound=(()=>{
     else s.connect(f);
     f.connect(g);g.connect(c.destination);s.start(t0);
   }
-  /* درون احتياطي فقط لو bg-music.mp3 ما تحمّل: نغمات sine ناعمة + فلتر low-pass يقص الحدة، تذبذب بطيء */
   function ambient(){
     const c=ac();if(!c||amb)return;
     const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=420;lp.connect(c.destination);
@@ -318,7 +320,7 @@ const Sound=(()=>{
   bg.volume=.40; bg.addEventListener('error',()=>{bgBroken=true;if(on&&started)ambient();});
   sSpin.volume=.45; sSpin.addEventListener('error',()=>{spinBroken=true;});
   sReel.volume=.32; sReel.loop=true; sReel.addEventListener('error',()=>{reelBroken=true;});
-  sWild.volume=.20; sWild.addEventListener('error',()=>{wildBroken=true;});
+  sWild.volume=.30; sWild.addEventListener('error',()=>{wildBroken=true;});
   sHeart.volume=.55; sHeart.addEventListener('error',()=>{heartBroken=true;});
 
   function startMusic(){if(!on)return;if(bgBroken){ambient();return;}bg.play().catch(()=>ambient());}
@@ -327,18 +329,15 @@ const Sound=(()=>{
   return{
     unlock(){ac();if(!started){started=true;startMusic();}},
     toggle(){on=!on;if(on)startMusic();else stopMusic();return on;},
-    /* نقرة السبين */
     click(){
       if(!on)return;
       if(!spinBroken){try{sSpin.currentTime=0;sSpin.play().catch(()=>{});return;}catch(e){}}
       noise(.07,.16,900,300);tone(140,.05,'square',.07);
     },
-    /* يبدأ صوت البكرات مع أول دورة */
     reelsStart(){
       if(!on||reelBroken)return;
       try{sReel.volume=.32;sReel.currentTime=0;sReel.play().catch(()=>{});}catch(e){}
     },
-    /* يخفّت ويوقف صوت البكرات بالضبط لما آخر بكرة توقف */
     reelsStop(){
       if(reelBroken||sReel.paused)return;
       const fade=setInterval(()=>{
@@ -346,13 +345,11 @@ const Sound=(()=>{
         if(sReel.volume<=0){clearInterval(fade);sReel.pause();sReel.currentTime=0;sReel.volume=.32;}
       },25);
     },
-    /* نزول الكونت — أقوى صوت */
     wild(){
       if(!on)return;
       if(!wildBroken){try{sWild.currentTime=0;sWild.play().catch(()=>{});return;}catch(e){}}
       tone(55,.5,'sawtooth',.3,0,38);noise(.4,.14,500);[233,311].forEach((f,i)=>tone(f,.4,'sine',.11,.08+i*.06));
     },
-    /* 🆕 نزول رمز القلب: نبضة وحدة لكل قلب (بيب جهاز العناية المركزة) بفاصل 0.4 ثانية — لو في ملف images/heart-beep.mp3 بينشغل هو، وإلا بيتولّد بالكود */
     heart(n=1){
       if(!on)return;
       for(let i=0;i<n;i++){
@@ -408,32 +405,55 @@ function makeGrid(){
   return g;
 }
 
-function cellHTML(c,isWin){
+function cellHTML(c,isWin,merge=true){
   const badge=c.key==='wild'?`<span class="badge">x${c.mult}</span>`:'';
-  return `<div class="cell ${isWin?'win':''}${c.key==='wild'?' wildc':''}"><img src="${IMG[c.key]}" alt="" onerror="this.style.display='none'">${badge}</div>`;
+  const m=merge&&c.pid;
+  return `<div class="cell ${isWin?'win':''}${c.key==='wild'?' wildc':''}${m?' merged':''}"><img src="${IMG[c.key]}" alt="" onerror="this.style.display='none'">${badge}</div>`;
 }
-function renderReelColumn(r,cells,winRows){const el=$('reelCol'+r);if(!el)return;el.style.height='';el.innerHTML=cells.map((c,row)=>cellHTML(c,winRows.includes(row))).join('');}
+function addPieces(col,cells,base,h,winRows,only){
+  const groups={};
+  cells.forEach((c,row)=>{
+    if(!c.pid||(only&&!only.includes(row)))return;
+    (groups[c.pid]=groups[c.pid]||{c,rows:[]}).rows.push(row);
+  });
+  const els=[];
+  for(const id in groups){
+    const g=groups[id],a=Math.min(...g.rows),b=Math.max(...g.rows);
+    const el=document.createElement('div');
+    el.className='wpiece'+(g.rows.some(x=>winRows.includes(x))?' win':'');
+    el.style.top=(base+a*h)+'px';el.style.height=((b-a+1)*h-2)+'px';
+    const src=g.c.kind==='full'?IMG_PIECE.full:IMG_PIECE.mid;
+    el.innerHTML=`<img src="${src}" alt="" onerror="this.onerror=null;this.src='${IMG.wild}'"><span class="badge">x${g.c.mult}</span>`;
+    col.appendChild(el);els.push(el);
+  }
+  return els;
+}
+function renderReelColumn(r,cells,winRows){
+  const el=$('reelCol'+r);if(!el)return;
+  el.style.height='';
+  el.innerHTML=cells.map((c,row)=>cellHTML(c,winRows.includes(row))).join('');
+  const f=el.firstChild;
+  if(f&&cells.some(c=>c.pid))addPieces(el,cells,f.offsetTop,f.offsetHeight+2,winRows);
+}
 function render(grid){
   $('reels').innerHTML=Array.from({length:REELS},(_,r)=>`<div class="reel" id="reelCol${r}"></div>`).join('');
   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.id='lineOverlay';svg.setAttribute('viewBox','0 0 100 100');svg.setAttribute('preserveAspectRatio','none');
   $('reels').appendChild(svg);
   for(let r=0;r<REELS;r++)renderReelColumn(r,grid[r],[]);
 }
-/* 🆕 frozenRows: صفوف فيها كونت "لاصق" (Sticky/Expanded) لازم يضل ثابت بمكانه
-   بينما باقي البكرة عم تلف حواليه — طبقة منفصلة فوق الشريط المتحرك، ما بتتحرك معه إطلاقاً. */
 function rollReel(r,oldCells,finalCells,ms,frozenRows=[]){
   return new Promise(res=>{
     const col=$('reelCol'+r);if(!col){res();return;}
     const mid=Array.from({length:8+r*3},()=>randomCell(poolFor(r,true)));
     const all=[...finalCells,...mid,...oldCells];
     col.style.height=col.offsetHeight+'px';
-    col.innerHTML='<div class="strip">'+all.map(c=>cellHTML(c,false)).join('')+'</div>';
+    col.innerHTML='<div class="strip">'+all.map(c=>cellHTML(c,false,false)).join('')+'</div>';
     const strip=col.firstChild,h=strip.children[0].offsetHeight+2;
 
     const frozenEls=[];
     frozenRows.forEach(row=>{
       const fc=finalCells[row];
-      if(!fc||fc.key!=='wild')return;
+      if(!fc||fc.key!=='wild'||fc.pid)return;
       const fe=document.createElement('div');
       fe.className='cell wildc frozen-wild';
       fe.style.position='absolute';
@@ -445,6 +465,7 @@ function rollReel(r,oldCells,finalCells,ms,frozenRows=[]){
       col.appendChild(fe);
       frozenEls.push(fe);
     });
+    frozenEls.push(...addPieces(col,finalCells,strip.offsetTop,h,[],frozenRows));
 
     strip.style.transform=`translateY(${-(all.length-ROWS)*h}px)`;strip.getBoundingClientRect();
     strip.style.transition=`transform ${ms}ms cubic-bezier(.15,.7,.25,1)`;strip.style.transform='translateY(0)';
@@ -575,11 +596,23 @@ function applyFreeModeWilds(grid){
   if(freeMode==='expanded'){
     for(const r in expandedReels){
       const mult=expandedReels[r];
-      for(let row=0;row<ROWS;row++)grid[+r][row]={key:'wild',mult};
+      for(let row=0;row<ROWS;row++)grid[+r][row]={key:'wild',mult,pid:'e'+r,kind:'full'};
     }
   }
   if(freeMode==='sliding'){
-    slidingWilds.forEach(w=>{ if(w.row>=0&&w.row<ROWS) grid[w.r][w.row]={key:'wild',mult:w.mult}; });
+    const occ=new Set();
+    slidingWilds.forEach(w=>{for(let k=0;k<2;k++){const rw=w.row+k;
+      if(rw>=0&&rw<ROWS){grid[w.r][rw]={key:'wild',mult:w.mult,pid:'s'+w.id,kind:'mid'};occ.add(w.r+','+rw);}}});
+    for(let r=0;r<REELS;r++)for(let row=0;row<ROWS;row++){
+      const c=grid[r][row];
+      if(c.key!=='wild'||c.pid||occ.has(r+','+row))continue;
+      let top=row;
+      if(top+1>=ROWS||occ.has(r+','+(top+1)))top=row-1;
+      if(top<0||occ.has(r+','+top)||occ.has(r+','+(top+1)))top=row;
+      const w={r,row:top,mult:c.mult,id:++pieceId};slidingWilds.push(w);
+      for(let k=0;k<2;k++){const rw=top+k;
+        if(rw<ROWS&&!occ.has(r+','+rw)){grid[r][rw]={key:'wild',mult:c.mult,pid:'s'+w.id,kind:'mid'};occ.add(r+','+rw);}}
+    }
   }
   return grid;
 }
@@ -590,19 +623,14 @@ function harvestFreeModeWilds(grid){
     grid.forEach((col,r)=>{
       if(expandedReels[r]!==undefined)return;
       const w=col.find(c=>c.key==='wild');
-      if(w){ expandedReels[r]=w.mult; for(let row=0;row<ROWS;row++)grid[r][row]={key:'wild',mult:w.mult}; }
+      if(w){ expandedReels[r]=w.mult; for(let row=0;row<ROWS;row++)grid[r][row]={key:'wild',mult:w.mult,pid:'e'+r,kind:'full'}; }
       else { col.forEach((c,row)=>{ if(c.key==='wild') stickyWilds[r+','+row]=c.mult; }); }
     });
   } else if(freeMode==='sliding'){
-    const already=new Set(slidingWilds.map(w=>w.r+','+w.row));
-    grid.forEach((col,r)=>col.forEach((c,row)=>{
-      if(c.key==='wild'&&!already.has(r+','+row)) slidingWilds.push({r,row,mult:c.mult});
-    }));
     slidingWilds=slidingWilds.map(w=>({...w,row:w.row+1})).filter(w=>w.row<ROWS);
   }
 }
 
-/* 🆕 يحسب لكل بكرة أي صفوف لازم تضل ثابتة (ما بتشارك بدوران الشريط) هاي اللفة */
 function frozenRowsFor(r){
   if(!inFree) return [];
   if(freeMode==='sticky'){
@@ -637,11 +665,11 @@ function showWinOverlay(amount,label){
     if(p<1)requestAnimationFrame(step);else setTimeout(()=>ov.classList.remove('show'),900);})(performance.now());
 }
 async function resolveSpin(grid){
-  const{total,wins,lines,sc}=evaluate(grid,bet);
   const wasFree=inFree;
-  if(!wasFree) recordSpin(total);
   if(wasFree)harvestFreeModeWilds(grid);
-  for(let r=0;r<REELS;r++){const rows=wins.filter(([wr])=>wr===r).map(([,row])=>row);if(rows.length)renderReelColumn(r,grid[r],rows);}
+  const{total,wins,lines,sc}=evaluate(grid,bet);
+  if(!wasFree) recordSpin(total);
+  for(let r=0;r<REELS;r++){const rows=wins.filter(([wr])=>wr===r).map(([,row])=>row);renderReelColumn(r,grid[r],rows);}
   drawWinLines(lines);
   if(grid.some(col=>col.some(c=>c.key==='wild')))Sound.wild();
   if(sc>0)Sound.heart(sc);
