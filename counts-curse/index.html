@@ -173,6 +173,7 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 
 <audio id="bgMusic" src="images/bg-music.mp3" loop preload="auto" style="display:none"></audio>
 <audio id="sfxSpin" src="images/spin-click.mp3" preload="auto" style="display:none"></audio>
+<audio id="sfxReel" src="images/reel-stop.mp3" preload="auto" style="display:none"></audio>
 <audio id="sfxWild" src="images/wild-drop.mp3" preload="auto" style="display:none"></audio>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
@@ -259,10 +260,12 @@ let slidingWilds=[];
 let expandedReels={};
 let pendingPkg=null, buyBet=300, buyBetIdx=0;
 
-/* ===== 🆕 أصوات رعب أصلية — ما عاد نستخدم نغمات الشجرة. نغمات منخفضة/ناقصة (minor)
-   بدل الماجور الفرحة، خلفية مستمرة بمستوى متوسط (مو قوية)، وصوت بكرات أعمق. ===== */
+/* ===== 🆕 الأصوات: 4 ملفات حقيقية (خلفية/سبين/بكرات/كونت) بمستويات متوازنة،
+   وكل صوت إله fallback تلقائي بـ WebAudio لو الملف ما تحمّل (منفصل لكل صوت،
+   فعطل بملف وحد ما بيأثر عالباقي). صوت البكرات مستمر طول الدوران وبيخفت
+   ويوقف بالضبط لما آخر بكرة توقف. أصوات الفوز تضل WebAudio متل ما كانت. ===== */
 const Sound=(()=>{
-  let ctx=null,on=true,amb=null,musicBroken=false,started=false;
+  let ctx=null,on=true,amb=null,started=false;
   const ac=()=>{if(!ctx){try{ctx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}if(ctx&&ctx.state==='suspended')ctx.resume().catch(()=>{});return ctx;};
   function tone(f,d,type='sine',v=.2,delay=0,fEnd=null){
     if(!on)return;const c=ac();if(!c)return;const t=c.currentTime+delay,o=c.createOscillator(),g=c.createGain();
@@ -271,53 +274,75 @@ const Sound=(()=>{
     g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.015);g.gain.exponentialRampToValueAtTime(.0001,t+d);
     o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+d+.02);
   }
-  function noise(d,v=.1,filt=2500,hp=0){
-    if(!on)return;const c=ac();if(!c)return;const n=Math.floor(c.sampleRate*d),b=c.createBuffer(1,n,c.sampleRate),a=b.getChannelData(0);
+  function noise(d,v=.1,filt=2500,hp=0,delay=0){
+    if(!on)return;const c=ac();if(!c)return;const t0=c.currentTime+delay;const n=Math.floor(c.sampleRate*d),b=c.createBuffer(1,n,c.sampleRate),a=b.getChannelData(0);
     for(let i=0;i<n;i++)a[i]=(Math.random()*2-1)*(1-i/n);
     const s=c.createBufferSource();s.buffer=b;
     const f=c.createBiquadFilter();f.type='lowpass';f.frequency.value=filt;
-    const g=c.createGain();g.gain.setValueAtTime(v,c.currentTime);g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+d);
+    const g=c.createGain();g.gain.setValueAtTime(v,t0);g.gain.exponentialRampToValueAtTime(.0001,t0+d);
     if(hp){const hf=c.createBiquadFilter();hf.type='highpass';hf.frequency.value=hp;s.connect(hf);hf.connect(f);}
     else s.connect(f);
-    f.connect(g);g.connect(c.destination);s.start();
+    f.connect(g);g.connect(c.destination);s.start(t0);
   }
-  const bg=$('bgMusic'),sS=$('sfxSpin'),sW=$('sfxWild');let sSb=false,sWb=false;
-  bg.volume=.14;bg.addEventListener('error',()=>{musicBroken=true;if(on&&started)ambient();});
-  sS.volume=.35;sS.addEventListener('error',()=>{sSb=true;});sW.volume=.55;sW.addEventListener('error',()=>{sWb=true;});
-
-  /* درون رعب: نغمتين منخفضتين متنافرتين قليلاً (تريتون) بدل الأوكتاف المريح، بمستوى متوسط لا قوي */
+  /* درون احتياطي فقط لو bg-music.mp3 ما تحمّل: نغمات sine ناعمة + فلتر low-pass يقص الحدة، تذبذب بطيء */
   function ambient(){
     const c=ac();if(!c||amb)return;
-    const m=c.createGain();m.gain.setValueAtTime(0,c.currentTime);m.gain.linearRampToValueAtTime(.045,c.currentTime+2.5);m.connect(c.destination);
+    const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=420;lp.connect(c.destination);
+    const m=c.createGain();m.gain.setValueAtTime(0,c.currentTime);m.gain.linearRampToValueAtTime(.05,c.currentTime+2.5);m.connect(lp);
     const os=[55,77.8,110].map((f,i)=>{
-      const o=c.createOscillator();o.type=i===1?'sawtooth':'sine';o.frequency.value=f;
-      const lfo=c.createOscillator();lfo.frequency.value=.07+i*.02;
-      const lfoGain=c.createGain();lfoGain.gain.value=1.5;
+      const o=c.createOscillator();o.type='sine';o.frequency.value=f;
+      const lfo=c.createOscillator();lfo.frequency.value=.05+i*.015;
+      const lfoGain=c.createGain();lfoGain.gain.value=1.2;
       lfo.connect(lfoGain);lfoGain.connect(o.frequency);lfo.start();
       o.connect(m);o.start();return o;
     });
     amb={m,os};
   }
   function stopAmb(){if(!amb)return;const a=amb;amb=null;a.m.gain.linearRampToValueAtTime(0,ac().currentTime+.6);setTimeout(()=>a.os.forEach(o=>{try{o.stop();}catch(e){}}),700);}
-  function startMusic(){if(!on)return;if(musicBroken){ambient();return;}bg.play().catch(()=>ambient());}
+
+  const bg=$('bgMusic'), sSpin=$('sfxSpin'), sReel=$('sfxReel'), sWild=$('sfxWild');
+  let bgBroken=false, spinBroken=false, reelBroken=false, wildBroken=false;
+  bg.volume=.40; bg.addEventListener('error',()=>{bgBroken=true;if(on&&started)ambient();});
+  sSpin.volume=.45; sSpin.addEventListener('error',()=>{spinBroken=true;});
+  sReel.volume=.32; sReel.loop=true; sReel.addEventListener('error',()=>{reelBroken=true;});
+  sWild.volume=.60; sWild.addEventListener('error',()=>{wildBroken=true;});
+
+  function startMusic(){if(!on)return;if(bgBroken){ambient();return;}bg.play().catch(()=>ambient());}
   function stopMusic(){bg.pause();stopAmb();}
+
   return{
     unlock(){ac();if(!started){started=true;startMusic();}},
     toggle(){on=!on;if(on)startMusic();else stopMusic();return on;},
-    /* نقرة سبين: طقة خشبية جافة (تابوت) بدل الطقة المعدنية */
-    click(){if(!on)return;if(!sSb){try{sS.currentTime=0;sS.play().catch(()=>{});return;}catch(e){}}noise(.07,.14,900,300);tone(140,.05,'square',.06);},
-    /* توقف البكرة: صوت احتكاك خشب خفيف */
-    stop(){noise(.08,.09,1100,250);tone(110,.1,'sine',.07);},
-    /* نزول الكونت: صوت رعد منخفض + جرس كنيسة متنافر خافت */
-    wild(){if(!on)return;if(!sWb){try{sW.currentTime=0;sW.play().catch(()=>{});return;}catch(e){}}
-      tone(55,.5,'sawtooth',.28,0,38);noise(.4,.12,500);
-      [233,311].forEach((f,i)=>tone(f,.4,'sine',.1,.08+i*.06));},
-    /* فوز عادي: نغمتين منخفضتين غامضتين (مو احتفالية ماجور) */
-    win(){[220,277].forEach((f,i)=>tone(f,.28,'triangle',.16,i*.1));},
-    nice(){[196,233,277,330].forEach((f,i)=>tone(f,.3,'triangle',.17,i*.09));},
-    big(){[165,196,233,294].forEach((f,i)=>tone(f,.35,'sawtooth',.16,i*.11));noise(.35,.1,2200);},
-    mega(){[110,165,220,277,330,415].forEach((f,i)=>tone(f,.45,'sawtooth',.18,i*.1));noise(.6,.14,2500);tone(55,.8,'sine',.12,.3);},
-    free(){[220,261,311,349].forEach((f,i)=>tone(f,.3,'triangle',.15,i*.09));}
+    /* نقرة السبين */
+    click(){
+      if(!on)return;
+      if(!spinBroken){try{sSpin.currentTime=0;sSpin.play().catch(()=>{});return;}catch(e){}}
+      noise(.07,.16,900,300);tone(140,.05,'square',.07);
+    },
+    /* يبدأ صوت البكرات مع أول دورة */
+    reelsStart(){
+      if(!on||reelBroken)return;
+      try{sReel.volume=.32;sReel.currentTime=0;sReel.play().catch(()=>{});}catch(e){}
+    },
+    /* يخفّت ويوقف صوت البكرات بالضبط لما آخر بكرة توقف */
+    reelsStop(){
+      if(reelBroken||sReel.paused)return;
+      const fade=setInterval(()=>{
+        sReel.volume=Math.max(0,sReel.volume-0.04);
+        if(sReel.volume<=0){clearInterval(fade);sReel.pause();sReel.currentTime=0;sReel.volume=.32;}
+      },25);
+    },
+    /* نزول الكونت — أقوى صوت */
+    wild(){
+      if(!on)return;
+      if(!wildBroken){try{sWild.currentTime=0;sWild.play().catch(()=>{});return;}catch(e){}}
+      tone(55,.5,'sawtooth',.3,0,38);noise(.4,.14,500);[233,311].forEach((f,i)=>tone(f,.4,'sine',.11,.08+i*.06));
+    },
+    win(){[220,277].forEach((f,i)=>tone(f,.28,'triangle',.17,i*.1));},
+    nice(){[196,233,277,330].forEach((f,i)=>tone(f,.3,'triangle',.18,i*.09));},
+    big(){[165,196,233,294].forEach((f,i)=>tone(f,.35,'sawtooth',.17,i*.11));noise(.35,.11,2200);},
+    mega(){[110,165,220,277,330,415].forEach((f,i)=>tone(f,.45,'sawtooth',.19,i*.1));noise(.6,.15,2500);tone(55,.8,'sine',.13,.3);},
+    free(){[220,261,311,349].forEach((f,i)=>tone(f,.3,'triangle',.16,i*.09));}
   };
 })();
 
@@ -394,7 +419,7 @@ function rollReel(r,oldCells,finalCells,ms,frozenRows=[]){
 
     strip.style.transform=`translateY(${-(all.length-ROWS)*h}px)`;strip.getBoundingClientRect();
     strip.style.transition=`transform ${ms}ms cubic-bezier(.15,.7,.25,1)`;strip.style.transform='translateY(0)';
-    setTimeout(()=>{Sound.stop();renderReelColumn(r,finalCells,[]);frozenEls.forEach(e=>e.remove());res();},ms+30);
+    setTimeout(()=>{renderReelColumn(r,finalCells,[]);frozenEls.forEach(e=>e.remove());res();},ms+30);
   });
 }
 function drawWinLines(lines){
@@ -565,7 +590,7 @@ window.spin=function(){
   if(spinning)return;
   const cost=spinCost();
   if(!inFree&&balance<cost){$('result').innerHTML='<span class="lose-t">رصيدك غير كافي</span>';return;}
-  spinning=true;lockUI(true);Sound.unlock();Sound.click();
+  spinning=true;lockUI(true);Sound.unlock();Sound.click();Sound.reelsStart();
   $('result').textContent='';const sl=$('lineOverlay');if(sl)sl.innerHTML='';
   if(!inFree){balance=R(balance-cost);totalSpins++;}
   update();
@@ -573,7 +598,7 @@ window.spin=function(){
   let grid=makeGrid();const old=currentGrid||grid;
   if(inFree) grid=applyFreeModeWilds(grid);
   const base=[900,650,450][speed];
-  Promise.all(grid.map((_,r)=>rollReel(r,old[r],grid[r],base+r*220,frozenRowsFor(r)))).then(()=>{currentGrid=grid;resolveSpin(grid);});
+  Promise.all(grid.map((_,r)=>rollReel(r,old[r],grid[r],base+r*220,frozenRowsFor(r)))).then(()=>{Sound.reelsStop();currentGrid=grid;resolveSpin(grid);});
 };
 function showFreeIntro(n){$('fsCount').textContent=n;$('fsIntro').style.display='flex';setTimeout(()=>{$('fsIntro').style.display='none';},1600);}
 function showWinOverlay(amount,label){
