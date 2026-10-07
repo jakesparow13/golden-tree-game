@@ -115,12 +115,23 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 @keyframes rshake{0%,100%{transform:none}20%{transform:translate(-2px,1px)}40%{transform:translate(2px,-1px)}60%{transform:translate(-1px,-1px)}80%{transform:translate(1px,1px)}}
 .win-overlay.neon{background:radial-gradient(circle,rgba(10,70,45,.78),rgba(0,0,0,.9));}
 .win-overlay.tap{pointer-events:auto;}
-.wtubes{display:flex;gap:8px;}
-.wtube{width:56px;height:118px;border-radius:28px 28px 8px 8px;border:3px solid #b98a2f;background:linear-gradient(180deg,#0f3d2e,#0a2a20);display:flex;align-items:center;justify-content:center;font-family:'Cairo',sans-serif;font-size:44px;font-weight:800;color:#d9ffe9;text-shadow:0 0 12px #4dffa0;box-shadow:0 0 18px rgba(77,255,160,.55);animation:tubeIn .35s both;}
+.wbox{position:relative;direction:ltr;width:100%;max-width:360px;padding:40px 38px 0;display:flex;flex-direction:column;align-items:center;}
+.wcoil{position:absolute;top:44px;bottom:-4px;width:20px;border-radius:4px;background:repeating-linear-gradient(180deg,#8a9a93 0 5px,#2a3430 5px 9px);box-shadow:0 0 10px rgba(77,255,160,.35);}
+.wcoil.l{left:8px;}.wcoil.r{right:8px;}
+.wcoil::before{content:'';position:absolute;top:-36px;left:50%;margin-left:-5px;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:36px solid #6b7a74;}
+.wcoil i{position:absolute;top:-48px;left:50%;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:#e6f7ff;box-shadow:0 0 10px 4px #6fd0ff;animation:wspark .45s steps(1,end) infinite;}
+.wcoil.r i{animation-delay:.2s;}
+@keyframes wspark{0%{opacity:1}35%{opacity:0}60%{opacity:.9}80%{opacity:.1}100%{opacity:1}}
+.wtubes{position:relative;z-index:1;display:flex;gap:6px;}
+.wtube{position:relative;width:50px;height:108px;border-radius:25px 25px 8px 8px;border:3px solid #d2a03a;background:linear-gradient(180deg,#0f5a42,#082a21);display:flex;align-items:center;justify-content:center;font-family:'Cairo',sans-serif;font-size:40px;font-weight:800;color:#d9ffe9;text-shadow:0 0 10px #4dffa0,0 0 22px #1fd67a;box-shadow:0 0 16px rgba(77,255,160,.5),inset 0 0 12px rgba(0,0,0,.6);animation:tubeIn .35s both;}
+.wtube::before{content:'';position:absolute;top:8px;left:6px;width:6px;height:60%;border-radius:4px;background:linear-gradient(180deg,rgba(255,255,255,.45),rgba(255,255,255,0));}
+.wtube::after{content:'';position:absolute;bottom:-14px;left:50%;width:34px;height:14px;margin-left:-17px;border-radius:0 0 6px 6px;background:linear-gradient(180deg,#a8742a,#5a3a14);}
 @keyframes tubeIn{from{opacity:0;transform:translateY(-20px) scale(.8)}to{opacity:1;transform:none}}
-.wplate{margin-top:-4px;padding:4px 40px;border:4px solid #3b6b5c;border-radius:14px;background:#10302a;font-family:'Cairo',sans-serif;font-size:64px;font-weight:800;color:#6dffb0;letter-spacing:6px;text-shadow:0 0 10px #2cff8a,0 0 24px #2cff8a;animation:wpulse 1s ease-in-out infinite;}
+.wplate,.wamt{position:relative;text-align:center;border:5px solid #4b6b66;border-radius:12px;background:linear-gradient(180deg,#2e4a47,#16292a);box-shadow:inset 0 0 16px rgba(0,0,0,.7),0 4px 14px rgba(0,0,0,.6);}
+.wplate::before,.wamt::before{content:'';position:absolute;inset:3px;pointer-events:none;background:radial-gradient(circle at 7px 7px,#a9c4bd 0 3px,transparent 4px),radial-gradient(circle at calc(100% - 7px) 7px,#a9c4bd 0 3px,transparent 4px),radial-gradient(circle at 7px calc(100% - 7px),#a9c4bd 0 3px,transparent 4px),radial-gradient(circle at calc(100% - 7px) calc(100% - 7px),#a9c4bd 0 3px,transparent 4px);}
+.wplate{margin-top:22px;padding:0 30px;font-family:'Cairo',sans-serif;font-size:68px;font-weight:800;letter-spacing:6px;line-height:1.25;color:rgba(40,255,140,.1);-webkit-text-stroke:3px #35ff8a;text-shadow:0 0 12px #2cff8a;animation:wpulse 1s ease-in-out infinite;}
 @keyframes wpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
-.wamt{margin-top:18px;min-width:230px;padding:8px 26px;border:3px solid #3b6b5c;border-radius:12px;background:#0d2620;font-size:44px;font-weight:800;color:#c9ffe0;font-variant-numeric:tabular-nums;text-shadow:0 0 14px rgba(77,255,160,.8);}
+.wamt{margin-top:18px;min-width:250px;padding:6px 24px;font-size:42px;font-weight:800;color:#cffff0;font-variant-numeric:tabular-nums;text-shadow:0 0 14px rgba(77,255,160,.8);}
 #fsEnd{display:none;position:fixed;inset:0;z-index:192;align-items:center;justify-content:center;background:rgba(0,0,0,.8);}
 .endcard{position:relative;width:78%;max-width:320px;padding:26px 14px 22px;text-align:center;border-radius:14px;border:3px solid #8a5a2a;background:radial-gradient(circle at 50% 30%,#6b4a30,#3a2518);box-shadow:0 0 28px rgba(0,0,0,.8),inset 0 0 30px rgba(0,0,0,.5);}
 .endcard::before,.endcard::after{content:'';position:absolute;top:18px;width:34px;height:70px;border-radius:17px;background:radial-gradient(circle at 50% 40%,#fff3b0,#f0a820 55%,#8a5a10);box-shadow:0 0 20px 6px rgba(255,190,40,.55);}
@@ -810,14 +821,16 @@ function forceHeartGrid(grid,n){
   return grid;
 }
 function zapWilds(grid){
-  const reels=$('reels');if(!reels)return;
+  const reels=$('reels');if(!reels)return false;
+  if(!inFree)prevWild=new Set();
   const ns='http://www.w3.org/2000/svg',cur=new Set();let any=false;
   for(let r=0;r<REELS;r++){
     let low=-1;
     for(let row=0;row<ROWS;row++){
       if(grid[r][row].key!=='wild')continue;
-      cur.add(r+','+row);
-      if(!prevWild.has(r+','+row))low=row;
+      const wk=grid[r][row].pid?('p'+grid[r][row].pid):(r+','+row);
+      cur.add(wk);
+      if(!prevWild.has(wk))low=row;
     }
     if(low<0)continue;
     any=true;
@@ -838,6 +851,7 @@ function zapWilds(grid){
     reels.classList.remove('shake');void reels.offsetWidth;reels.classList.add('shake');
     setTimeout(()=>reels.classList.remove('shake'),300);
   }
+  return any;
 }
 function showFreeEnd(amount){
   return new Promise(res=>{
@@ -869,7 +883,7 @@ function playBatThen(cb){
 function showFreeIntro(n){$('fsCount').textContent=n;$('fsIntro').style.display='flex';setTimeout(()=>{$('fsIntro').style.display='none';},1600);}
 function showWinOverlay(amount,label){
   const ov=$('winOverlay'),word=label.split(' ')[0];
-  ov.innerHTML='<div class="wtubes">'+[...word].map((ch,i)=>'<div class="wtube" style="animation-delay:'+(i*.12)+'s"><span>'+ch+'</span></div>').join('')+'</div><div class="wplate">WIN</div><div class="wamt">0</div>';
+  ov.innerHTML='<div class="wbox"><div class="wcoil l"><i></i></div><div class="wcoil r"><i></i></div><div class="wtubes">'+[...word].map((ch,i)=>'<div class="wtube" style="animation-delay:'+(i*.12)+'s"><span>'+ch+'</span></div>').join('')+'</div><div class="wplate">WIN</div><div class="wamt">0</div></div>';
   ov.classList.add('show','neon','tap');
   const amt=ov.querySelector('.wamt');
   let finished=false,closed=false;
@@ -890,8 +904,7 @@ async function resolveSpin(grid){
   boughtSpin=false;
   for(let r=0;r<REELS;r++){const rows=wins.filter(([wr])=>wr===r).map(([,row])=>row);renderReelColumn(r,grid[r],rows);}
   drawWinLines(lines);
-  if(grid.some(col=>col.some(c=>c.key==='wild')))Sound.wild();
-  zapWilds(grid);
+  if(zapWilds(grid))Sound.wild();
   if(sc>0)Sound.heart(sc);
   let msg='',big=false;
   if(total>0){
