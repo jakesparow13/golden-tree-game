@@ -313,7 +313,7 @@ function buildPool(wildW,scatW){ return [...BASE_SYMS,{key:'wild',weight:wildW},
 const stripWild = pool => pool.filter(s=>s.key!=='wild');
 const POOL_BASE=buildPool(.5,2), POOL_BASE_NOWILD=stripWild(POOL_BASE);
 const POOL_DC=buildPool(.5,2.2), POOL_DC_NOWILD=stripWild(POOL_DC);
-const FREE_WILD_W={nat:.4,sticky:1.2,sliding:2.78,expanded:.65};
+const FREE_WILD_W={nat:.4,sticky:1.2,sliding:2.69,expanded:.65};
 const POOL_FREE_BY={};for(const k in FREE_WILD_W)POOL_FREE_BY[k]=buildPool(FREE_WILD_W[k],2);
 const POOL_FREE_NOWILD=stripWild(buildPool(.4,2));
 const WMULTS=[{val:2,weight:75},{val:3,weight:17},{val:5,weight:6},{val:10,weight:2}];
