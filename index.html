@@ -328,7 +328,7 @@
     transition:opacity .5s ease;
   }
   .intro-overlay.hide{opacity:0;pointer-events:none;}
-  .intro-overlay video{width:100%;height:100%;object-fit:contain;background:#000;}
+  .intro-overlay video{width:100%;height:100%;object-fit:cover;background:#000;}
 </style>
 </head>
 <body>
@@ -498,7 +498,7 @@ const ICONS = {
 const GAMES = [
   { id:'counts-curse',   name:"Count's Curse",             img:'counts-curse.jpg',           icon:ICONS.countsCurse,   tint:'rgba(61,220,151,0.3)',  tag:null,  ready:true },
   { id:'aviator',        name:'Aviator',                    img:'aviator.jpg',                icon:ICONS.aviator,       tint:'rgba(230,57,70,0.3)',   tag:null,  ready:false },
-  { id:'wild-bounty',    name:'Wild Bounty Showdown',       img:'wild-bounty-showdown.jpg',   icon:ICONS.wildBounty,    tint:'rgba(138,90,43,0.3)',   tag:null,  ready:false },
+  { id:'wild-bounty',    name:'Wild Bounty Showdown',       img:'wild-bounty-showdown.jpg',   icon:ICONS.wildBounty,    tint:'rgba(138,90,43,0.3)',   tag:null,  ready:true },
   { id:'spicy-eight',    name:'Spicy Eight',                img:'spicy-eight.jpg',            icon:ICONS.spicyEight,    tint:'rgba(255,140,26,0.3)',  tag:null,  ready:false },
   { id:'golden-tree',    name:'Tree of Chronos Chronicles', img:'tree-of-chronos.jpg',        icon:ICONS.treeOfChronos, tint:'rgba(61,220,151,0.3)',  tag:'HOT', ready:true },
   { id:'god-of-olympus', name:'God of Oly MP',              img:'god-of-olympus.jpg',         icon:ICONS.godOfOlympus,  tint:'rgba(212,175,55,0.3)',  tag:null,  ready:false }
@@ -568,6 +568,9 @@ window.openGame = function(id){
   }
   if(id === 'counts-curse'){ /* 🆕 */
     location.href = 'counts-curse/index.html' + location.hash;
+  }
+  if(id === 'wild-bounty'){ /* 🆕 */
+    location.href = 'wild-bounty/index.html' + location.hash;
   }
 }
 
