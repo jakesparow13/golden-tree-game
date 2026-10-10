@@ -318,7 +318,7 @@ button:disabled{opacity:.5;cursor:not-allowed;}
   <div class="game-title">Tree of Chronos</div>
   <div class="loading-bar-wrap"><div id="loadingBar"></div></div>
   <div id="loadingPct">0%</div>
-  <div id="verTag" style="margin-top:6px;font-size:11px;color:#8f86b8;">v3</div>
+  <div id="verTag" style="margin-top:6px;font-size:11px;color:#8f86b8;">v4</div>
 </div>
 
 <div id="gameScreen">
@@ -474,11 +474,11 @@ window.__dataReady=false;
         if(pp && pp.catch) pp.catch(beginProgress);
       };
     });
-    /* حارس: بيكمّل بس لو الفيديو واقف تماماً (ما تحرك) 30 ثانية، مو بسبب بطء النت */
+    /* حارس: بيكمّل بس لو الفيديو واقف تماماً (ما تحرك) 60 ثانية، مو بسبب بطء النت */
     setInterval(function(){
       if(started) return;
       if(vid.currentTime!==lastT){ lastT=vid.currentTime; lastMove=Date.now(); }
-      else if(Date.now()-lastMove>(waitingTap?120000:30000)) beginProgress();
+      else if(Date.now()-lastMove>(waitingTap?120000:60000)) beginProgress();
     },1000);
   } else {
     beginProgress();
@@ -1166,17 +1166,16 @@ async function resolveWithGrid(grid){
 function preloadAll(){
   const urls=[...SYMS.filter(x=>x.img).map(x=>x.img),...Object.values(WILD_IMG),'images/spin-icon.jpg','images/bg.jpg'];
   const loadOne = u => new Promise(res=>{
-    const im=new Image(); let fin=false;
-    const end = ok => { if(fin) return; fin=true; clearTimeout(t); res(ok); };
-    const t=setTimeout(()=>end(false),15000);
-    im.onload=()=>{ (im.decode?im.decode():Promise.resolve()).catch(()=>{}).then(()=>end(true)); };
-    im.onerror=()=>end(false);
+    const im=new Image();
+    /* ما في مهلة هون: بنستنى الصورة تتحمل كاملة مهما كان النت بطيء، والسبلاش بيفتح اللعبة بعد 3 دقايق كحد أقصى */
+    im.onload=()=>{ Promise.race([(im.decode?im.decode():Promise.resolve()).catch(()=>{}), new Promise(r=>setTimeout(r,5000))]).then(()=>res(true)); };
+    im.onerror=()=>res(false);
     im.src=u;
   });
   const loadWithRetry = async u => {
-    for(let a=0;a<6;a++){
+    while(!window.__forced){
       if(await loadOne(u)) return true;
-      await new Promise(r=>setTimeout(r,1500));
+      await new Promise(r=>setTimeout(r,2000));
     }
     return false;
   };
@@ -1218,6 +1217,7 @@ window.addEventListener('resize', fitStage);
 window.addEventListener('orientationchange', fitStage);
 
 window.__forceEnter = function(){
+  window.__forced = true;
   try{
     if(!currentGrid){ currentGrid = makeGrid(); render(currentGrid); }
   }catch(e){ console.error(e); }
