@@ -314,7 +314,7 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 <div class="orb" style="width:160px;height:160px;bottom:8%;left:20%;animation-delay:-8s"></div>
 
 <div id="splashScreen">
-  <video id="splashVideo" autoplay muted playsinline src="images/splash-video.mp4"></video>
+  <video id="splashVideo" autoplay muted playsinline preload="auto" src="images/splash-video.mp4"></video>
   <div class="game-title">Tree of Chronos</div>
   <div class="loading-bar-wrap"><div id="loadingBar"></div></div>
   <div id="loadingPct">0%</div>
@@ -456,12 +456,28 @@ window.__dataReady=false;
     },130);
   }
   if(vid){
-    vid.addEventListener('playing', function(){ vidPlaying=true; });
+    function unmuteVid(){
+      try{ vid.muted=false; vid.volume=1; if(vid.paused && !vid.ended) vid.play().catch(function(){}); }catch(e){}
+    }
+    ['click','touchend'].forEach(function(ev){ document.getElementById('splashScreen').addEventListener(ev, unmuteVid, {once:true}); });
+    vid.addEventListener('playing', function(){
+      vidPlaying=true;
+      setTimeout(beginProgress, ((vid.duration||30)+10)*1000);
+    });
     vid.addEventListener('ended', beginProgress);
     vid.addEventListener('error', beginProgress);
     var playPromise=vid.play();
-    if(playPromise && playPromise.catch) playPromise.catch(beginProgress);
-    setTimeout(function(){ if(!vidPlaying) beginProgress(); }, 8000);
+    if(playPromise && playPromise.catch) playPromise.catch(function(){
+      var sp=document.getElementById('splashScreen');
+      pct.textContent='المسي الشاشة لتشغيل الفيديو';
+      sp.onclick=function(){
+        sp.onclick=null;
+        pct.textContent='0%';
+        var pp=vid.play();
+        if(pp && pp.catch) pp.catch(beginProgress);
+      };
+    });
+    setTimeout(function(){ if(!vidPlaying) beginProgress(); }, 45000);
   } else {
     beginProgress();
   }
