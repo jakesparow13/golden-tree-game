@@ -425,32 +425,43 @@ window.__dataReady=false;
 (function(){
   var vid=document.getElementById('splashVideo');
   var bar=document.getElementById('loadingBar'), pct=document.getElementById('loadingPct');
-  var started=false, p=0, t0=null, iv=null;
+  var started=false, vidPlaying=false, p=0, t0=null, iv=null;
   function done(){
     document.getElementById('splashScreen').style.display='none';
     document.getElementById('gameScreen').style.display='block';
     if(window.__fitStage) window.__fitStage();
   }
   window.addEventListener('error',function(e){ pct.textContent='خطأ: '+e.message; console.error(e); });
-  /* 🆕 شريط التحميل بيبدأ بس يخلص فيديو المقدمة (أو لو الفيديو فشل/تأخر 8 ثواني) */
+  /* 🆕 شريط التحميل بيبدأ بس يخلص فيديو المقدمة (أو لو الفيديو فشل/ما اشتغل بعد 8 ثواني) */
   function beginProgress(){
     if(started) return;
     started=true;
     t0=Date.now();
+    window.__loadRequested=true;
+    if(window.__startLoading) window.__startLoading();
     iv=setInterval(function(){
-      p+=Math.random()*15+5;
-      var late=Date.now()-t0>90000;
-      if(!window.__dataReady && !late) p=Math.min(p,90);
+      if(p<50){ p=Math.min(50,p+Math.random()*6+3); }
+      else if(!window.__dataReady){
+        p=Math.min(95,p+Math.random()*0.8);
+        if(Date.now()-t0>180000){
+          clearInterval(iv);
+          pct.textContent='تعذّر التحميل، المسي الشاشة للمحاولة مرة ثانية';
+          document.getElementById('splashScreen').onclick=function(){ location.reload(); };
+          return;
+        }
+      }
+      else { p+=Math.random()*8+4; }
       if(p>=100){ p=100; clearInterval(iv); setTimeout(done,300); }
       bar.style.width=p+'%'; pct.textContent=Math.floor(p)+'%';
     },130);
   }
   if(vid){
+    vid.addEventListener('playing', function(){ vidPlaying=true; });
     vid.addEventListener('ended', beginProgress);
     vid.addEventListener('error', beginProgress);
     var playPromise=vid.play();
     if(playPromise && playPromise.catch) playPromise.catch(beginProgress);
-    setTimeout(beginProgress, 8000);
+    setTimeout(function(){ if(!vidPlaying) beginProgress(); }, 8000);
   } else {
     beginProgress();
   }
@@ -995,7 +1006,7 @@ async function loadUser(){
     try{ dbApi = await import('./db.js'); }
     catch(e){ throw new Error('فشل تحميل ملف db.js (تأكدي إنو جنب index.html): '+(e.message||e)); }
     let d;
-    try{ d = await dbApi.loadBalance(userId, userName); }
+    try{ d = await Promise.race([dbApi.loadBalance(userId, userName), new Promise((_,rej)=>setTimeout(()=>rej(new Error('انتهت مهلة الاتصال بالسيرفر')),30000))]); }
     catch(e){ throw new Error('فشلت قراءة الرصيد من Firebase: '+(e.message||e)); }
     balance = R(d.balance); totalSpins = d.totalSpins; totalWins = R(d.totalWins);
     update();
@@ -1127,7 +1138,7 @@ function preloadAll(){
   const urls=[...SYMS.filter(x=>x.img).map(x=>x.img),...Object.values(WILD_IMG),'images/spin-icon.jpg','images/bg.jpg'];
   return Promise.all(urls.map(u=>new Promise(res=>{
     const im=new Image(); const t=setTimeout(res,10000);
-    im.onload=()=>{ clearTimeout(t); (im.decode?im.decode():Promise.resolve()).catch(()=>{}).then(res); };
+    im.onload=()=>{ (im.decode?im.decode():Promise.resolve()).catch(()=>{}).then(res); };
     im.onerror=()=>{ clearTimeout(t); res(); };
     im.src=u;
   })));
@@ -1167,13 +1178,22 @@ window.__fitStage = fitStage;
 window.addEventListener('resize', fitStage);
 window.addEventListener('orientationchange', fitStage);
 
-Promise.all([loadUser(), preloadAll()]).then(()=>{
-  currentGrid = makeGrid();
-  render(currentGrid);
-  window.__dataReady = true;
-  setTimeout(fitStage,0);
-  requestAnimationFrame(fitStage);
-});
+window.__startLoading = function(){
+  if(window.__loadStarted) return;
+  window.__loadStarted = true;
+  Promise.all([loadUser(), preloadAll()]).then(()=>{
+    currentGrid = makeGrid();
+    render(currentGrid);
+  }).catch(e=>{
+    console.error(e);
+    $('result').innerHTML = '<span class="lose-t">'+(e.message||e)+'</span>';
+  }).finally(()=>{
+    window.__dataReady = true;
+    setTimeout(fitStage,0);
+    requestAnimationFrame(fitStage);
+  });
+};
+if(window.__loadRequested) window.__startLoading();
 </script>
 </body>
 </html>
