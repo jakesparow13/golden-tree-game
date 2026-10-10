@@ -425,7 +425,7 @@ window.__dataReady=false;
 (function(){
   var vid=document.getElementById('splashVideo');
   var bar=document.getElementById('loadingBar'), pct=document.getElementById('loadingPct');
-  var started=false, vidPlaying=false, p=0, t0=null, iv=null;
+  var started=false, vidPlaying=false, waitingTap=false, lastT=-1, lastMove=Date.now(), p=0, t0=null, iv=null;
   function done(){
     document.getElementById('splashScreen').style.display='none';
     document.getElementById('gameScreen').style.display='block';
@@ -442,12 +442,10 @@ window.__dataReady=false;
     iv=setInterval(function(){
       if(p<50){ p=Math.min(50,p+Math.random()*6+3); }
       else if(!window.__dataReady){
-        p=Math.min(95,p+Math.random()*0.8);
+        /* واقف على 50 لحد ما يتأكد تحميل كل الرموز والرصيد، أو يمر 3 دقايق ويفتح */
         if(Date.now()-t0>180000){
-          clearInterval(iv);
-          pct.textContent='تعذّر التحميل، المسي الشاشة للمحاولة مرة ثانية';
-          document.getElementById('splashScreen').onclick=function(){ location.reload(); };
-          return;
+          if(window.__forceEnter) window.__forceEnter();
+          window.__dataReady=true;
         }
       }
       else { p+=Math.random()*8+4; }
@@ -460,14 +458,12 @@ window.__dataReady=false;
       try{ vid.muted=false; vid.volume=1; if(vid.paused && !vid.ended) vid.play().catch(function(){}); }catch(e){}
     }
     ['click','touchend'].forEach(function(ev){ document.getElementById('splashScreen').addEventListener(ev, unmuteVid, {once:true}); });
-    vid.addEventListener('playing', function(){
-      vidPlaying=true;
-      setTimeout(beginProgress, ((vid.duration||30)+10)*1000);
-    });
+    vid.addEventListener('playing', function(){ vidPlaying=true; });
     vid.addEventListener('ended', beginProgress);
     vid.addEventListener('error', beginProgress);
     var playPromise=vid.play();
     if(playPromise && playPromise.catch) playPromise.catch(function(){
+      waitingTap=true;
       var sp=document.getElementById('splashScreen');
       pct.textContent='المسي الشاشة لتشغيل الفيديو';
       sp.onclick=function(){
@@ -477,7 +473,12 @@ window.__dataReady=false;
         if(pp && pp.catch) pp.catch(beginProgress);
       };
     });
-    setTimeout(function(){ if(!vidPlaying) beginProgress(); }, 45000);
+    /* حارس: بيكمّل بس لو الفيديو واقف تماماً (ما تحرك) 30 ثانية، مو بسبب بطء النت */
+    setInterval(function(){
+      if(started) return;
+      if(vid.currentTime!==lastT){ lastT=vid.currentTime; lastMove=Date.now(); }
+      else if(Date.now()-lastMove>(waitingTap?120000:30000)) beginProgress();
+    },1000);
   } else {
     beginProgress();
   }
@@ -1011,24 +1012,35 @@ function showFreeSpinsIntro(n){
 }
 
 async function save(){
-  if(!dbApi) return;
+  if(!dbApi || !window.__balanceOk) return;
   try{ await dbApi.saveBalance(userId,{balance,totalSpins,totalWins}); }
   catch(e){ console.error('خطأ بالحفظ:', e); }
 }
 
 async function loadUser(){
   renderChips();
-  try{
-    try{ dbApi = await import('./db.js'); }
-    catch(e){ throw new Error('فشل تحميل ملف db.js (تأكدي إنو جنب index.html): '+(e.message||e)); }
-    let d;
-    try{ d = await Promise.race([dbApi.loadBalance(userId, userName), new Promise((_,rej)=>setTimeout(()=>rej(new Error('انتهت مهلة الاتصال بالسيرفر')),30000))]); }
-    catch(e){ throw new Error('فشلت قراءة الرصيد من Firebase: '+(e.message||e)); }
-    balance = R(d.balance); totalSpins = d.totalSpins; totalWins = R(d.totalWins);
-    update();
-  }catch(e){
-    console.error(e);
-    $('result').innerHTML = '<span class="lose-t">'+(e.message||e)+'</span>';
+  const tEnd = Date.now() + 300000;
+  let lastErr = null;
+  while(Date.now() < tEnd){
+    try{
+      if(!dbApi){
+        try{ dbApi = await import('./db.js'); }
+        catch(e){ throw new Error('فشل تحميل ملف db.js (تأكدي إنو جنب index.html): '+(e.message||e)); }
+      }
+      let d;
+      try{ d = await Promise.race([dbApi.loadBalance(userId, userName), new Promise((_,rej)=>setTimeout(()=>rej(new Error('انتهت مهلة الاتصال بالسيرفر')),30000))]); }
+      catch(e){ throw new Error('فشلت قراءة الرصيد من Firebase: '+(e.message||e)); }
+      balance = R(d.balance); totalSpins = d.totalSpins; totalWins = R(d.totalWins);
+      window.__balanceOk = true;
+      $('result').innerHTML = '';
+      update();
+      return;
+    }catch(e){
+      lastErr = e;
+      console.error(e);
+      $('result').innerHTML = '<span class="lose-t">'+(e.message||e)+'</span>';
+      await new Promise(r=>setTimeout(r,2000));
+    }
   }
 }
 
@@ -1152,12 +1164,22 @@ async function resolveWithGrid(grid){
 
 function preloadAll(){
   const urls=[...SYMS.filter(x=>x.img).map(x=>x.img),...Object.values(WILD_IMG),'images/spin-icon.jpg','images/bg.jpg'];
-  return Promise.all(urls.map(u=>new Promise(res=>{
-    const im=new Image(); const t=setTimeout(res,10000);
-    im.onload=()=>{ (im.decode?im.decode():Promise.resolve()).catch(()=>{}).then(res); };
-    im.onerror=()=>{ clearTimeout(t); res(); };
+  const loadOne = u => new Promise(res=>{
+    const im=new Image(); let fin=false;
+    const end = ok => { if(fin) return; fin=true; clearTimeout(t); res(ok); };
+    const t=setTimeout(()=>end(false),15000);
+    im.onload=()=>{ (im.decode?im.decode():Promise.resolve()).catch(()=>{}).then(()=>end(true)); };
+    im.onerror=()=>end(false);
     im.src=u;
-  })));
+  });
+  const loadWithRetry = async u => {
+    for(let a=0;a<6;a++){
+      if(await loadOne(u)) return true;
+      await new Promise(r=>setTimeout(r,1500));
+    }
+    return false;
+  };
+  return Promise.all(urls.map(loadWithRetry));
 }
 
 if(!tg?.initDataUnsafe?.user){
@@ -1194,12 +1216,21 @@ window.__fitStage = fitStage;
 window.addEventListener('resize', fitStage);
 window.addEventListener('orientationchange', fitStage);
 
+window.__forceEnter = function(){
+  try{
+    if(!currentGrid){ currentGrid = makeGrid(); render(currentGrid); }
+  }catch(e){ console.error(e); }
+  setTimeout(fitStage,0);
+  requestAnimationFrame(fitStage);
+};
 window.__startLoading = function(){
   if(window.__loadStarted) return;
   window.__loadStarted = true;
   Promise.all([loadUser(), preloadAll()]).then(()=>{
-    currentGrid = makeGrid();
-    render(currentGrid);
+    if(!currentGrid){
+      currentGrid = makeGrid();
+      render(currentGrid);
+    }
   }).catch(e=>{
     console.error(e);
     $('result').innerHTML = '<span class="lose-t">'+(e.message||e)+'</span>';
