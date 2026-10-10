@@ -318,7 +318,7 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 .reels{gap:4px;margin:0 -4px;}
 .reel{padding:2px;border:2px solid #d9962e;border-image:none;border-radius:10px;
   background:linear-gradient(180deg,#171152,#0c0826);}
-.cell img:not(.sym-blank){inset:-8%;width:116%;height:116%;}
+.cell img:not(.sym-blank){inset:-3%;width:106%;height:106%;}
 
 /* ---- 3) المربعات العلوية: بأعلى الشاشة + متحركة ---- */
 .suits{margin-top:0;margin-bottom:8px;}
@@ -335,17 +335,17 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 @keyframes suitShine{0%,55%{left:-70%;}100%{left:140%;}}
 
 /* ---- 4) مستطيل الرهانات أسود + الأرقام 1-5 ظاهرة دائماً ---- */
-.chips{background:#0b0b0f;border:1.5px solid #1d1d26;border-radius:18px 18px 0 0;padding:12px 8px 6px;margin:12px 0 0;}
+.chips{background:#0b0b0f;border:1.5px solid #1d1d26;border-radius:18px;padding:12px 8px 12px;margin:12px 0 10px;}
+.chips:has(+ .levels[style*="flex"]){border-radius:18px 18px 0 0;margin-bottom:0;padding-bottom:6px;}
 .chip{background:#2a2a30;border:1.5px solid #4a4a55;color:#f2f2f2;font-size:13px;}
 .chip.active{border-color:var(--gold2);box-shadow:0 0 8px rgba(255,215,0,.5);}
-.levels{display:flex !important;background:#0b0b0f;border:1.5px solid #1d1d26;border-top:none;border-radius:0 0 18px 18px;padding:6px 0 12px;margin:0 0 12px;}
+.levels{background:#0b0b0f;border:1.5px solid #1d1d26;border-top:none;border-radius:0 0 18px 18px;padding:6px 0 12px;margin:0 0 12px;}
 .lv{width:44px;height:44px;background:#34343a;border:1.5px solid #34343a;color:#fff;font-size:16px;}
 .lv.active{border-color:var(--gold2);}
-#coinBtn{display:none;}
 
 /* ---- 5) زر السبين: دائرة سودا بإطار فضي وسهم أبيض ---- */
 .actions{gap:10px;}
-.spin{width:108px;height:108px;padding:0;border:6px solid #cfcfdc;border-image:none;border-radius:50%;
+.spin{width:100px;height:100px;padding:0;border:6px solid #cfcfdc;border-image:none;border-radius:50%;
   background:radial-gradient(circle at 50% 35%,#2b2b33,#0a0a0e 75%);
   box-shadow:0 0 0 2px #6b6b78,0 6px 14px rgba(0,0,0,.7),inset 0 3px 6px rgba(255,255,255,.25),inset 0 -8px 14px rgba(0,0,0,.7);}
 .spin img{display:none;}
@@ -355,7 +355,7 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 .spin:disabled{opacity:.9;}
 
 /* ---- 6) زر اللعب التلقائي + باقي الأزرار الدائرية ---- */
-.rbtn{overflow:visible;width:50px;height:50px;border:3px solid #d5d5e3;
+.rbtn{overflow:visible;width:46px;height:46px;border:3px solid #d5d5e3;
   background:radial-gradient(circle at 50% 35%,#2b2b33,#0a0a0e);color:#fff;}
 #autoBtn{font-size:0;}
 #autoBtn::before{content:'';position:absolute;top:50%;left:50%;transform:translate(-35%,-50%);
