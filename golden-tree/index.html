@@ -309,7 +309,7 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 <!-- ============ PATCH UI v5 : الكتلة A (بداية) ============ -->
 <style id="patch-ui-v5">
 /* ---- 1) العنوان و x20,000 أكبر ---- */
-.logo{font-size:32px;padding:12px 18px;letter-spacing:1px;}
+.logo{font-size:32px;padding:0 14px;line-height:1.2;letter-spacing:1px;color:#ffd23a;text-shadow:0 2px 0 #7a4a00,0 0 12px rgba(255,200,0,.7);}
 .logo-max{direction:ltr;unicode-bidi:isolate;margin-top:6px;font-family:'Amiri',serif;font-weight:800;font-size:46px;line-height:1.1;
   background:linear-gradient(180deg,#fff3a8,#ffc83a 55%,#b8761a);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
   filter:drop-shadow(0 2px 0 #4a2a00) drop-shadow(0 0 8px rgba(255,215,0,.6));}
@@ -366,6 +366,42 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 .balbar{background:rgba(0,0,0,.88);border:1.5px solid #1d1d26;border-radius:16px;padding:12px 56px;}
 .sound-toggle{top:auto;bottom:calc(15px + env(safe-area-inset-bottom));right:12px;width:36px;height:36px;
   border:none;background:transparent;font-size:18px;}
+</style>
+<style id="patch-ui-v6">
+/* ===== نافذة البونص مثل اللعبة الأصلية ===== */
+.modal-card{display:flex;flex-direction:column;max-width:360px;padding:14px 14px 16px;
+  background:linear-gradient(180deg,#2c1c68,#1b1050);border:3px solid #f0a238;border-radius:18px;
+  box-shadow:0 0 0 2px rgba(255,214,120,.35),0 0 28px rgba(255,170,40,.45);}
+.modal-title{order:1;font-family:'Amiri',serif;font-size:36px;font-weight:800;line-height:1.1;color:#ffd23a;margin-bottom:4px;
+  text-shadow:0 3px 0 #7a4a00,0 0 16px rgba(255,200,0,.65);}
+.modal-title span{font-size:0;margin-top:0;}
+.modal-title span::after{content:'x20,000';direction:ltr;unicode-bidi:isolate;display:block;font-size:40px;font-weight:800;color:#ffd23a;
+  text-shadow:0 3px 0 #7a4a00,0 0 18px rgba(255,200,0,.75);}
+.pkg-grid{order:2;direction:ltr;gap:10px;margin:8px 0 12px;}
+.pkg{direction:rtl;padding:0;overflow:hidden;border:3px solid #cfcfdc;border-radius:12px;background:#171048;}
+.pkg.sel{border-color:var(--gold2);box-shadow:0 0 14px rgba(255,215,0,.55);}
+.pkg-icons{height:88px;margin:0;padding:6px 4px 0;background:linear-gradient(180deg,#2a2152,#18123f);}
+.pkg-icons img{height:60px;border:2px solid #d4d4e0;border-radius:8px;background:#1d1559;filter:grayscale(1) brightness(1.15);}
+.pkg.sel .pkg-icons img{filter:none;border-color:var(--gold2);}
+.pkg-icons.double img{height:52px;}
+.pkg-icons.triple img{height:42px;margin:0 -9px;}
+.pkg-icons.triple img:nth-child(2){height:56px;position:relative;z-index:2;}
+.pkg-icons.quad{height:88px;padding:6px;gap:4px;}
+.pkg-icons.quad img{height:100%;width:100%;object-fit:contain;}
+.pkg-icons.quad span{font-size:0;background:#101030;border:2px solid #cfcfdc;border-radius:6px;}
+.pkg-icons.quad span::after{content:'?';font-size:24px;font-weight:800;color:#ffd23a;}
+.pkg-cost,.pkg-sub{background:#7e7e8d;color:#fff;}
+.pkg-cost{padding-top:5px;font-size:15px;}
+.pkg-sub{margin-top:0;padding-bottom:5px;font-size:11px;color:#f1f1f6;}
+.bet-stepper{order:3;flex-direction:row-reverse;margin:4px 0 12px;gap:10px;}
+.bet-disp{min-width:150px;padding:10px 14px;border:3px solid #e8892a;border-radius:12px;font-size:20px;font-weight:800;color:#2a1a00;
+  background:linear-gradient(180deg,#ffeaa6,#f2b53e);}
+.bet-stepper button{width:46px;height:46px;border-radius:10px;font-weight:900;}
+.bet-stepper button:first-child{background:linear-gradient(180deg,#ffb94d,#f0781a);border:2px solid #ffd58a;color:#1a1250;}
+.bet-stepper button:last-child{background:linear-gradient(180deg,#eeeef4,#8d8d99);border:2px solid #fff;color:#1b1b24;}
+.modal-actions{order:4;margin-top:0;}
+.modal-actions .confirm{background:linear-gradient(180deg,#bcd2bd,#6f8f78);color:#26352a;border:3px solid #dcdce6;}
+.modal-actions .cancel{border:2px solid #4a4a60;}
 </style>
 <!-- ============ PATCH UI v5 : الكتلة A (نهاية) ============ -->
 </head>
@@ -773,7 +809,7 @@ function randomColumn(pool){ return Array.from({length:ROWS}, ()=>randomCell(poo
 function makeGrid(){
   const bonusForce = guaranteedWildsPerSpin > 0;
   const pityReached = spinsSinceWild >= WILD_PITY_SPINS;
-  const allowWild = bonusForce || inFree || pityReached;
+  const allowWild = pityReached && !bonusForce && !inFree;
   const usedBlankRows = new Set();
   const grid = [];
   for(let r=0;r<REELS;r++){
