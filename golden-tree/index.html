@@ -406,7 +406,8 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 <style id="patch-ui-v7">
 /* ===== الشجرة تطلع فوق البكرة بدل ما تنقص داخلها ===== */
 .expand-wild{overflow:visible;transform-origin:center bottom;}
-.expand-wild img{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:auto;height:122%;max-width:190%;max-height:122%;object-fit:contain;object-position:center bottom;}
+.expand-wild img{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:160%;height:122%;max-width:none;max-height:none;object-fit:cover;object-position:center bottom;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);}
 </style>
 <!-- ============ PATCH UI v5 : الكتلة A (نهاية) ============ -->
 </head>
