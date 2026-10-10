@@ -305,6 +305,69 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 }
 .sound-toggle.off{opacity:.5;}
 </style>
+
+<!-- ============ PATCH UI v5 : الكتلة A (بداية) ============ -->
+<style id="patch-ui-v5">
+/* ---- 1) العنوان و x20,000 أكبر ---- */
+.logo{font-size:32px;padding:12px 18px;letter-spacing:1px;}
+.logo-max{direction:ltr;unicode-bidi:isolate;margin-top:6px;font-family:'Amiri',serif;font-weight:800;font-size:46px;line-height:1.1;
+  background:linear-gradient(180deg,#fff3a8,#ffc83a 55%,#b8761a);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 2px 0 #4a2a00) drop-shadow(0 0 8px rgba(255,215,0,.6));}
+
+/* ---- 2) الرموز أكبر وتعبي الخانة مثل اللعبة الأصلية ---- */
+.reels{gap:4px;margin:0 -4px;}
+.reel{padding:2px;border:2px solid #d9962e;border-image:none;border-radius:10px;
+  background:linear-gradient(180deg,#171152,#0c0826);}
+.cell img:not(.sym-blank){inset:-8%;width:116%;height:116%;}
+
+/* ---- 3) المربعات العلوية: بأعلى الشاشة + متحركة ---- */
+.suits{margin-top:0;margin-bottom:8px;}
+.suit{position:relative;animation:suitFloat 3.2s ease-in-out infinite,suitGlow 2.4s ease-in-out infinite;animation-delay:var(--d),var(--d);}
+.suit:nth-child(1){--d:0s;}
+.suit:nth-child(2){--d:-.8s;}
+.suit:nth-child(3){--d:-1.6s;}
+.suit:nth-child(4){--d:-2.4s;}
+.suit::after{content:'';position:absolute;top:0;left:-70%;width:45%;height:100%;pointer-events:none;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.35),transparent);
+  transform:skewX(-20deg);animation:suitShine 4s ease-in-out infinite;animation-delay:var(--d);}
+@keyframes suitFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-3px);}}
+@keyframes suitGlow{0%,100%{box-shadow:0 0 0 rgba(255,215,0,0);border-color:#8a6a2a;}50%{box-shadow:0 0 10px rgba(255,215,0,.55);border-color:#e6bf5a;}}
+@keyframes suitShine{0%,55%{left:-70%;}100%{left:140%;}}
+
+/* ---- 4) مستطيل الرهانات أسود + الأرقام 1-5 ظاهرة دائماً ---- */
+.chips{background:#0b0b0f;border:1.5px solid #1d1d26;border-radius:18px 18px 0 0;padding:12px 8px 6px;margin:12px 0 0;}
+.chip{background:#2a2a30;border:1.5px solid #4a4a55;color:#f2f2f2;font-size:13px;}
+.chip.active{border-color:var(--gold2);box-shadow:0 0 8px rgba(255,215,0,.5);}
+.levels{display:flex !important;background:#0b0b0f;border:1.5px solid #1d1d26;border-top:none;border-radius:0 0 18px 18px;padding:6px 0 12px;margin:0 0 12px;}
+.lv{width:44px;height:44px;background:#34343a;border:1.5px solid #34343a;color:#fff;font-size:16px;}
+.lv.active{border-color:var(--gold2);}
+#coinBtn{display:none;}
+
+/* ---- 5) زر السبين: دائرة سودا بإطار فضي وسهم أبيض ---- */
+.actions{gap:10px;}
+.spin{width:108px;height:108px;padding:0;border:6px solid #cfcfdc;border-image:none;border-radius:50%;
+  background:radial-gradient(circle at 50% 35%,#2b2b33,#0a0a0e 75%);
+  box-shadow:0 0 0 2px #6b6b78,0 6px 14px rgba(0,0,0,.7),inset 0 3px 6px rgba(255,255,255,.25),inset 0 -8px 14px rgba(0,0,0,.7);}
+.spin img{display:none;}
+.spin::before{content:'';position:absolute;inset:0;margin:auto;width:52%;height:52%;box-sizing:border-box;border-radius:50%;
+  border:8px solid #e9e9f2;border-right-color:transparent;filter:drop-shadow(0 0 4px rgba(255,255,255,.5));}
+.spin.spinning::before{animation:rot .6s linear infinite;}
+.spin:disabled{opacity:.9;}
+
+/* ---- 6) زر اللعب التلقائي + باقي الأزرار الدائرية ---- */
+.rbtn{overflow:visible;width:50px;height:50px;border:3px solid #d5d5e3;
+  background:radial-gradient(circle at 50% 35%,#2b2b33,#0a0a0e);color:#fff;}
+#autoBtn{font-size:0;}
+#autoBtn::before{content:'';position:absolute;top:50%;left:50%;transform:translate(-35%,-50%);
+  border-style:solid;border-width:9px 0 9px 15px;border-color:transparent transparent transparent #fff;}
+#autoBtn.on::before{border-left-color:var(--gold2);}
+
+/* ---- 7) شريط الرصيد أسود + زر الصوت تحت يمين ---- */
+.balbar{background:rgba(0,0,0,.88);border:1.5px solid #1d1d26;border-radius:16px;padding:12px 56px;}
+.sound-toggle{top:auto;bottom:calc(15px + env(safe-area-inset-bottom));right:12px;width:36px;height:36px;
+  border:none;background:transparent;font-size:18px;}
+</style>
+<!-- ============ PATCH UI v5 : الكتلة A (نهاية) ============ -->
 </head>
 <body>
 
@@ -1243,5 +1306,21 @@ window.__startLoading = function(){
 };
 if(window.__loadRequested) window.__startLoading();
 </script>
+
+<!-- ============ PATCH UI v5 : الكتلة B (بداية) ============ -->
+<script>
+(function(){
+  var els=document.querySelectorAll('.suit span');
+  var vals=[].map.call(els,function(e){return parseInt(e.textContent.replace(/,/g,''),10)||0;});
+  var step=[3,8,25,120];
+  setInterval(function(){
+    for(var i=0;i<els.length;i++){
+      vals[i]+=Math.floor(Math.random()*step[i]*3)+1;
+      els[i].textContent=vals[i].toLocaleString('en-US');
+    }
+  },1200);
+})();
+</script>
+<!-- ============ PATCH UI v5 : الكتلة B (نهاية) ============ -->
 </body>
 </html>
