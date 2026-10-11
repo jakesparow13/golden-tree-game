@@ -406,7 +406,7 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 <style id="patch-ui-v7">
 /* ===== الشجرة تطلع فوق البكرة بدل ما تنقص داخلها ===== */
 .expand-wild{overflow:visible;transform-origin:center bottom;}
-.expand-wild img{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:110%;height:100%;max-width:none;max-height:none;object-fit:cover;object-position:center bottom;
+.expand-wild img{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:100%;height:106%;max-width:none;max-height:none;object-fit:cover;object-position:center bottom;
   -webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);}
 </style>
 <!-- ============ PATCH UI v5 : الكتلة A (نهاية) ============ -->
@@ -727,8 +727,8 @@ const SoundEngine = (() => {
   const sfxSpinEl = document.getElementById('sfxSpin');
   const sfxWildEl = document.getElementById('sfxWild');
   let sfxSpinBroken = false, sfxWildBroken = false;
-  if(sfxSpinEl){ sfxSpinEl.volume = 0.4; sfxSpinEl.addEventListener('error', ()=>{ sfxSpinBroken = true; }); }
-  if(sfxWildEl){ sfxWildEl.volume = 0.6; sfxWildEl.addEventListener('error', ()=>{ sfxWildBroken = true; }); }
+  if(sfxSpinEl){ sfxSpinEl.volume = 0.2; sfxSpinEl.addEventListener('error', ()=>{ sfxSpinBroken = true; }); }
+  if(sfxWildEl){ sfxWildEl.volume = 0.4; sfxWildEl.addEventListener('error', ()=>{ sfxWildBroken = true; }); }
   function playClick(){
     if(sfxSpinEl && !sfxSpinBroken){
       try{ sfxSpinEl.currentTime = 0; sfxSpinEl.play().catch(()=>{ synthClick(); }); return; }catch(e){}
