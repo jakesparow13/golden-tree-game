@@ -404,10 +404,9 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 .modal-actions .cancel{border:2px solid #4a4a60;}
 </style>
 <style id="patch-ui-v7">
-/* ===== الشجرة تطلع فوق البكرة بدل ما تنقص داخلها ===== */
-.expand-wild{overflow:visible;background:none;border-radius:0;transform-origin:center bottom;}
-.expand-wild img{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:112%;height:120%;max-width:none;max-height:none;object-fit:fill;-webkit-mask-image:none;mask-image:none;}
-  -webkit-mask-image:none;mask-image:none;}
+/* ===== الشجرة تغطي الرموز وتطلع فوق البكرة ===== */
+.expand-wild{overflow:visible;background:linear-gradient(180deg,#171152,#0c0826);border-radius:8px;transform-origin:center bottom;}
+.expand-wild img{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:115%;height:115%;max-width:none;max-height:none;object-fit:fill;-webkit-mask-image:none;mask-image:none;}
 </style>
 <!-- ============ PATCH UI v5 : الكتلة A (نهاية) ============ -->
 </head>
