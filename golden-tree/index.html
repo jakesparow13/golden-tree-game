@@ -524,6 +524,9 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 <audio id="bgMusic" src="images/bg-music.mp3" loop preload="auto" style="display:none"></audio>
 <audio id="sfxSpin" src="images/spin-click.mp3" preload="auto" style="display:none"></audio>
 <audio id="sfxWild" src="images/wild-drop.mp3" preload="auto" style="display:none"></audio>
+<audio id="sfxBuy" src="images/buy-bonus.mp3" preload="auto" style="display:none"></audio>
+<audio id="sfxBig" src="images/big-win.mp3" preload="auto" style="display:none"></audio>
+<audio id="sfxPick" src="images/bonus-select.mp3" preload="auto" style="display:none"></audio>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
 window.__dataReady=false;
@@ -747,6 +750,14 @@ const SoundEngine = (() => {
     [1568,1976,2349].forEach((f,i)=> tone(f,0.5,'sine',0.22,0.02+i*0.03));
   }
 
+  function playEl(id, vol, fallback){
+    const el = document.getElementById(id);
+    if(el){
+      try{ el.volume = vol; el.currentTime = 0; el.play().catch(()=>{ if(fallback) fallback(); }); return; }catch(e){}
+    }
+    if(fallback) fallback();
+  }
+
   return {
     unlock(){ ac(); startAmbient(); },
     toggleAmbient(){ if(ambientOn) stopAmbient(); else startAmbient(); return ambientOn; },
@@ -756,14 +767,20 @@ const SoundEngine = (() => {
     wildDrop(){ playWildDrop(); },
     win(){ [523,659,784].forEach((f,i)=> tone(f,0.22,'triangle',0.18,i*0.09)); },
     niceWin(){ [587,740,880,987].forEach((f,i)=> tone(f,0.25,'triangle',0.19,i*0.08)); },
+    buyBonus(){ playEl('sfxBuy', 0.7); },
+    pickBonus(){ playEl('sfxPick', 0.5); },
     bigWin(){
-      [523,659,784,1047].forEach((f,i)=> tone(f,0.3,'triangle',0.2,i*0.11));
-      noiseBurst(0.3,0.08,0.3,6000);
+      playEl('sfxBig', 0.7, ()=>{
+        [523,659,784,1047].forEach((f,i)=> tone(f,0.3,'triangle',0.2,i*0.11));
+        noiseBurst(0.3,0.08,0.3,6000);
+      });
     },
     megaWin(){
-      [392,523,659,784,988,1175,1568].forEach((f,i)=> tone(f,0.4,'triangle',0.22,i*0.09));
-      noiseBurst(0.5,0.12,0.5,7000);
-      tone(1568,0.6,'sawtooth',0.06,0.55);
+      playEl('sfxBig', 0.8, ()=>{
+        [392,523,659,784,988,1175,1568].forEach((f,i)=> tone(f,0.4,'triangle',0.22,i*0.09));
+        noiseBurst(0.5,0.12,0.5,7000);
+        tone(1568,0.6,'sawtooth',0.06,0.55);
+      });
     },
     freeSpins(){ [660,880,1100,1320].forEach((f,i)=> tone(f,0.25,'triangle',0.16,i*0.08)); }
   };
@@ -1081,6 +1098,7 @@ window.bonusStepBet = (dir) => {
 };
 window.openBuyModal = () => {
   if(spinning || inFree) return;
+  SoundEngine.pickBonus();
   updateBonusCosts();
   pendingPkg = null;
   document.querySelectorAll('.pkg').forEach(p=>p.classList.remove('sel'));
@@ -1089,6 +1107,7 @@ window.openBuyModal = () => {
 };
 window.closeBuyModal = () => { $('buyModal').style.display = 'none'; };
 window.selectPkg = (el, key) => {
+  SoundEngine.pickBonus();
   document.querySelectorAll('.pkg').forEach(p=>p.classList.remove('sel'));
   el.classList.add('sel');
   pendingPkg = key;
@@ -1103,6 +1122,7 @@ window.confirmBuy = async () => {
     return;
   }
   balance = R(balance - cost);
+  SoundEngine.buyBonus();
   guaranteedWildsPerSpin = pendingPkg==='1' ? 1 : pendingPkg==='2' ? 2 : pendingPkg==='3' ? 3 : (1+Math.floor(Math.random()*4));
   inFree=true; freeLeft=5; freeWin=0;
   closeBuyModal();
