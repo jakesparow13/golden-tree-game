@@ -407,6 +407,11 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 /* ===== الشجرة تغطي الرموز وتطلع فوق البكرة ===== */
 .expand-wild{overflow:visible;background:linear-gradient(180deg,#171152,#0c0826);border-radius:8px;transform-origin:center bottom;}
 .expand-wild img{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:115%;height:115%;max-width:none;max-height:none;object-fit:fill;-webkit-mask-image:none;mask-image:none;}
+.wild-mult{position:absolute;left:50%;bottom:-16px;transform:translateX(-50%);z-index:20;pointer-events:none;direction:ltr;
+  padding:0 12px;border-radius:14px;border:2px solid #e8892a;background:linear-gradient(180deg,#ffeaa6,#f2b53e);
+  font-family:'Cairo',sans-serif;font-size:18px;font-weight:800;line-height:26px;color:#2a1a00;
+  box-shadow:0 2px 6px rgba(0,0,0,.6),0 0 10px rgba(255,215,0,.6);animation:multPop .45s cubic-bezier(.2,.9,.3,1.4) both;}
+@keyframes multPop{0%{transform:translateX(-50%) scale(0);opacity:0;}100%{transform:translateX(-50%) scale(1);opacity:1;}}
 </style>
 <!-- ============ PATCH UI v5 : الكتلة A (نهاية) ============ -->
 </head>
@@ -631,6 +636,16 @@ function R(n){ return Math.round(n); }
 
 const SoundEngine = (() => {
   let ctx = null;
+  /* ===== مستويات الصوت: عدّل الأرقام من هون (من 0 لـ 1) ===== */
+  const VOL = {
+    bg:       0.12,  /* صوت الخلفية */
+    reel:     0.12,  /* صوت ضغطة السبين */
+    reelStop: 0.6,   /* صوت وقوف كل بكرة (مضاعف) */
+    wild:     0.22,  /* صوت نزول الشجرة */
+    bonus:    0.15,  /* صوت اختيار وشراء البونص */
+    big:      0.3,   /* صوت البيج وين والميجا وين */
+    synth:    0.6    /* الأصوات المولّدة (مكاسب عادية) */
+  };
   function ac(){
     if(!ctx){
       try{ ctx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ ctx=null; }
@@ -647,7 +662,7 @@ const SoundEngine = (() => {
     osc.frequency.setValueAtTime(freq, t0);
     if(freqEnd) osc.frequency.exponentialRampToValueAtTime(freqEnd, t0+dur);
     gain.gain.setValueAtTime(0, t0);
-    gain.gain.linearRampToValueAtTime(vol, t0+0.012);
+    gain.gain.linearRampToValueAtTime(vol*VOL.synth, t0+0.012);
     gain.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
     osc.connect(gain); gain.connect(c.destination);
     osc.start(t0); osc.stop(t0+dur+0.02);
@@ -664,7 +679,7 @@ const SoundEngine = (() => {
     const filt = c.createBiquadFilter();
     filt.type='lowpass'; filt.frequency.value = filterFreq;
     const gain = c.createGain();
-    gain.gain.setValueAtTime(vol, t0);
+    gain.gain.setValueAtTime(vol*VOL.synth, t0);
     gain.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
     src.connect(filt); filt.connect(gain); gain.connect(c.destination);
     src.start(t0);
@@ -673,7 +688,7 @@ const SoundEngine = (() => {
   const bgMusicEl = document.getElementById('bgMusic');
   let musicBroken = false;
   if(bgMusicEl){
-    bgMusicEl.volume = 0.22;
+    bgMusicEl.volume = VOL.bg;
     bgMusicEl.addEventListener('error', ()=>{ musicBroken = true; console.warn('bg-music.mp3 فشل تحميلها، رح نستخدم المولّدة بدلها'); startAmbientSynth(); });
   }
   let ambientOn = false;
@@ -729,8 +744,8 @@ const SoundEngine = (() => {
   const sfxSpinEl = document.getElementById('sfxSpin');
   const sfxWildEl = document.getElementById('sfxWild');
   let sfxSpinBroken = false, sfxWildBroken = false;
-  if(sfxSpinEl){ sfxSpinEl.volume = 0.2; sfxSpinEl.addEventListener('error', ()=>{ sfxSpinBroken = true; }); }
-  if(sfxWildEl){ sfxWildEl.volume = 0.4; sfxWildEl.addEventListener('error', ()=>{ sfxWildBroken = true; }); }
+  if(sfxSpinEl){ sfxSpinEl.volume = VOL.reel; sfxSpinEl.addEventListener('error', ()=>{ sfxSpinBroken = true; }); }
+  if(sfxWildEl){ sfxWildEl.volume = VOL.wild; sfxWildEl.addEventListener('error', ()=>{ sfxWildBroken = true; }); }
   function playClick(){
     if(sfxSpinEl && !sfxSpinBroken){
       try{ sfxSpinEl.currentTime = 0; sfxSpinEl.play().catch(()=>{ synthClick(); }); return; }catch(e){}
@@ -763,20 +778,20 @@ const SoundEngine = (() => {
     toggleAmbient(){ if(ambientOn) stopAmbient(); else startAmbient(); return ambientOn; },
     click(){ playClick(); },
     reelTick(){ tone(500 + Math.random()*150, 0.035, 'square', 0.025); },
-    reelStop(){ noiseBurst(0.06,0.08,0,1800); tone(180,0.08,'sine',0.08); },
+    reelStop(){ noiseBurst(0.06,0.08*VOL.reelStop,0,1800); tone(180,0.08,'sine',0.08*VOL.reelStop); },
     wildDrop(){ playWildDrop(); },
     win(){ [523,659,784].forEach((f,i)=> tone(f,0.22,'triangle',0.18,i*0.09)); },
     niceWin(){ [587,740,880,987].forEach((f,i)=> tone(f,0.25,'triangle',0.19,i*0.08)); },
-    buyBonus(){ playEl('sfxBuy', 0.7); },
-    pickBonus(){ playEl('sfxPick', 0.5); },
+    buyBonus(){ playEl('sfxBuy', VOL.bonus); },
+    pickBonus(){ playEl('sfxPick', VOL.bonus); },
     bigWin(){
-      playEl('sfxBig', 0.7, ()=>{
+      playEl('sfxBig', VOL.big, ()=>{
         [523,659,784,1047].forEach((f,i)=> tone(f,0.3,'triangle',0.2,i*0.11));
         noiseBurst(0.3,0.08,0.3,6000);
       });
     },
     megaWin(){
-      playEl('sfxBig', 0.8, ()=>{
+      playEl('sfxBig', VOL.big, ()=>{
         [392,523,659,784,988,1175,1568].forEach((f,i)=> tone(f,0.4,'triangle',0.22,i*0.09));
         noiseBurst(0.5,0.12,0.5,7000);
         tone(1568,0.6,'sawtooth',0.06,0.55);
@@ -1174,7 +1189,7 @@ window.spin = function(){
   if(!inFree && balance < bet){ $('result').innerHTML='<span class="lose-t">رصيدك غير كافي</span>'; return; }
   spinning = true;
   clearWinLines();
-  document.querySelectorAll('.expand-wild').forEach(el=>el.remove());
+  document.querySelectorAll('.expand-wild,.wild-mult').forEach(el=>el.remove());
   SoundEngine.unlock();
   SoundEngine.click();
   $('spinBtn').disabled = true; $('spinBtn').classList.add('spinning'); $('buyBtn').disabled = true;
@@ -1233,6 +1248,11 @@ async function resolveWithGrid(grid){
     overlay.className = 'expand-wild';
     overlay.innerHTML = `<img src="${WILD_IMG[10]}" alt="" onerror="this.replaceWith(document.createTextNode('🌳'))">`;
     col.appendChild(overlay);
+    const wc = grid[r].find(c=>c.key==='wild');
+    const tag = document.createElement('div');
+    tag.className = 'wild-mult';
+    tag.textContent = 'x' + (wc ? wc.mult : 10);
+    col.appendChild(tag);
     spawnSparks(col, 10);
     setTimeout(()=>{ glow.remove(); }, 1400);
   });
