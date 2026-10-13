@@ -624,14 +624,14 @@ const SYMS = [
   {key:'lemon',   img:'images/lemon.png',      e:'🍋', weight:13},
   {key:'plum',    img:'images/eggplant.png',   e:'🍆', weight:13}
 ];
-const WILD_IMG = {2:'images/wild-x2.png',3:'images/wild-x3.png',5:'images/wild-x5.png',10:'images/wild-base.png'};
+const WILD_IMG = {1:'images/wild-base.png',2:'images/wild-x2.png',3:'images/wild-x3.png',5:'images/wild-x5.png',10:'images/wild-base.png'};
 const PAY = {
   wild:{2:2,3:10,4:50,5:1000},
-  seven:{2:2,3:12,4:55,5:1000},
-  grape:{3:9,4:27,5:150}, melon:{3:9,4:27,5:150}, bell:{3:5,4:10,5:50},
-  cherry:{3:3,4:8,5:35}, orange:{3:3,4:8,5:35}, lemon:{3:3,4:8,5:35}, plum:{3:3,4:8,5:35},
+  seven:{2:2,3:10,4:50,5:1000},
+  grape:{3:8,4:24,5:140}, melon:{3:8,4:24,5:140}, bell:{3:4,4:8,5:40},
+  cherry:{3:2,4:6,5:30}, orange:{3:2,4:6,5:30}, lemon:{3:2,4:6,5:30}, plum:{3:2,4:6,5:30},
   scatterDollar:{3:10,4:40,5:200},
-  scatterStar:{3:40,4:120,5:400}
+  scatterStar:{3:40}
 };
 const BONUS_COST_MULT = { '1':60, '2':205, '3':575, 'r':600 };
 
@@ -816,8 +816,8 @@ const SoundEngine = (() => {
   };
 })();
 
-const LINES = [[1,1,1,1,1],[0,0,0,0,0],[2,2,2,2,2],[0,1,2,1,0],[2,1,0,1,2],[0,0,1,0,0],[2,2,1,2,2],[1,0,0,0,1],[1,2,2,2,1],[0,1,1,1,0]];
-const WMULTS = [{val:2,weight:10},{val:3,weight:6},{val:5,weight:3},{val:10,weight:1}];
+const LINES = [[1,1,1,1,1],[0,0,0,0,0],[2,2,2,2,2],[0,1,2,1,0],[2,1,0,1,2],[0,0,1,2,2],[2,2,1,0,0],[1,2,2,2,1],[1,0,0,0,1],[0,1,1,1,0]];
+const WMULTS = [{val:1,weight:12},{val:2,weight:8},{val:3,weight:5},{val:5,weight:2},{val:10,weight:1}];
 const LEVELS = [
   [300,600,1200,1500,3000],
   [6000,10000,15000,20000,25000],
@@ -846,9 +846,12 @@ let lastBlankReels = new Set();
 let spinsSinceWild = 0;
 const WILD_PITY_SPINS = 20;
 function poolForReel(r, avoidBlank, allowWild){
-  if(r===1 || r===3) return allowWild ? SYMS_NO_BLANK : SYMS_NO_BLANK_NO_WILD;
-  if(avoidBlank) return allowWild ? SYMS_NO_BLANK : SYMS_NO_BLANK_NO_WILD;
-  return allowWild ? SYMS : SYMS_NO_WILD;
+  let p;
+  if(r===1 || r===3) p = allowWild ? SYMS_NO_BLANK : SYMS_NO_BLANK_NO_WILD;
+  else if(avoidBlank) p = allowWild ? SYMS_NO_BLANK : SYMS_NO_BLANK_NO_WILD;
+  else p = allowWild ? SYMS : SYMS_NO_WILD;
+  /* النجمة بتنزل بس على البكرات الأولى والثالثة والخامسة */
+  return (r===1 || r===3) ? p.filter(x=>x.key!=='scatterStar') : p;
 }
 
 function randomCell(pool){
@@ -1026,7 +1029,7 @@ function evaluate(grid, b){
     const t = PAY[target];
     if(t && t[count]){
       let w = b*t[count];
-      const m = cells.reduce((s,[r,row])=>grid[r][row].key==='wild' ? s+grid[r][row].mult : s, 0);
+      const m = cells.reduce((s,[r,row])=>(grid[r][row].key==='wild' && grid[r][row].mult>1) ? s+grid[r][row].mult : s, 0);
       if(m>0) w *= m;
       w = R(w);
       total += w; wins.push(...cells);
@@ -1045,8 +1048,9 @@ function evaluate(grid, b){
     wins.push(...dollarCells);
     winLinesCells.push(dollarCells);
   }
-  if(starCells.length>=3 && PAY.scatterStar[Math.min(starCells.length,5)]){
-    total = R(total + b*PAY.scatterStar[Math.min(starCells.length,5)]);
+  const starReels = new Set(starCells.map(([r])=>r));
+  if(starReels.has(0) && starReels.has(2) && starReels.has(4)){
+    total = R(total + b*PAY.scatterStar[3]);
     wins.push(...starCells);
     winLinesCells.push(starCells);
   }
@@ -1243,10 +1247,12 @@ function showWinOverlay(amount, label){
   requestAnimationFrame(step);
 }
 
+const bestWild = col => col.filter(c=>c.key==='wild').reduce((a,c)=>(!a || c.mult>a.mult) ? c : a, null);
+
 async function resolveWithGrid(grid){
   /* الشجرة تتحسب على كل خانات البكرة (ما عدا النجمة والدولار) - ظهورها وباقي المنطق ما تغيّر */
   const evalGrid = grid.map(col=>{
-    const w = col.find(c=>c.key==='wild');
+    const w = bestWild(col);
     if(!w) return col;
     return col.map(c=> (c.key==='scatterDollar' || c.key==='scatterStar') ? c : {key:'wild', mult:w.mult});
   });
@@ -1269,11 +1275,13 @@ async function resolveWithGrid(grid){
     overlay.className = 'expand-wild';
     overlay.innerHTML = `<img src="${WILD_IMG[10]}" alt="" onerror="this.replaceWith(document.createTextNode('🌳'))">`;
     col.appendChild(overlay);
-    const wc = grid[r].find(c=>c.key==='wild');
-    const tag = document.createElement('div');
-    tag.className = 'wild-mult';
-    tag.textContent = 'x' + (wc ? wc.mult : 10);
-    col.appendChild(tag);
+    const wc = bestWild(grid[r]);
+    if(wc && wc.mult>1){
+      const tag = document.createElement('div');
+      tag.className = 'wild-mult';
+      tag.textContent = 'x' + wc.mult;
+      col.appendChild(tag);
+    }
     spawnSparks(col, 10);
     setTimeout(()=>{ glow.remove(); }, 1400);
   });
