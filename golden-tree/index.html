@@ -1244,7 +1244,13 @@ function showWinOverlay(amount, label){
 }
 
 async function resolveWithGrid(grid){
-  const {total, wins, sc, winLinesCells} = evaluate(grid, bet);
+  /* الشجرة تتحسب على كل خانات البكرة (ما عدا النجمة والدولار) - ظهورها وباقي المنطق ما تغيّر */
+  const evalGrid = grid.map(col=>{
+    const w = col.find(c=>c.key==='wild');
+    if(!w) return col;
+    return col.map(c=> (c.key==='scatterDollar' || c.key==='scatterStar') ? c : {key:'wild', mult:w.mult});
+  });
+  const {total, wins, sc, winLinesCells} = evaluate(evalGrid, bet);
   for(let r=0;r<REELS;r++){
     const winRows = wins.filter(([wr])=>wr===r).map(([,wrow])=>wrow);
     if(winRows.length) renderReelColumn(r, grid[r], winRows);
