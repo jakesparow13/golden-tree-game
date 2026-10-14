@@ -375,8 +375,8 @@ const Sound=(()=>{
 
   // كل المؤثرات صارت مفكوكة بالذاكرة وبتشتغل عبر نفس AudioContext مع الموسيقى
   // (بدل ما كل صوت يكون عنصر <audio> لحاله وبيتخانقوا مع بعض عالتلفون)
-  const SRC={spin:'images/spin-click.mp3',reel:'images/reel-stop.mp3',wild:'images/wild-drop.mp3',heart:'images/heart-beep.mp3',bonus:'images/bonus-select.mp3',winSmall:'images/win-small.mp3',winBig:'images/win-big.mp3'};
-  const VOL={spin:.45,reel:.32,wild:.18,heart:.55,bonus:.6,winSmall:.5,winBig:.6};
+  const SRC={spin:'images/spin-click.mp3',reel:'images/reel-stop.mp3',wild:'images/wild-drop.mp3',heart:'images/heart-beep.mp3'};
+  const VOL={spin:.45,reel:.32,wild:.18,heart:.55};
   const bufs={};
   let bgNode=null, reelPlay=null;
   async function preload(){
@@ -461,11 +461,11 @@ const Sound=(()=>{
       }
     },
     zap(){if(!on)return;noise(.14,.05,5000,2000);tone(700,.12,'sawtooth',.025,0,90);},
-    win(){if(on&&bufs.winSmall){playBuf('winSmall');return;}[220,277].forEach((f,i)=>tone(f,.28,'triangle',.17,i*.1));},
-    nice(){if(on&&bufs.winSmall){playBuf('winSmall');return;}[196,233,277,330].forEach((f,i)=>tone(f,.3,'triangle',.18,i*.09));},
-    big(){if(on&&bufs.winBig){playBuf('winBig');return;}[165,196,233,294].forEach((f,i)=>tone(f,.35,'sawtooth',.17,i*.11));noise(.35,.11,2200);},
-    mega(){if(on&&bufs.winBig){playBuf('winBig');return;}[110,165,220,277,330,415].forEach((f,i)=>tone(f,.45,'sawtooth',.19,i*.1));noise(.6,.15,2500);tone(55,.8,'sine',.13,.3);},
-    free(){if(on&&bufs.bonus){playBuf('bonus');return;}[220,261,311,349].forEach((f,i)=>tone(f,.3,'triangle',.16,i*.09));}
+    win(){[220,277].forEach((f,i)=>tone(f,.28,'triangle',.17,i*.1));},
+    nice(){[196,233,277,330].forEach((f,i)=>tone(f,.3,'triangle',.18,i*.09));},
+    big(){[165,196,233,294].forEach((f,i)=>tone(f,.35,'sawtooth',.17,i*.11));noise(.35,.11,2200);},
+    mega(){[110,165,220,277,330,415].forEach((f,i)=>tone(f,.45,'sawtooth',.19,i*.1));noise(.6,.15,2500);tone(55,.8,'sine',.13,.3);},
+    free(){[220,261,311,349].forEach((f,i)=>tone(f,.3,'triangle',.16,i*.09));}
   };
 })();
 
@@ -666,7 +666,6 @@ function autoNext(){
 
 window.openBuy=()=>{
   if(spinning||inFree)return;
-  Sound.unlock();Sound.free();
   buyBetIdx=betIdx;buyBet=bet;pendingPkg=null;
   document.querySelectorAll('.pkg').forEach(p=>p.classList.remove('sel'));
   $('confirmBuyBtn').disabled=true;
