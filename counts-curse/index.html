@@ -295,7 +295,7 @@ const R=n=>Math.round(n);
 const pick=l=>{let r=Math.random()*l.reduce((s,x)=>s+x.weight,0);for(const i of l){r-=i.weight;if(r<=0)return i;}return l[l.length-1];};
 
 const REELS=5,ROWS=4,FREE_SPINS=10,DC_MULT=1.25;
-const BUY_COST_MULT={sticky:100,sliding:200,expanded:300};
+const BUY_COST_MULT={sticky:70,sliding:130,expanded:90};
 const BUY_HEARTS={sticky:3,sliding:4,expanded:5};
 const SCATTER_PAY={3:10,4:15,5:8000/300};
 const IMG={wild:'images/wild-base.png',scatter:'images/scatter.png',blank:'images/bat.png',
@@ -326,7 +326,7 @@ const POOL_FREE_NOWILD=stripWild(buildPool(.4,2));
 const WMULTS=[{val:2,weight:75},{val:3,weight:17},{val:5,weight:6},{val:10,weight:2}];
 const LINES=[[1,1,1,1,1],[0,0,0,0,0],[2,2,2,2,2],[3,3,3,3,3],[0,1,2,1,0],[3,2,1,2,3],[1,0,0,0,1],[2,3,3,3,2],[0,0,1,0,0],[3,3,2,3,3],
   [1,2,3,2,1],[2,1,0,1,2],[0,1,1,1,0],[3,2,2,2,3],[1,0,1,0,1],[2,3,2,3,2],[0,1,0,1,0],[3,2,3,2,3],[1,1,0,1,1],[2,2,3,2,2]];
-const BETS=[300,600,1000,1500,3000];
+const BETS=[300,600,1200,1500,3000,6000,10000,15000,20000,25000,30000,35000,40000,50000,60000,100000,120000,160000,200000,250000,300000,600000,650000,700000,800000];
 
 let balance=0,bet=300,betIdx=0,spinning=false,totalSpins=0,totalWins=0;
 let inFree=false,freeLeft=0,freeWin=0,currentGrid=null,dc=false,speed=0,autoLeft=0,autoInfinite=false;
@@ -640,7 +640,7 @@ function evaluate(grid,b){
   });
   let sc=0;grid.forEach(col=>col.forEach(c=>{if(c.key==='scatter')sc++;}));
   const scWin=(!inFree&&!boughtSpin&&sc>=3)?R(b*SCATTER_PAY[Math.min(sc,5)]):0;
-  return{total:R(total+scWin),wins,lines,sc};
+  return{total:Math.min(R(total+scWin),R(b*MAX_WIN_MULT)),wins,lines,sc};
 }
 
 const spinCost=()=>dc?R(bet*DC_MULT):bet;
@@ -713,7 +713,7 @@ window.confirmBuy=async()=>{
   closeBuy();
   if(balance<cost){$('result').innerHTML=`<span class="lose-t">رصيدك غير كافي (${cost.toLocaleString()})</span>`;return;}
   betIdx=buyBetIdx;bet=buyBet;
-  balance=R(balance-cost);
+  balance=R(balance-cost);govAcc().wager+=cost;
   forceHearts=BUY_HEARTS[pendingPkg];boughtMode=pendingPkg;Sound.unlock();update();await save();spin();return;
   inFree=true;freeLeft=FREE_SPINS;freeWin=0;
   freeMode=pendingPkg;freeNatural=false;stickyWilds={};slidingWilds=[];expandedReels={};
@@ -726,13 +726,80 @@ window.openInfo=()=>{
 };
 window.closeInfo=()=>{$('infoModal').style.display='none';};
 
-async function save(){if(!dbApi)return;try{await dbApi.saveBalance(userId,{balance,totalSpins,totalWins});}catch(e){console.error('خطأ بالحفظ:',e);}}
+/* ===== إعدادات المدير (Game Manager) ===== */
+const MAX_WIN_MULT=5000; /* أقصى ربح للفة، ولمجموع البونص كامل = الرهان × هالرقم */
+/* ضابط منفصل لكل مستوى رهان: ratio = سقف رجوع اللاعب بالمدى الطويل، buf = مخزّن أمان بوحدات الرهان.
+   الرهانات الكبيرة أقسى (اللاعب بيسترجع أقل). الأرقام من محاكاة على منطق اللعبة. */
+function govTier(){
+  if(bet<=600)    return {ratio:0.85, buf:100};
+  if(bet<=1200)   return {ratio:0.75, buf:40};
+  if(bet<=1500)   return {ratio:0.70, buf:20};
+  if(bet<=3000)   return {ratio:0.62, buf:8};
+  if(bet<=25000)  return {ratio:0.60, buf:8};
+  if(bet<=60000)  return {ratio:0.55, buf:5};
+  if(bet<=250000) return {ratio:0.50, buf:3};
+  return {ratio:0.45, buf:3};
+}
+const govLedger={};
+function govAcc(){ const k=String(bet); return govLedger[k] || (govLedger[k]={wager:0,paid:0}); }
+let lastStat={wager:0,paid:0,spins:0};
+function ledgerTotals(){ let w=0,p=0; Object.values(govLedger).forEach(a=>{ w+=a.wager||0; p+=a.paid||0; }); return {wager:w,paid:p}; }
+function applyGov(d){
+  if(d.gov){ Object.keys(d.gov).forEach(k=>{ const a=d.gov[k]; if(a && typeof a.wager==='number' && typeof a.paid==='number') govLedger[k]={wager:a.wager,paid:a.paid}; }); }
+  const t=ledgerTotals(); lastStat={wager:t.wager,paid:t.paid,spins:totalSpins};
+}
+/* نسخة احتياطية من حالة اللعبة (الخفافيش + Sticky/Sliding/Expanded) لنقدر نعيد سحب الشبكة بدون ما نخرّب الحالة */
+function govSnap(){ return {lb:new Set(lastBat),st:{...stickyWilds},sl:slidingWilds.map(w=>({...w})),ex:{...expandedReels},pid:pieceId}; }
+function govRest(s){ lastBat=new Set(s.lb); stickyWilds={...s.st}; slidingWilds=s.sl.map(w=>({...w})); expandedReels={...s.ex}; pieceId=s.pid; }
+function govCand(forced){
+  let g=makeGrid();
+  if(forced) g=forceHeartGrid(g,forced);
+  if(inFree) g=applyFreeModeWilds(g);
+  return g;
+}
+/* ربح الشبكة بعد حصاد الكونت (بدون ما يتغيّر شي بالحالة) */
+function govPreview(g){
+  const s=govSnap();
+  const probe=g.map(col=>col.map(c=>({...c})));
+  if(inFree) harvestFreeModeWilds(probe);
+  const w=evaluate(probe,bet).total;
+  govRest(s);
+  return w;
+}
+/* ضابط النسبة: لو مجموع أرباح اللاعب (على هالرهان) تعدّى السقف، بيعيد سحب الشبكة (حتى 8 مرات) ويختار الأقل ربحاً */
+function makeGridGoverned(forced){
+  const acc=govAcc(), tier=govTier();
+  const limit=()=>acc.wager*tier.ratio + bet*tier.buf;
+  const base=govSnap();
+  let g=govCand(forced), w=govPreview(g);
+  let best={g,w,st:govSnap()};
+  if(w>0 && acc.paid+w>limit()){
+    for(let k=0;k<8 && acc.paid+best.w>limit();k++){
+      govRest(base);
+      const g2=govCand(forced), w2=govPreview(g2);
+      if(w2<best.w) best={g:g2,w:w2,st:govSnap()};
+    }
+    govRest(best.st);
+  }
+  return best.g;
+}
+
+async function save(){
+  if(!dbApi)return;
+  try{await dbApi.saveBalance(userId,{balance,totalSpins,totalWins,govCountsCurse:govLedger});}catch(e){console.error('خطأ بالحفظ:',e);return;}
+  /* إحصائيات المنصّة الحقيقية (مجموع الرهانات والأرباح لكل اللاعبين) - بتفشل بصمت إذا القواعد ما انضافت */
+  try{
+    const t=ledgerTotals();
+    const dW=t.wager-lastStat.wager, dP=t.paid-lastStat.paid, dS=totalSpins-lastStat.spins;
+    if((dW||dP||dS) && dbApi.addGameStats){ await dbApi.addGameStats('counts-curse',dW,dP,dS); lastStat={wager:t.wager,paid:t.paid,spins:totalSpins}; }
+  }catch(e){console.error('إحصائيات:',e);}
+}
 async function loadUser(){
   update();currentGrid=makeGrid();render(currentGrid);
   try{
     dbApi=await import('./db.js');
     const d=await dbApi.loadBalance(userId,userName);
-    balance=R(d.balance);totalSpins=d.totalSpins;totalWins=R(d.totalWins);update();return true;
+    balance=R(d.balance);totalSpins=d.totalSpins;totalWins=R(d.totalWins);applyGov(d);update();return true;
   }catch(e){
     console.error(e);
     if(isLocal){dbApi=null;balance=100000;update();$('result').innerHTML='<span class="lose-t">وضع تجريبي محلي (بدون قاعدة بيانات)</span>';return true;}
@@ -746,7 +813,7 @@ function retryBalance(){
     try{
       dbApi=await import('./db.js?r='+Date.now());
       const d=await dbApi.loadBalance(userId,userName);
-      balance=R(d.balance);totalSpins=d.totalSpins;totalWins=R(d.totalWins);
+      balance=R(d.balance);totalSpins=d.totalSpins;totalWins=R(d.totalWins);applyGov(d);
       $('result').textContent='';update();clearInterval(t);
     }catch(e){}
   },5000);
@@ -812,12 +879,11 @@ window.spin=function(){
   if(!inFree&&!forceHearts&&balance<cost){$('result').innerHTML='<span class="lose-t">رصيدك غير كافي</span>';return;}
   spinning=true;lockUI(true);Sound.unlock();Sound.click();Sound.reelsStart();
   $('result').textContent='';const sl=$('lineOverlay');if(sl)sl.innerHTML='';
-  if(!inFree&&!forceHearts){balance=R(balance-cost);totalSpins++;}
+  if(!inFree&&!forceHearts){balance=R(balance-cost);totalSpins++;govAcc().wager+=cost;}
   update();
   if(!inFree) updateBalance();
-  let grid=makeGrid();const old=currentGrid||grid;
-  if(forceHearts){grid=forceHeartGrid(grid,forceHearts);boughtSpin=true;forceHearts=0;}
-  if(inFree) grid=applyFreeModeWilds(grid);
+  const forced=forceHearts;if(forced){boughtSpin=true;forceHearts=0;}
+  let grid=makeGridGoverned(forced);const old=currentGrid||grid;
   const base=[900,650,450][speed];
   Promise.all(grid.map((_,r)=>rollReel(r,old[r],grid[r],base+r*220,frozenRowsFor(r)))).then(()=>{Sound.reelsStop();currentGrid=grid;resolveSpin(grid);});
 };
@@ -916,7 +982,8 @@ function showWinOverlay(amount,label){
 async function resolveSpin(grid){
   const wasFree=inFree;
   if(wasFree)harvestFreeModeWilds(grid);
-  const{total,wins,lines,sc}=evaluate(grid,bet);
+  let{total,wins,lines,sc}=evaluate(grid,bet);
+  if(inFree)total=Math.max(0,Math.min(total,R(bet*MAX_WIN_MULT)-freeWin));
   if(!wasFree&&!boughtSpin) recordSpin(total);
   boughtSpin=false;
   for(let r=0;r<REELS;r++){const rows=wins.filter(([wr])=>wr===r).map(([,row])=>row);renderReelColumn(r,grid[r],rows);}
@@ -925,7 +992,7 @@ async function resolveSpin(grid){
   if(sc>0)Sound.heart(sc);
   let msg='',big=false;
   if(total>0){
-    balance=R(balance+total);totalWins=R(totalWins+total);if(inFree){freeWin=R(freeWin+total);if(freeNatural)sessWin+=total;}
+    balance=R(balance+total);totalWins=R(totalWins+total);govAcc().paid+=total;if(inFree){freeWin=R(freeWin+total);if(freeNatural)sessWin+=total;}
     msg=`<span class="win-t">مكسب: ${total.toLocaleString()}</span>`;
     if(total>=bet*100){big=true;Sound.mega();showWinOverlay(total,'SUPER WIN');}
     else if(total>=bet*50){big=true;Sound.mega();showWinOverlay(total,'MEGA WIN');}
