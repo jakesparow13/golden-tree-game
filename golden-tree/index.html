@@ -868,15 +868,29 @@ let lastBlankReels = new Set();
 let spinsSinceWild = 0;
 const WILD_PITY_SPINS = 20;
 /* ===== إعدادات المدير (Game Manager) =====
-   MAX_WIN_MULT : أقصى ربح للفة الواحدة = الرهان × هالرقم (تطابق ×20,000 المكتوبة)
+   MAX_WIN_MULT : أقصى ربح للفة الواحدة = الرهان × هالرقم (النص المكتوب باللعبة ×20,000 ما انلمس)
    GOV_RATIO    : سقف مجموع أرباح اللاعب بالجلسة = إجمالي رهاناته × هالرقم (+ المخزّن)
    GOV_BUFFER   : مخزّن أمان بوحدات الرهان (يسمح بربح أولي/كبير قبل ما يشتغل الضابط)
    الاختبار (محاكاة): 1.5 و 300 ⇒ نسبة رجوع للاعب ≈ 82% وللمنصّة ≈ 18%.
    لتقليل ربح اللاعب نزّل GOV_RATIO (مثلاً 1.3 و 200 ⇒ ≈ 79%). */
-const MAX_WIN_MULT = 20000;
+const MAX_WIN_MULT = 5000; /* أقصى ربح للفة، ولمجموع البونص كامل = الرهان × هالرقم */
 const GOV_RATIO = 1.5;
 const GOV_BUFFER = 300;
-let sessWager = 0, sessPaid = 0;
+/* حساب ضابط منفصل لكل مستوى رهان (ما بيقدر اللاعب يبني رصيد ضابط برهان صغير ويستعمله برهان كبير).
+   ratio : سقف الرجوع للاعب بالمدى الطويل | buf : مخزّن بوحدات الرهان (يسمح بربح أولي قبل ما يشتغل الضابط)
+   الرهانات الكبيرة أقسى (لاعب الرهان الكبير لازم "يحرق" أكتر قبل ما يربح) */
+function govTier(){
+  /* كل ما زاد الرهان صار الضابط أقسى (بالمدى الطويل اللاعب بيسترجع أقل) */
+  if(bet<=600)    return {ratio:1.5,  buf:300};
+  if(bet<=1200)   return {ratio:0.9,  buf:40};
+  if(bet<=1500)   return {ratio:0.8,  buf:20};
+  if(bet<=3000)   return {ratio:0.7,  buf:10};
+  if(bet<=25000)  return {ratio:0.65, buf:10};
+  if(bet<=60000)  return {ratio:0.6,  buf:8};
+  if(bet<=250000) return {ratio:0.55, buf:5};
+  return {ratio:0.5, buf:3};
+}
+function govAcc(){ const k=String(bet); return govLedger[k] || (govLedger[k]={wager:0,paid:0}); }
 function poolForReel(r, avoidBlank, allowWild){
   let p;
   if(r===1 || r===3) p = allowWild ? SYMS_NO_BLANK : SYMS_NO_BLANK_NO_WILD;
@@ -1199,7 +1213,7 @@ window.confirmBuy = async () => {
     closeBuyModal();
     return;
   }
-  balance = R(balance - cost); sessWager += cost;
+  balance = R(balance - cost); govAcc().wager += cost;
   SoundEngine.buyBonus();
   randomTrees = (pendingPkg==='r');
   guaranteedWildsPerSpin = pendingPkg==='1' ? 1 : pendingPkg==='2' ? 2 : pendingPkg==='3' ? 3 : (1+Math.floor(Math.random()*3));
@@ -1215,10 +1229,18 @@ function showFreeSpinsIntro(n){
   setTimeout(()=>{ $('fsIntro').style.display = 'none'; }, 1600);
 }
 
+let lastStat = {wager:0, paid:0, spins:0};
+function ledgerTotals(){ let w=0,p=0; Object.values(govLedger).forEach(a=>{ w+=a.wager||0; p+=a.paid||0; }); return {wager:w, paid:p}; }
 async function save(){
   if(!dbApi || !window.__balanceOk) return;
-  try{ await dbApi.saveBalance(userId,{balance,totalSpins,totalWins}); }
-  catch(e){ console.error('خطأ بالحفظ:', e); }
+  try{ await dbApi.saveBalance(userId,{balance,totalSpins,totalWins,govGoldenTree:govLedger}); }
+  catch(e){ console.error('خطأ بالحفظ:', e); return; }
+  /* إحصائيات المنصّة الحقيقية (مجموع الرهانات والأرباح لكل اللاعبين) - بتفشل بصمت إذا القواعد ما انضافت */
+  try{
+    const t = ledgerTotals();
+    const dW = t.wager-lastStat.wager, dP = t.paid-lastStat.paid, dS = totalSpins-lastStat.spins;
+    if((dW||dP||dS) && dbApi.addGameStats){ await dbApi.addGameStats('golden-tree', dW, dP, dS); lastStat={wager:t.wager,paid:t.paid,spins:totalSpins}; }
+  }catch(e){ console.error('إحصائيات:', e); }
 }
 
 async function loadUser(){
@@ -1235,6 +1257,8 @@ async function loadUser(){
       try{ d = await Promise.race([dbApi.loadBalance(userId, userName), new Promise((_,rej)=>setTimeout(()=>rej(new Error('انتهت مهلة الاتصال بالسيرفر')),30000))]); }
       catch(e){ throw new Error('فشلت قراءة الرصيد من Firebase: '+(e.message||e)); }
       balance = R(d.balance); totalSpins = d.totalSpins; totalWins = R(d.totalWins);
+      if(d.gov){ Object.keys(d.gov).forEach(k=>{ const a=d.gov[k]; if(a && typeof a.wager==='number' && typeof a.paid==='number') govLedger[k]={wager:a.wager,paid:a.paid}; }); }
+      { const t = ledgerTotals(); lastStat = {wager:t.wager, paid:t.paid, spins:totalSpins}; }
       window.__balanceOk = true;
       $('result').innerHTML = '';
       update();
@@ -1260,11 +1284,12 @@ function gridWin(grid){
 /* ضابط النسبة: لو مجموع أرباح اللاعب تعدّى السقف، بيعيد سحب الشبكة (حتى 8 مرات) ويختار الأقل ربحاً */
 function makeGridGoverned(){
   const snapS = spinsSinceWild, snapL = lastBlankReels;
-  const limit = () => sessWager*GOV_RATIO + bet*GOV_BUFFER;
+  const acc = govAcc(), tier = govTier();
+  const limit = () => acc.wager*tier.ratio + bet*tier.buf;
   let g = makeGrid(), w = gridWin(g);
-  if(w>0 && sessPaid + w > limit()){
+  if(w>0 && acc.paid + w > limit()){
     let bg=g, bw=w, bs=spinsSinceWild, bl=lastBlankReels;
-    for(let k=0; k<8 && sessPaid + bw > limit(); k++){
+    for(let k=0; k<8 && acc.paid + bw > limit(); k++){
       spinsSinceWild = snapS; lastBlankReels = snapL;
       const g2 = makeGrid(), w2 = gridWin(g2);
       if(w2 < bw){ bg=g2; bw=w2; bs=spinsSinceWild; bl=lastBlankReels; }
@@ -1284,7 +1309,7 @@ window.spin = function(){
   SoundEngine.click();
   $('spinBtn').disabled = true; $('spinBtn').classList.add('spinning'); $('buyBtn').disabled = true;
   $('result').textContent = '';
-  if(!inFree){ balance = R(balance - bet); totalSpins++; sessWager += bet; }
+  if(!inFree){ balance = R(balance - bet); totalSpins++; govAcc().wager += bet; }
   update();
 
   const finalGrid = makeGridGoverned();
@@ -1327,7 +1352,9 @@ async function resolveWithGrid(grid){
     if(!w) return col;
     return col.map(c=> (c.key==='scatterDollar' || c.key==='scatterStar') ? c : {key:'wild', mult:w.mult});
   });
-  const {total, wins, sc, winLinesCells} = evaluate(evalGrid, bet);
+  let {total, wins, sc, winLinesCells} = evaluate(evalGrid, bet);
+  /* سقف مجموع البونص كامل */
+  if(inFree){ total = Math.max(0, Math.min(total, R(bet*MAX_WIN_MULT) - freeWin)); }
   for(let r=0;r<REELS;r++){
     const winRows = wins.filter(([wr])=>wr===r).map(([,wrow])=>wrow);
     if(winRows.length) renderReelColumn(r, grid[r], winRows);
@@ -1372,7 +1399,7 @@ async function resolveWithGrid(grid){
   let msg='';
   let bigOrMega = false;
   if(total>0){
-    balance = R(balance + total); totalWins = R(totalWins + total); sessPaid += total; if(inFree) freeWin = R(freeWin + total);
+    balance = R(balance + total); totalWins = R(totalWins + total); govAcc().paid += total; if(inFree) freeWin = R(freeWin + total);
     msg = `<span class="win-t">مكسب: ${total.toLocaleString()}</span>`;
     if(total >= bet*50){
       bigOrMega = true;
