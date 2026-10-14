@@ -27,7 +27,7 @@ export async function loadBalance(userId, name){
       balance: typeof d.balance === 'number' ? d.balance : 0,
       totalSpins: d.totalSpins || 0,
       totalWins: d.totalWins || 0,
-      gov: d.govGoldenTree || null   // [إضافة] حساب ضابط اللعبة (بيتخزّن مع اللاعب)
+      gov: d.govCountsCurse || null   // [إضافة] حساب ضابط اللعبة (بيتخزّن مع اللاعب)
     };
   }
   const fresh = { name, balance: 1000, totalSpins: 0, totalWins: 0, createdAt: Date.now() };
