@@ -304,6 +304,9 @@ button:disabled{opacity:.5;cursor:not-allowed;}
   font-size:15px;cursor:pointer;z-index:15;
 }
 .sound-toggle.off{opacity:.5;}
+.back-btn{position:absolute;top:6px;right:6px;width:34px;height:34px;border-radius:50%;
+  border:1.5px solid rgba(212,164,55,.6);background:rgba(10,4,30,.6);color:#fff;
+  font-size:16px;line-height:1;cursor:pointer;z-index:15;}
 </style>
 
 <!-- ============ PATCH UI v5 : الكتلة A (بداية) ============ -->
@@ -433,6 +436,7 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 <div id="gameScreen">
   <div id="stage">
   <div class="container">
+    <button class="back-btn" id="backBtn" onclick="goLobby()" aria-label="رجوع للوبي">✕</button>
     <button class="sound-toggle" id="soundToggle" onclick="toggleSound()">🔊</button>
     <div id="freeSpinsBadge"></div>
     <div class="suits">
@@ -516,7 +520,7 @@ button:disabled{opacity:.5;cursor:not-allowed;}
       <div class="pkg" onclick="selectPkg(this,'r')">
         <div class="pkg-icons quad"><img src="images/wild-base.png" alt=""><span>؟</span><span>؟</span><span>؟</span></div>
         <div class="pkg-cost" id="pkgCostR">-</div>
-        <div class="pkg-sub">عشوائي (1-4 Wild)</div>
+        <div class="pkg-sub">عشوائي (1-3 Wild)</div>
       </div>
     </div>
     <div class="modal-actions">
@@ -606,6 +610,21 @@ let dbApi = null;
 const tg = window.Telegram?.WebApp;
 try { tg?.expand(); tg?.ready(); } catch(e){}
 
+/* ===== زر الرجوع للوبي =====
+   اللوبي بيفتح اللعبة بـ location.href من مجلد golden-tree، فالرجوع للوبي هو الصفحة الأم (../index.html).
+   أولاً بنرجع بالتاريخ (هيك اللوبي بيتخطى فيديو المقدمة)، وإذا ما في تاريخ بنفتح اللوبي بالرابط مع بيانات تيليجرام. */
+const LOBBY_URL = '../index.html';
+window.goLobby = () => {
+  if(spinning || inFree){
+    $('result').innerHTML = '<span class="lose-t">استنّى تخلص اللفة الحالية</span>';
+    return;
+  }
+  try{ save(); }catch(e){}
+  if(history.length > 1){ history.back(); return; }
+  location.href = LOBBY_URL + location.hash;
+};
+try{ tg?.BackButton?.show(); tg?.BackButton?.onClick(()=>window.goLobby()); }catch(e){}
+
 const TEST_ID = '123456789';
 const userId = String(tg?.initDataUnsafe?.user?.id || TEST_ID);
 const userName = tg?.initDataUnsafe?.user?.first_name || 'ضيف';
@@ -633,7 +652,8 @@ const PAY = {
   scatterDollar:{3:10,4:40,5:200},
   scatterStar:{3:40}
 };
-const BONUS_COST_MULT = { '1':60, '2':205, '3':575, 'r':600 };
+/* أسعار البونص (×الرهان) - محسوبة بمحاكاة لتكون نسبة رجوع اللاعب حوالي 78-80% */
+const BONUS_COST_MULT = { '1':40, '2':360, '3':1950, 'r':800 };
 
 function R(n){ return Math.round(n); }
 
@@ -817,7 +837,8 @@ const SoundEngine = (() => {
 })();
 
 const LINES = [[1,1,1,1,1],[0,0,0,0,0],[2,2,2,2,2],[0,1,2,1,0],[2,1,0,1,2],[0,0,1,2,2],[2,2,1,0,0],[1,2,2,2,1],[1,0,0,0,1],[0,1,1,1,0]];
-const WMULTS = [{val:1,weight:12},{val:2,weight:8},{val:3,weight:5},{val:5,weight:2},{val:10,weight:1}];
+/* أوزان مضاعفات الشجرة (معدّلة): x2/x3 نادرة، وx5/x10 تقريباً مرة كل 100 لفة. لزيادة x5/x10 ارفع رقميها، لتقليلها نزّلهن */
+const WMULTS = [{val:1,weight:7000},{val:2,weight:700},{val:3,weight:300},{val:5,weight:1500},{val:10,weight:500}];
 const LEVELS = [
   [300,600,1200,1500,3000],
   [6000,10000,15000,20000,25000],
@@ -835,6 +856,7 @@ const pick = l => { let r=Math.random()*l.reduce((s,x)=>s+x.weight,0); for(const
 let balance=0, bet=300, spinning=false, totalSpins=0, totalWins=0;
 let inFree=false, freeLeft=0, freeWin=0;
 let guaranteedWildsPerSpin=0;
+let randomTrees=false; /* البونص العشوائي: عدد الأشجار (1-3) بيتغيّر عشوائياً بكل لفة مجانية */
 let pendingPkg=null;
 let currentGrid=null;
 const $ = id => document.getElementById(id);
@@ -845,6 +867,16 @@ const SYMS_NO_BLANK_NO_WILD = SYMS.filter(s => s.key !== 'blank' && s.key !== 'w
 let lastBlankReels = new Set();
 let spinsSinceWild = 0;
 const WILD_PITY_SPINS = 20;
+/* ===== إعدادات المدير (Game Manager) =====
+   MAX_WIN_MULT : أقصى ربح للفة الواحدة = الرهان × هالرقم (تطابق ×20,000 المكتوبة)
+   GOV_RATIO    : سقف مجموع أرباح اللاعب بالجلسة = إجمالي رهاناته × هالرقم (+ المخزّن)
+   GOV_BUFFER   : مخزّن أمان بوحدات الرهان (يسمح بربح أولي/كبير قبل ما يشتغل الضابط)
+   الاختبار (محاكاة): 1.5 و 300 ⇒ نسبة رجوع للاعب ≈ 82% وللمنصّة ≈ 18%.
+   لتقليل ربح اللاعب نزّل GOV_RATIO (مثلاً 1.3 و 200 ⇒ ≈ 79%). */
+const MAX_WIN_MULT = 20000;
+const GOV_RATIO = 1.5;
+const GOV_BUFFER = 300;
+let sessWager = 0, sessPaid = 0;
 function poolForReel(r, avoidBlank, allowWild){
   let p;
   if(r===1 || r===3) p = allowWild ? SYMS_NO_BLANK : SYMS_NO_BLANK_NO_WILD;
@@ -862,6 +894,7 @@ function randomCell(pool){
 function randomColumn(pool){ return Array.from({length:ROWS}, ()=>randomCell(pool)); }
 
 function makeGrid(){
+  if(randomTrees) guaranteedWildsPerSpin = 1 + Math.floor(Math.random()*3);
   const bonusForce = guaranteedWildsPerSpin > 0;
   const pityReached = spinsSinceWild >= WILD_PITY_SPINS;
   const allowWild = pityReached && !bonusForce && !inFree;
@@ -879,6 +912,16 @@ function makeGrid(){
       return c;
     });
     grid.push(col);
+  }
+  /* ممنوع النجمة والدولار يجتمعوا بنفس البكرة: لو اجتمعوا بنستبدل الدولار برمز عادي */
+  for(let r=0;r<REELS;r++){
+    const hasStar = grid[r].some(c=>c.key==='scatterStar');
+    const hasDollar = grid[r].some(c=>c.key==='scatterDollar');
+    if(hasStar && hasDollar){
+      grid[r] = grid[r].map(c=> c.key==='scatterDollar'
+        ? randomCell(SYMS_NO_BLANK_NO_WILD.filter(x=>x.key!=='scatterDollar' && x.key!=='scatterStar'))
+        : c);
+    }
   }
   if(guaranteedWildsPerSpin>0){
     const positions=[];
@@ -1054,6 +1097,7 @@ function evaluate(grid, b){
     wins.push(...starCells);
     winLinesCells.push(starCells);
   }
+  total = Math.min(total, R(b*MAX_WIN_MULT));
   return {total, wins, sc, winLinesCells};
 }
 
@@ -1155,9 +1199,10 @@ window.confirmBuy = async () => {
     closeBuyModal();
     return;
   }
-  balance = R(balance - cost);
+  balance = R(balance - cost); sessWager += cost;
   SoundEngine.buyBonus();
-  guaranteedWildsPerSpin = pendingPkg==='1' ? 1 : pendingPkg==='2' ? 2 : pendingPkg==='3' ? 3 : (1+Math.floor(Math.random()*4));
+  randomTrees = (pendingPkg==='r');
+  guaranteedWildsPerSpin = pendingPkg==='1' ? 1 : pendingPkg==='2' ? 2 : pendingPkg==='3' ? 3 : (1+Math.floor(Math.random()*3));
   inFree=true; freeLeft=5; freeWin=0;
   closeBuyModal();
   showFreeSpinsIntro(5);
@@ -1203,6 +1248,32 @@ async function loadUser(){
   }
 }
 
+/* ربح شبكة (مع توسّع الشجرة) لاستعماله بضابط النسبة */
+function gridWin(grid){
+  const eg = grid.map(col=>{
+    const w = bestWild(col);
+    if(!w) return col;
+    return col.map(c=> (c.key==='scatterDollar' || c.key==='scatterStar') ? c : {key:'wild', mult:w.mult});
+  });
+  return evaluate(eg, bet).total;
+}
+/* ضابط النسبة: لو مجموع أرباح اللاعب تعدّى السقف، بيعيد سحب الشبكة (حتى 8 مرات) ويختار الأقل ربحاً */
+function makeGridGoverned(){
+  const snapS = spinsSinceWild, snapL = lastBlankReels;
+  const limit = () => sessWager*GOV_RATIO + bet*GOV_BUFFER;
+  let g = makeGrid(), w = gridWin(g);
+  if(w>0 && sessPaid + w > limit()){
+    let bg=g, bw=w, bs=spinsSinceWild, bl=lastBlankReels;
+    for(let k=0; k<8 && sessPaid + bw > limit(); k++){
+      spinsSinceWild = snapS; lastBlankReels = snapL;
+      const g2 = makeGrid(), w2 = gridWin(g2);
+      if(w2 < bw){ bg=g2; bw=w2; bs=spinsSinceWild; bl=lastBlankReels; }
+    }
+    spinsSinceWild = bs; lastBlankReels = bl; g = bg;
+  }
+  return g;
+}
+
 window.spin = function(){
   if(spinning) return;
   if(!inFree && balance < bet){ $('result').innerHTML='<span class="lose-t">رصيدك غير كافي</span>'; return; }
@@ -1213,10 +1284,10 @@ window.spin = function(){
   SoundEngine.click();
   $('spinBtn').disabled = true; $('spinBtn').classList.add('spinning'); $('buyBtn').disabled = true;
   $('result').textContent = '';
-  if(!inFree){ balance = R(balance - bet); totalSpins++; }
+  if(!inFree){ balance = R(balance - bet); totalSpins++; sessWager += bet; }
   update();
 
-  const finalGrid = makeGrid();
+  const finalGrid = makeGridGoverned();
   const oldGrid = currentGrid || finalGrid;
   const base = [900,650,450][speed];
   Promise.all(finalGrid.map((_,r)=> rollReel(r, oldGrid[r], finalGrid[r], base + r*250)))
@@ -1301,7 +1372,7 @@ async function resolveWithGrid(grid){
   let msg='';
   let bigOrMega = false;
   if(total>0){
-    balance = R(balance + total); totalWins = R(totalWins + total); if(inFree) freeWin = R(freeWin + total);
+    balance = R(balance + total); totalWins = R(totalWins + total); sessPaid += total; if(inFree) freeWin = R(freeWin + total);
     msg = `<span class="win-t">مكسب: ${total.toLocaleString()}</span>`;
     if(total >= bet*50){
       bigOrMega = true;
@@ -1334,7 +1405,7 @@ async function resolveWithGrid(grid){
       update();
       if(freeLeft<=0){
         inFree=false;
-        guaranteedWildsPerSpin=0;
+        guaranteedWildsPerSpin=0; randomTrees=false;
         $('result').innerHTML += (msg?'<br>':'') + `<span class="win-t">مجموع اللفات المجانية: ${freeWin.toLocaleString()}</span>`;
         update(); $('spinBtn').disabled=false; autoNext();
       } else { setTimeout(()=>spin(),1200); }
