@@ -890,6 +890,7 @@ function govTier(){
   if(bet<=250000) return {ratio:0.55, buf:5};
   return {ratio:0.5, buf:3};
 }
+const govLedger = {};
 function govAcc(){ const k=String(bet); return govLedger[k] || (govLedger[k]={wager:0,paid:0}); }
 function poolForReel(r, avoidBlank, allowWild){
   let p;
