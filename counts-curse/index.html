@@ -367,7 +367,7 @@ const Sound=(()=>{
 
   const bg=$('bgMusic'), sSpin=$('sfxSpin'), sReel=$('sfxReel'), sWild=$('sfxWild'), sHeart=$('sfxHeart');
   let bgBroken=false, spinBroken=false, reelBroken=false, wildBroken=false, heartBroken=false;
-  bg.volume=.40; bg.addEventListener('error',()=>{bgBroken=true;if(on&&started)ambient();});
+  bg.volume=.20; bg.addEventListener('error',()=>{bgBroken=true;if(on&&started)ambient();});
   sSpin.volume=.45; sSpin.addEventListener('error',()=>{spinBroken=true;});
   sReel.volume=.32; sReel.loop=true; sReel.addEventListener('error',()=>{reelBroken=true;});
   sWild.volume=.18; sWild.addEventListener('error',()=>{wildBroken=true;});
@@ -376,7 +376,7 @@ const Sound=(()=>{
   // كل المؤثرات صارت مفكوكة بالذاكرة وبتشتغل عبر نفس AudioContext مع الموسيقى
   // (بدل ما كل صوت يكون عنصر <audio> لحاله وبيتخانقوا مع بعض عالتلفون)
   const SRC={spin:'images/spin-click.mp3',reel:'images/reel-stop.mp3',wild:'images/wild-drop.mp3',heart:'images/heart-beep.mp3',bonus:'images/bonus-select.mp3',winSmall:'images/win-small.mp3',winBig:'images/win-big.mp3'};
-  const VOL={spin:.45,reel:.32,wild:.18,heart:.55,bonus:.6,winSmall:.5,winBig:.6};
+  const VOL={spin:.45,reel:.22,wild:.45,heart:.55,bonus:.6,winSmall:.5,winBig:.6};
   const bufs={};
   let bgNode=null, reelPlay=null;
   async function preload(){
@@ -455,7 +455,7 @@ const Sound=(()=>{
           const c=ac();if(!c)return;
           const t=c.currentTime,o=c.createOscillator(),g=c.createGain();
           o.type='sine';o.frequency.value=1000;
-          g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.2,t+.008);g.gain.setValueAtTime(.2,t+.11);g.gain.linearRampToValueAtTime(0,t+.13);
+          g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.6,t+.008);g.gain.setValueAtTime(.6,t+.11);g.gain.linearRampToValueAtTime(0,t+.13);
           o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+.15);
         },i*400);
       }
