@@ -295,7 +295,7 @@ const R=n=>Math.round(n);
 const pick=l=>{let r=Math.random()*l.reduce((s,x)=>s+x.weight,0);for(const i of l){r-=i.weight;if(r<=0)return i;}return l[l.length-1];};
 
 const REELS=5,ROWS=4,FREE_SPINS=10,DC_MULT=1.25;
-const BUY_COST_MULT={sticky:70,sliding:130,expanded:90};
+const BUY_COST_MULT={sticky:100,sliding:200,expanded:300};
 const BUY_HEARTS={sticky:3,sliding:4,expanded:5};
 const SCATTER_PAY={3:10,4:15,5:8000/300};
 const IMG={wild:'images/wild-base.png',scatter:'images/scatter.png',blank:'images/bat.png',
@@ -472,6 +472,19 @@ const Sound=(()=>{
     nice(){if(on&&bufs.winSmall){playBuf('winSmall');return;}[196,233,277,330].forEach((f,i)=>tone(f,.3,'triangle',.18,i*.09));},
     big(){if(on&&bufs.winBig){playBuf('winBig');return;}[165,196,233,294].forEach((f,i)=>tone(f,.35,'sawtooth',.17,i*.11));noise(.35,.11,2200);},
     mega(){if(on&&bufs.winBig){playBuf('winBig');return;}[110,165,220,277,330,415].forEach((f,i)=>tone(f,.45,'sawtooth',.19,i*.1));noise(.6,.15,2500);tone(55,.8,'sine',.13,.3);},
+    /* مدة العدّاد = مدة صوت الربح الكبير (بحد أدنى 2.8 ث وأقصى 8 ث) */
+    winMs(){const b=bufs.winBig;return b?Math.min(8000,Math.max(2800,Math.round(b.duration*1000))):2800;},
+    /* صوت الربح الكبير مربوط بالعدّاد: إذا الملف أقصر بيتكرر، وإذا أطول من الحد بيخفت، وبيخلصوا سوا */
+    winCounted(durMs){
+      if(!on||!bufs.winBig)return null;
+      const c=ac();if(!c)return null;
+      const len=bufs.winBig.duration*1000,loop=len<durMs-50,cut=loop||len>durMs+50;
+      const h=playBuf('winBig',loop);if(!h)return null;
+      const t=c.currentTime,e=t+durMs/1000;
+      if(cut){h.g.gain.setValueAtTime(VOL.winBig,Math.max(t,e-.5));h.g.gain.linearRampToValueAtTime(0,e);try{h.s.stop(e+.05);}catch(x){}}
+      h.end=()=>{const n=c.currentTime;h.g.gain.cancelScheduledValues(n);h.g.gain.setValueAtTime(h.g.gain.value,n);h.g.gain.linearRampToValueAtTime(0,n+.3);try{h.s.stop(n+.35);}catch(x){}};
+      return h;
+    },
     free(){if(on&&bufs.bonus){playBuf('bonus');return;}[220,261,311,349].forEach((f,i)=>tone(f,.3,'triangle',.16,i*.09));}
   };
 })();
@@ -731,14 +744,14 @@ const MAX_WIN_MULT=5000; /* أقصى ربح للفة، ولمجموع البون
 /* ضابط منفصل لكل مستوى رهان: ratio = سقف رجوع اللاعب بالمدى الطويل، buf = مخزّن أمان بوحدات الرهان.
    الرهانات الكبيرة أقسى (اللاعب بيسترجع أقل). الأرقام من محاكاة على منطق اللعبة. */
 function govTier(){
-  if(bet<=600)    return {ratio:0.85, buf:100};
-  if(bet<=1200)   return {ratio:0.75, buf:40};
-  if(bet<=1500)   return {ratio:0.70, buf:20};
-  if(bet<=3000)   return {ratio:0.62, buf:8};
-  if(bet<=25000)  return {ratio:0.60, buf:8};
-  if(bet<=60000)  return {ratio:0.55, buf:5};
-  if(bet<=250000) return {ratio:0.50, buf:3};
-  return {ratio:0.45, buf:3};
+  if(bet<=600)    return {ratio:0.90, buf:100};
+  if(bet<=1200)   return {ratio:0.80, buf:40};
+  if(bet<=1500)   return {ratio:0.75, buf:25};
+  if(bet<=3000)   return {ratio:0.70, buf:15};
+  if(bet<=25000)  return {ratio:0.68, buf:15};
+  if(bet<=60000)  return {ratio:0.62, buf:10};
+  if(bet<=250000) return {ratio:0.56, buf:6};
+  return {ratio:0.50, buf:4};
 }
 const govLedger={};
 function govAcc(){ const k=String(bet); return govLedger[k] || (govLedger[k]={wager:0,paid:0}); }
@@ -964,20 +977,20 @@ function playBatThen(cb){
   try{v.currentTime=0;const pr=v.play();if(pr&&pr.catch)pr.catch(end);}catch(e){end();}
 }
 function showFreeIntro(n){$('fsCount').textContent=n;$('fsIntro').style.display='flex';setTimeout(()=>{$('fsIntro').style.display='none';},1600);}
-function showWinOverlay(amount,label){
+function showWinOverlay(amount,label,durMs,snd){
   const ov=$('winOverlay'),word=label.split(' ')[0];
   ov.innerHTML='<div class="wbox"><div class="wcoil l"><i></i></div><div class="wcoil r"><i></i></div><div class="wtubes">'+[...word].map((ch,i)=>'<div class="wtube" style="animation-delay:'+(i*.12)+'s"><span>'+ch+'</span></div>').join('')+'</div><div class="wplate">WIN</div><div class="wamt">0</div></div>';
   ov.classList.add('show','neon','tap');
   const amt=ov.querySelector('.wamt');
   let finished=false,closed=false;
   const close=()=>{if(closed)return;closed=true;ov.classList.remove('show','neon','tap');ov.onclick=null;};
-  const t0=performance.now(),dur=2800;
+  const t0=performance.now(),dur=durMs||2800;
   (function step(now){
     if(finished||closed)return;
     const p=Math.min(1,Math.max(0,(now-t0)/dur)),e=1-Math.pow(1-p,3);amt.textContent=R(amount*e).toLocaleString();
     if(p<1)requestAnimationFrame(step);else{finished=true;setTimeout(close,900);}
   })(performance.now());
-  ov.onclick=()=>{if(!finished){finished=true;amt.textContent=R(amount).toLocaleString();setTimeout(close,700);}else close();};
+  ov.onclick=()=>{if(!finished){finished=true;if(snd&&snd.end)snd.end();amt.textContent=R(amount).toLocaleString();setTimeout(close,700);}else close();};
 }
 async function resolveSpin(grid){
   const wasFree=inFree;
@@ -990,13 +1003,14 @@ async function resolveSpin(grid){
   drawWinLines(lines);
   if(zapWilds(grid))Sound.wild();
   if(sc>0)Sound.heart(sc);
-  let msg='',big=false;
+  let msg='',big=false,bigMs=2800;
   if(total>0){
     balance=R(balance+total);totalWins=R(totalWins+total);govAcc().paid+=total;if(inFree){freeWin=R(freeWin+total);if(freeNatural)sessWin+=total;}
     msg=`<span class="win-t">مكسب: ${total.toLocaleString()}</span>`;
-    if(total>=bet*100){big=true;Sound.mega();showWinOverlay(total,'SUPER WIN');}
-    else if(total>=bet*50){big=true;Sound.mega();showWinOverlay(total,'MEGA WIN');}
-    else if(total>=bet*20){big=true;Sound.big();showWinOverlay(total,'BIG WIN');}
+    const bigWin=(lab,fb)=>{big=true;bigMs=Sound.winMs();const h=Sound.winCounted(bigMs);if(!h)fb();showWinOverlay(total,lab,bigMs,h);};
+    if(total>=bet*100)bigWin('SUPER WIN',Sound.mega);
+    else if(total>=bet*50)bigWin('MEGA WIN',Sound.mega);
+    else if(total>=bet*20)bigWin('BIG WIN',Sound.big);
     else if(total>=bet*5)Sound.nice();else Sound.win();
     if(navigator.vibrate)navigator.vibrate([100,50,100]);
   }
@@ -1017,7 +1031,7 @@ async function resolveSpin(grid){
         update();const endBonus=()=>{lockUI(false);autoNext();};if(freeWin>0)showFreeEnd(freeWin).then(endBonus);else endBonus();
       }else setTimeout(()=>spin(),1200);
     }else{lockUI(false);autoNext();}
-  },big?3900:(total>0?1000:250));
+  },big?(bigMs+1100):(total>0?1000:250));
 }
 
 function preloadAll(){
