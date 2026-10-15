@@ -178,7 +178,7 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 <div class="modal" id="buyModal"><div class="card buyconfirm">
   <h3>شراء البونص</h3>
   <p>١٠ لفات مجانية، تبدأ كل لفة بمضاعف <b>×٨</b></p>
-  <p>التكلفة: <b id="buyCost">-</b> NSP<br><span style="font-size:11px;color:#aaa">(٧٥× الرهان الحالي)</span></p>
+  <p>التكلفة: <b id="buyCost">-</b> NSP<br><span style="font-size:11px;color:#aaa">(٤٤× الرهان الحالي)</span></p>
   <div class="mbtns"><button class="c" onclick="closeBuy()">إلغاء</button><button class="ok" onclick="confirmBuy()">شراء</button></div>
 </div></div>
 <div class="modal" id="infoModal"><div class="card">
@@ -238,7 +238,7 @@ const pick=l=>{let r=Math.random()*l.reduce((s,x)=>s+x.weight,0);for(const i of 
 /* ===== الشبكة الحقيقية: أعمدة بارتفاعات متفاوتة (3,4,5,5,4,3) = 3600 طريقة ===== */
 const REELS=6,FREE_SPINS=10;
 const REEL_HEIGHTS=[3,4,5,5,4,3];
-const BUY_COST_MULT=75;
+const BUY_COST_MULT=44;
 const HOLE=['images/hole1.png','images/hole2.png','images/hole3.png'];
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function setGlow(on){const b=document.querySelector('.board');if(b)b.classList.toggle('glow',!!on);}
@@ -247,7 +247,7 @@ const IMG={wild:'images/wild.png',scatter:'images/scatter.png',bandit:'images/ba
   card_q:'images/card_q.png',card_j:'images/card_j.png',wolf:'images/wolf.png',eagle:'images/eagle.png',
   bison:'images/bison.png',native:'images/native_woman.png'};
 /* جدول الدفع = أضعاف الرهان × PAY_MULT (مقبض تحكم وحيد بالـRTP) */
-const PAY_MULT=1;
+const PAY_MULT=0.52;
 const PAY={
   native:{3:12*PAY_MULT,4:24*PAY_MULT,5:36*PAY_MULT,6:60*PAY_MULT},
   bandit:{3:10*PAY_MULT,4:20*PAY_MULT,5:30*PAY_MULT,6:50*PAY_MULT},
@@ -267,8 +267,8 @@ const BASE_SYMS=[{key:'native',weight:5},{key:'bandit',weight:7},{key:'eagle',we
   {key:'wolf',weight:9},{key:'revolver',weight:10},{key:'hat',weight:12},{key:'bottle',weight:12},
   {key:'card_a',weight:14},{key:'card_k',weight:14},{key:'card_q',weight:16},{key:'card_j',weight:16}];
 function buildPool(wildW,scatW){ return [...BASE_SYMS,{key:'wild',weight:wildW},{key:'scatter',weight:scatW}]; }
-const POOL_BASE=buildPool(2,3);
-const POOL_DC=buildPool(2,3.5);
+const POOL_BASE=buildPool(2,2.6);
+const POOL_DC=buildPool(2,3.03);
 const POOL_FREE=buildPool(2.2,2.6);
 const BETS=[300,600,1200,1500,3000,6000,10000,15000,20000,25000,30000,35000,40000,50000,60000,100000,120000,160000,200000,250000,300000,600000,650000,700000,800000];
 /* حجم كل رمز داخل الخانة (1 = حجم الخانة). كبّر/صغّر حسب ذوقك */
@@ -770,3 +770,4 @@ Promise.all([loadUser(),preloadAll(),capped(Sound.preload(),60000)]).then(([data
 </script>
 </body>
 </html>
+<!--  -->
