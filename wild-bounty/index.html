@@ -120,6 +120,11 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 .totalcont{position:absolute;left:0;right:0;top:var(--total-top,46%);text-align:center;z-index:1;}
 #totalAmt{font-family:'Rye',serif;font-size:52px;font-weight:800;color:#fff6cf;-webkit-text-stroke:6px #6b3610;paint-order:stroke fill;text-shadow:0 0 18px rgba(255,200,60,.9);}
 #totalBtn{margin-top:26px;padding:13px 46px;border-radius:14px;border:2px solid var(--gold);background:linear-gradient(180deg,#d98a1a,#7a3a0a);color:#fff;font-weight:800;font-size:18px;box-shadow:0 4px 14px rgba(0,0,0,.6);}
+#introOverlay{display:none;position:fixed;inset:0;z-index:192;align-items:center;justify-content:center;background:#1a0e04;overflow:hidden;}
+.introT{font-family:'Cairo',sans-serif;font-weight:800;font-size:30px;line-height:1.3;color:var(--gold);-webkit-text-stroke:5px #5a2e0a;paint-order:stroke fill;text-shadow:0 0 16px rgba(255,160,40,.9);}
+.introT b{display:block;font-size:64px;color:#fff6cf;}
+.introS{margin-top:18px;font-weight:700;font-size:18px;color:#fff6cf;-webkit-text-stroke:4px #5a2e0a;paint-order:stroke fill;animation:introBlink 1.2s ease-in-out infinite alternate;}
+@keyframes introBlink{from{opacity:.45;}to{opacity:1;}}
 .modal{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);align-items:center;justify-content:center;padding:14px;}
 .card{width:100%;max-width:340px;max-height:88vh;overflow:auto;background:linear-gradient(180deg,#241408,#0d0704);border:2px solid var(--gold);border-radius:16px;padding:14px;}
 .card h3{text-align:center;font-family:'Rye',serif;color:var(--gold);font-size:20px;margin-bottom:8px;}
@@ -181,6 +186,7 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 <div class="win-overlay" id="winOverlay"><div class="winbox"><img id="winImg" src="images/win.jpg" alt="" onerror="this.style.display='none'"><div class="wincont"><div id="winAmt">0</div><div id="winTitle">BIG WIN</div></div></div></div>
 <div id="bonusOverlay"><video id="bonusVideo" playsinline preload="auto" src="images/bonus-video.mp4"></video></div>
 <div id="totalOverlay"><img id="totalImg" src="images/total.jpg" alt="" onerror="this.style.display='none'"><div class="totalcont"><div id="totalAmt">0</div><button id="totalBtn">متابعة</button></div></div>
+<div class="win-overlay" id="introOverlay" style="pointer-events:auto"><div class="winbox"><img src="images/win.jpg" alt="" onerror="this.style.display='none'"><div class="wincont"><div class="introT">لديك<b id="introCount">10</b>لفات مجانية</div><div class="introS">اضغط في أي مكان للبدء</div></div></div></div>
 
 <div class="modal" id="buyModal"><div class="card buyconfirm">
   <h3>شراء البونص</h3>
@@ -256,6 +262,8 @@ const IMG={wild:'images/wild.png',scatter:'images/scatter.png',bandit:'images/ba
   bison:'images/bison.png',native:'images/native_woman.png'};
 /* جدول الدفع = أضعاف الرهان × PAY_MULT (مقبض تحكم وحيد بالـRTP) */
 const PAY_MULT=0.52;
+const BASE_PAY_ADJ=0.90,FREE_PAY_ADJ=1.08;
+const payAdj=()=>inFree?FREE_PAY_ADJ:BASE_PAY_ADJ;
 const PAY={
   native:{3:12*PAY_MULT,4:24*PAY_MULT,5:36*PAY_MULT,6:60*PAY_MULT},
   bandit:{3:10*PAY_MULT,4:20*PAY_MULT,5:30*PAY_MULT,6:50*PAY_MULT},
@@ -317,6 +325,7 @@ const MULT_LADDER=[1,2,4,8,16,32,64,128,256,512,1024];
 let balance=0,bet=300,betIdx=0,spinning=false,totalSpins=0,totalWins=0;
 let inFree=false,freeLeft=0,freeWin=0,currentGrid=null,dc=false,speed=0,autoLeft=0,autoInfinite=false;
 let multIdx=0;
+let buying=false;const sess={w:0,p:0,n:0};
 
 const Sound=(()=>{
   let ctx=null,on=true,amb=null,musicBroken=false;
@@ -337,8 +346,8 @@ const Sound=(()=>{
   function startMusic(){if(!on)return;if(musicBroken){ambient();return;}bg.play().catch(()=>ambient());}
   function stopMusic(){bg.pause();stopAmb();}
   /* أصوات الربح والبونص: ملفات بالذاكرة (نفس لعبة الكونت). إذا الملف مو موجود بيشتغل الصوت المولّد القديم */
-  const SRC={win:'images/win-small.mp3',big:'images/win-big.mp3',bonus:'images/bonus-select.mp3'};
-  const VOLB={win:.5,big:.6,bonus:.6};
+  const SRC={win:'images/win-small.mp3',big:'images/win-big.mp3',bonus:'images/bonus-select.mp3',scatter:'images/scatter.mp3'};
+  const VOLB={win:.5,big:.6,bonus:.6,scatter:.7};
   const bufs={};
   async function preload(){
     const c=ac();if(!c)return;
@@ -368,6 +377,7 @@ const Sound=(()=>{
     nice(){if(on&&bufs.win){playBuf('win');return;}[587,740,880,987].forEach((f,i)=>tone(f,.25,'triangle',.19,i*.08));},
     big(){if(on&&bufs.big){playBuf('big');return;}[523,659,784,1047].forEach((f,i)=>tone(f,.3,'triangle',.2,i*.11));noise(.3,.08,6000);},
     mega(){if(on&&bufs.big){playBuf('big');return;}[392,523,659,784,988,1175,1568].forEach((f,i)=>tone(f,.4,'triangle',.22,i*.09));noise(.5,.12,7000);},
+    scatter(){if(on&&bufs.scatter){playBuf('scatter');return;}tone(1320,.16,'triangle',.1);},
     antic(){[440,554,660,880].forEach((f,i)=>tone(f,.3,'triangle',.12,i*.12));},
     free(){if(on&&bufs.bonus){playBuf('bonus');return;}[660,880,1100,1320].forEach((f,i)=>tone(f,.25,'triangle',.16,i*.08));},
     /* مدة العدّاد = مدة صوت الربح الكبير (بحد أدنى 2.8 ث وأقصى 8 ث) */
@@ -506,7 +516,7 @@ function evaluateWays(grid){
     }
     if(reelCount>=3){
       const t=PAY[key][Math.min(reelCount,6)];
-      if(t){ total+=R(bet*t*ways/10); anyWin=true; cellsHit.forEach(([r,row])=>wins.add(r+','+row)); }
+      if(t){ total+=R(bet*t*ways/10*payAdj()); anyWin=true; cellsHit.forEach(([r,row])=>wins.add(r+','+row)); }
     }
   }
   {
@@ -517,7 +527,7 @@ function evaluateWays(grid){
       if(matches.length===0)break;
       reelCount++; matches.forEach(row=>cellsHit.push([r,row]));
     }
-    if(reelCount>=3){ const t=PAY.wild[Math.min(reelCount,6)]; if(t){ total+=R(bet*t); anyWin=true; cellsHit.forEach(([r,row])=>wins.add(r+','+row)); } }
+    if(reelCount>=3){ const t=PAY.wild[Math.min(reelCount,6)]; if(t){ total+=R(bet*t*payAdj()); anyWin=true; cellsHit.forEach(([r,row])=>wins.add(r+','+row)); } }
   }
   let sc=0;grid.forEach(col=>col.forEach(c=>{if(c.key==='scatter')sc++;}));
   return{total:R(total),wins,anyWin,sc};
@@ -545,8 +555,15 @@ function applyGov(d){
   const t=ledgerTotals(); lastStat={wager:t.wager,paid:t.paid,spins:totalSpins};
 }
 /* محاكاة لفة كاملة (الشبكة + كل الكاسكيدات) بدون رسم. بترجع كل خطوة جاهزة لتنعرض بنفس الترتيب */
-function simSpin(){
-  const g0=makeGrid();
+function makeForcedGrid(){
+  const g=makeGrid();
+  for(let r=0;r<REELS;r++)for(let i=0;i<g[r].length;i++)if(g[r][i].key==='scatter'){let c;do{c=randomCell(poolFor(),r);}while(c.key==='scatter');g[r][i]=c;}
+  const rs=[0,1,2,3,4,5].sort(()=>Math.random()-.5).slice(0,3);
+  rs.forEach(r=>{g[r][Math.floor(Math.random()*REEL_HEIGHTS[r])]={key:'scatter'};});
+  return g;
+}
+function simSpin(force){
+  const g0=force?makeForcedGrid():makeGrid();
   let grid=g0.slice(),idx=inFree?multIdx:0,round=0,guard=0;
   const steps=[];
   while(guard++<300){
@@ -561,14 +578,23 @@ function simSpin(){
   }
   return{g0,steps,round,sc:0};
 }
-/* ضابط النسبة: لو مجموع أرباح اللاعب (على هالرهان) تعدّى السقف، بيعيد سحب اللفة (حتى 8 مرات) ويختار الأقل ربحاً */
-function simGoverned(){
+/* ضابط النسبة + توازن الجلسة. الجلسة بتتذكر آخر ~30 لفة: لاعب بارد (استرجع أقل من SESS_COLD) بيجيه فوز متوسط، ولاعب ساخن (فوق SESS_HOT) بتخف أرباحه.
+   السقف الصلب (room) فوق كل شي: ما في ربح بيتخطى نسبة الضابط أبداً، يعني البيت ما بيخسر */
+const SESS_MIN=15,SESS_COLD=0.2,SESS_HOT=2.0,SESS_DECAY=0.97,SESS_TRIES=6;
+function simGoverned(force){
   const acc=govAcc(), tier=govTier();
-  const limit=()=>acc.wager*tier.ratio + bet*tier.buf;
-  let best=simSpin();
-  if(best.round>0 && acc.paid+best.round>limit()){
-    for(let k=0;k<8 && acc.paid+best.round>limit();k++){
-      const s2=simSpin();
+  const room=()=>acc.wager*tier.ratio + bet*tier.buf - acc.paid;
+  const mode=(!inFree&&!force&&sess.n>=SESS_MIN&&sess.w>0)?(sess.p<sess.w*SESS_COLD?'cold':(sess.p>sess.w*SESS_HOT?'hot':'')):'';
+  const okCold=x=>x.round>=bet*0.5&&x.round<=bet*8&&x.round<=room();
+  let best=simSpin(force);
+  if(mode==='cold'){
+    for(let k=0;k<SESS_TRIES&&!okCold(best);k++){const s2=simSpin(force);if(okCold(s2))best=s2;}
+  }else if(mode==='hot'){
+    for(let k=0;k<4;k++){const s2=simSpin(force);if(s2.round<best.round)best=s2;}
+  }
+  if(best.round>0 && best.round>room()){
+    for(let k=0;k<8 && best.round>room();k++){
+      const s2=simSpin(force);
       if(s2.round<best.round) best=s2;
     }
   }
@@ -628,20 +654,19 @@ function showTotalWin(amount,cb){
     if(closed)return;closed=true;ov.style.display='none';btn.onclick=null;cb();
   };
 }
-window.openBuy=()=>{ if(spinning||inFree)return; $('buyCost').textContent=R(bet*BUY_COST_MULT).toLocaleString(); playBonusVideo(()=>{$('buyModal').style.display='flex';}); };
+window.openBuy=()=>{ if(spinning||inFree)return; $('buyCost').textContent=R(bet*BUY_COST_MULT).toLocaleString(); $('buyModal').style.display='flex'; };
 window.closeBuy=()=>{$('buyModal').style.display='none';};
 window.confirmBuy=async()=>{
   const cost=R(bet*BUY_COST_MULT);
   closeBuy();
   if(balance<cost){$('result').innerHTML=`<span class="lose-t">رصيدك غير كافي (${cost.toLocaleString()})</span>`;return;}
-  balance=R(balance-cost);govAcc().wager+=cost;
-  inFree=true;freeLeft=FREE_SPINS;freeWin=0;setMult(3);
-  renderMultSign();
-  Sound.unlock();Sound.free();showFreeIntro(FREE_SPINS);update();await save();setTimeout(()=>spin(),1700);
+  balance=R(balance-cost);totalSpins++;govAcc().wager+=cost;sess.w+=cost;dc=false;
+  buying=true;update();
+  Sound.unlock();Sound.free();await save();spin();
 };
 window.openInfo=()=>{
   const order=['native','bandit','eagle','bison','wolf','revolver','hat','bottle','card_a','card_k','card_q','card_j'];
-  $('payList').innerHTML=order.map(k=>`<div class="prow"><img src="${IMG[k]}" alt=""><div>6x ${R(bet*PAY[k][6]).toLocaleString()}<br>5x ${R(bet*PAY[k][5]).toLocaleString()}<br>4x ${R(bet*PAY[k][4]).toLocaleString()}<br>3x ${R(bet*PAY[k][3]).toLocaleString()}</div></div>`).join('');
+  $('payList').innerHTML=order.map(k=>`<div class="prow"><img src="${IMG[k]}" alt=""><div>6x ${R(bet*PAY[k][6]*BASE_PAY_ADJ).toLocaleString()}<br>5x ${R(bet*PAY[k][5]*BASE_PAY_ADJ).toLocaleString()}<br>4x ${R(bet*PAY[k][4]*BASE_PAY_ADJ).toLocaleString()}<br>3x ${R(bet*PAY[k][3]*BASE_PAY_ADJ).toLocaleString()}</div></div>`).join('');
   $('infoModal').style.display='flex';
 };
 window.closeInfo=()=>{$('infoModal').style.display='none';};
@@ -672,12 +697,12 @@ async function loadUser(){
 window.spin=function(){
   if(spinning)return;
   const cost=spinCost();
-  if(!inFree&&balance<cost){$('result').innerHTML='<span class="lose-t">رصيدك غير كافي</span>';return;}
+  if(!inFree&&!buying&&balance<cost){$('result').innerHTML='<span class="lose-t">رصيدك غير كافي</span>';return;}
   spinning=true;lockUI(true);Sound.unlock();Sound.click();
   $('result').textContent='';setGlow(false);
-  if(!inFree){balance=R(balance-cost);totalSpins++;govAcc().wager+=cost;setMult(0);}
+  if(!inFree){if(!buying){balance=R(balance-cost);totalSpins++;govAcc().wager+=cost;sess.w*=SESS_DECAY;sess.p*=SESS_DECAY;sess.n++;sess.w+=cost;}setMult(0);}
   update();
-  const sim=simGoverned();
+  const sim=simGoverned(buying);buying=false;
   const grid=sim.g0.slice();const old=currentGrid||grid;
   const base=[900,650,450][speed];
   /* أوقات توقف البكرات: بعد ما ينزل سكاترين، باقي البكرات بتتبطّأ وبتتوهّج بالذهبي */
@@ -688,10 +713,14 @@ window.spin=function(){
     scatSoFar+=grid[r].filter(c=>c.key==='scatter').length;
   }
   if(anticFrom>0){setTimeout(()=>{Sound.antic();for(let r=anticFrom;r<REELS;r++){const el=$('reelCol'+r);if(el)el.classList.add('antic');}},stops[anticFrom-1]);}
-  Promise.all(grid.map((_,r)=>rollReel(r,old[r],grid[r],stops[r],anticReel[r]?14:0))).then(()=>{currentGrid=grid;document.querySelectorAll('.reel').forEach(el=>el.classList.remove('gold'));resolveCascade(grid,sim,0,0);});
+  Promise.all(grid.map((_,r)=>rollReel(r,old[r],grid[r],stops[r],anticReel[r]?14:0).then(()=>{if(grid[r].some(c=>c.key==='scatter'))Sound.scatter();}))).then(()=>{currentGrid=grid;document.querySelectorAll('.reel').forEach(el=>el.classList.remove('gold'));resolveCascade(grid,sim,0,0);});
 };
 
-function showFreeIntro(n){$('fsCount').textContent=n;$('fsIntro').style.display='flex';setTimeout(()=>{$('fsIntro').style.display='none';},1600);}
+function showFreeIntro(n,cb){
+  const ov=$('introOverlay');$('introCount').textContent=n;ov.style.display='flex';Sound.free();
+  const go=()=>{ov.style.display='none';ov.onclick=null;if(cb)cb();};
+  setTimeout(()=>{ov.onclick=go;},500);
+}
 function showWinOverlay(amount,label,durMs){
   const ov=$('winOverlay');$('winTitle').textContent=label;$('winAmt').textContent='0';ov.classList.add('show');
   const t0=performance.now(),dur=durMs||2800;
@@ -756,7 +785,7 @@ async function resolveCascade(grid,sim,i,roundTotal){
 async function finishSpin(grid,roundTotal,sc){
   let msg='',big=false,bigMs=2800;
   if(roundTotal>0){
-    balance=R(balance+roundTotal);totalWins=R(totalWins+roundTotal);govAcc().paid+=roundTotal;if(inFree)freeWin=R(freeWin+roundTotal);
+    balance=R(balance+roundTotal);totalWins=R(totalWins+roundTotal);govAcc().paid+=roundTotal;if(inFree)freeWin=R(freeWin+roundTotal);sess.p+=roundTotal;
     msg=`<span class="win-t">مجموع اللفة: ${roundTotal.toLocaleString()}</span>`;
     const bigWin=(lab,fb)=>{big=true;bigMs=Sound.winMs();const h=Sound.winCounted(bigMs);if(!h)fb();showWinOverlay(roundTotal,lab,bigMs);};
     if(roundTotal>=bet*50)bigWin('MEGA WIN',Sound.mega);
@@ -766,13 +795,13 @@ async function finishSpin(grid,roundTotal,sc){
   }
   let started=false;
   if(sc>=3){
-    if(!inFree){inFree=true;freeLeft=FREE_SPINS;freeWin=roundTotal;started=true;Sound.free();}
+    if(!inFree){inFree=true;freeLeft=FREE_SPINS;freeWin=roundTotal;started=true;}
     else{freeLeft+=5;msg+=(msg?'<br>':'')+'<span class="win-t">+5 لفات مجانية</span>';Sound.free();}
   }
   $('result').innerHTML=msg;update();await save();
   setTimeout(()=>{
     spinning=false;
-    if(started){setMult(3);update();playBonusVideo(()=>{showFreeIntro(FREE_SPINS);setTimeout(()=>spin(),1800);});return;}
+    if(started){setMult(3);update();playBonusVideo(()=>{showFreeIntro(FREE_SPINS,()=>spin());});return;}
     if(inFree){
       freeLeft--;update();
       if(freeLeft<=0){
@@ -806,4 +835,5 @@ Promise.all([loadUser(),preloadAll(),capped(Sound.preload(),60000)]).then(([data
 </script>
 </body>
 </html>
+<!--  -->
 <!--  -->
