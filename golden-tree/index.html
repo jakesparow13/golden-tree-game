@@ -1232,7 +1232,10 @@ function showFreeSpinsIntro(n){
 
 let lastStat = {wager:0, paid:0, spins:0};
 function ledgerTotals(){ let w=0,p=0; Object.values(govLedger).forEach(a=>{ w+=a.wager||0; p+=a.paid||0; }); return {wager:w, paid:p}; }
-async function save(){
+/* الحفظ بيمشي بالدور (واحد ورا التاني) حتى ما يتداخل ولا تنعدّ الإحصائيات مرتين */
+let saveChain = Promise.resolve();
+function save(){ const p = saveChain.then(()=>saveNow()); saveChain = p.catch(()=>{}); return p; }
+async function saveNow(){
   if(!dbApi || !window.__balanceOk) return;
   try{ await dbApi.saveBalance(userId,{balance,totalSpins,totalWins,govGoldenTree:govLedger}); }
   catch(e){ console.error('خطأ بالحفظ:', e); return; }
@@ -1421,7 +1424,7 @@ async function resolveWithGrid(grid){
   }
   $('result').innerHTML = msg;
   update();
-  await save();
+  if(inFree){ save(); } else { await save(); } /* باللفات المجانية الحفظ بالخلفية حتى ما تتقطع اللفات */
 
   const settleDelay = bigOrMega ? 3900 : (total>0 ? 900 : 0);
   setTimeout(()=>{
@@ -1446,7 +1449,7 @@ function preloadAll(){
   const loadOne = u => new Promise(res=>{
     const im=new Image();
     /* ما في مهلة هون: بنستنى الصورة تتحمل كاملة مهما كان النت بطيء، والسبلاش بيفتح اللعبة بعد 3 دقايق كحد أقصى */
-    im.onload=()=>{ Promise.race([(im.decode?im.decode():Promise.resolve()).catch(()=>{}), new Promise(r=>setTimeout(r,5000))]).then(()=>res(true)); };
+    im.onload=()=>{ (window.__imgKeep=window.__imgKeep||[]).push(im); Promise.race([(im.decode?im.decode():Promise.resolve()).catch(()=>{}), new Promise(r=>setTimeout(r,5000))]).then(()=>res(true)); };
     im.onerror=()=>res(false);
     im.src=u;
   });
