@@ -262,8 +262,9 @@ const IMG={wild:'images/wild.png',scatter:'images/scatter.png',bandit:'images/ba
   bison:'images/bison.png',native:'images/native_woman.png'};
 /* جدول الدفع = أضعاف الرهان × PAY_MULT (مقبض تحكم وحيد بالـRTP) */
 const PAY_MULT=0.52;
-const BASE_PAY_ADJ=0.90,FREE_PAY_ADJ=1.08;
+const BASE_PAY_ADJ=0.75,FREE_PAY_ADJ=1.08;
 const payAdj=()=>inFree?FREE_PAY_ADJ:BASE_PAY_ADJ;
+const MIN_WIN_X=0.5; /* أقل ربح للفة رابحة = نص الرهان */
 const PAY={
   native:{3:12*PAY_MULT,4:24*PAY_MULT,5:36*PAY_MULT,6:60*PAY_MULT},
   bandit:{3:10*PAY_MULT,4:20*PAY_MULT,5:30*PAY_MULT,6:50*PAY_MULT},
@@ -325,7 +326,7 @@ const MULT_LADDER=[1,2,4,8,16,32,64,128,256,512,1024];
 let balance=0,bet=300,betIdx=0,spinning=false,totalSpins=0,totalWins=0;
 let inFree=false,freeLeft=0,freeWin=0,currentGrid=null,dc=false,speed=0,autoLeft=0,autoInfinite=false;
 let multIdx=0;
-let buying=false;const sess={w:0,p:0,n:0};
+let buying=false,noScat=false,buyPlan=null,bonusQueue=null;const sess={w:0,p:0,n:0};
 
 const Sound=(()=>{
   let ctx=null,on=true,amb=null,musicBroken=false;
@@ -461,7 +462,7 @@ function buildTumble(grid,clearSet){
       else surv.push(c);
     });
     let si=surv.length-1;
-    for(let row=H-1;row>=0;row--){ if(col[row])continue; if(si>=0)col[row]=surv[si--]; else{col[row]=randomCell(poolFor(),r);isNew[row]=true;} }
+    for(let row=H-1;row>=0;row--){ if(col[row])continue; if(si>=0)col[row]=surv[si--]; else{col[row]=randomCell(poolFor(),r);if(noScat)while(col[row].key==='scatter')col[row]=randomCell(poolFor(),r);isNew[row]=true;} }
     newCols.push(col);newFlags.push(isNew);
     const F=isNew.filter(Boolean).length;fallRows.push(isNew.map(v=>v?F:0));
   }
@@ -537,14 +538,9 @@ function evaluateWays(grid){
    ratio = سقف رجوع اللاعب بالمدى الطويل، buf = مخزّن أمان بوحدات الرهان.
    الرهانات الكبيرة أقسى (اللاعب بيسترجع أقل). الأرقام نفس الكونت، لحد ما نعمل محاكاة للويلد */
 function govTier(){
-  if(bet<=600)    return {ratio:0.90, buf:100};
-  if(bet<=1200)   return {ratio:0.80, buf:40};
-  if(bet<=1500)   return {ratio:0.75, buf:25};
-  if(bet<=3000)   return {ratio:0.70, buf:15};
-  if(bet<=25000)  return {ratio:0.68, buf:15};
-  if(bet<=60000)  return {ratio:0.62, buf:10};
-  if(bet<=250000) return {ratio:0.56, buf:6};
-  return {ratio:0.50, buf:4};
+  if(bet<=3000)   return {ratio:0.94, buf:80};
+  if(bet<=60000)  return {ratio:0.94, buf:60};
+  return {ratio:0.94, buf:40};
 }
 const govLedger={};
 function govAcc(){ const k=String(bet); return govLedger[k] || (govLedger[k]={wager:0,paid:0}); }
@@ -562,13 +558,35 @@ function makeForcedGrid(){
   rs.forEach(r=>{g[r][Math.floor(Math.random()*REEL_HEIGHTS[r])]={key:'scatter'};});
   return g;
 }
+/* خطة الشراء: بتحدد مسبقاً نتيجة البونص كله. 40% بترجّع 0.2-0.8× السعر، 40% حوالي السعر (0.9-1.1×)، 20% 1.4-2× السعر. جوا كل فئة النتيجة عشوائية */
+const BUY_BANDS=[[0.4,0.2,0.8],[0.8,0.9,1.1],[1.01,1.4,2.0]];
+async function planBuy(cost){
+  const u=Math.random(),bd=BUY_BANDS.find(b=>u<b[0]),lo=bd[1],hi=bd[2];
+  let best=null,bestD=1e18;const saveF=inFree,saveM=multIdx;
+  for(let t=0;t<600;t++){
+    if(t&&t%40===0)await sleep(0);
+    inFree=false;multIdx=0;
+    let first=simSpin(true);
+    for(let k=0;k<60&&first.sc!==3;k++)first=simSpin(true);
+    inFree=true;multIdx=3;
+    const frees=[];let n=FREE_SPINS,i=0,tot=first.round;
+    while(i<n){const s2=simSpin();frees.push(s2);tot+=s2.round;if(s2.sc>=3)n+=5;i++;}
+    inFree=false;multIdx=0;
+    const x=tot/cost,d=x<lo?lo-x:(x>hi?x-hi:0);
+    if(d<bestD){bestD=d;best={first,frees,tot};}
+    if(d===0)break;
+  }
+  inFree=saveF;multIdx=saveM;
+  return best;
+}
 function simSpin(force){
+  noScat=!!force;
   const g0=force?makeForcedGrid():makeGrid();
   let grid=g0.slice(),idx=inFree?multIdx:0,round=0,guard=0;
   const steps=[];
   while(guard++<300){
     const ev=evaluateWays(grid);
-    if(!ev.anyWin) return{g0,steps,round,sc:ev.sc};
+    if(!ev.anyWin){if(round>0&&round<R(bet*MIN_WIN_X)){const d=R(bet*MIN_WIN_X)-round;round+=d;steps[0].won+=d;}return{g0,steps,round,sc:ev.sc};}
     const pre=buildTumble(grid,ev.wins);
     const mult=MULT_LADDER[idx],won=R(ev.total*mult);
     round=R(round+won);
@@ -581,22 +599,27 @@ function simSpin(force){
 /* ضابط النسبة + توازن الجلسة. الجلسة بتتذكر آخر ~30 لفة: لاعب بارد (استرجع أقل من SESS_COLD) بيجيه فوز متوسط، ولاعب ساخن (فوق SESS_HOT) بتخف أرباحه.
    السقف الصلب (room) فوق كل شي: ما في ربح بيتخطى نسبة الضابط أبداً، يعني البيت ما بيخسر */
 const SESS_MIN=15,SESS_COLD=0.2,SESS_HOT=2.0,SESS_DECAY=0.97,SESS_TRIES=6;
+const SMALL_WIN_P=0.15; /* نسبة اللفات الفاضية اللي بتتحول لفوز صغير (0.5-1.5× الرهان) ضمن السقف */
 function simGoverned(force){
   const acc=govAcc(), tier=govTier();
   const room=()=>acc.wager*tier.ratio + bet*tier.buf - acc.paid;
   const mode=(!inFree&&!force&&sess.n>=SESS_MIN&&sess.w>0)?(sess.p<sess.w*SESS_COLD?'cold':(sess.p>sess.w*SESS_HOT?'hot':'')):'';
   const okCold=x=>x.round>=bet*0.5&&x.round<=bet*8&&x.round<=room();
-  let best=simSpin(force);
+  const draw=()=>{let x=simSpin(force);if(force){for(let k=0;k<60&&x.sc!==3;k++)x=simSpin(force);}return x;};
+  let best=draw();
   if(mode==='cold'){
-    for(let k=0;k<SESS_TRIES&&!okCold(best);k++){const s2=simSpin(force);if(okCold(s2))best=s2;}
+    for(let k=0;k<SESS_TRIES&&!okCold(best);k++){const s2=draw();if(okCold(s2))best=s2;}
   }else if(mode==='hot'){
-    for(let k=0;k<4;k++){const s2=simSpin(force);if(s2.round<best.round)best=s2;}
+    for(let k=0;k<4;k++){const s2=draw();if(s2.round<best.round)best=s2;}
   }
   if(best.round>0 && best.round>room()){
     for(let k=0;k<8 && best.round>room();k++){
-      const s2=simSpin(force);
+      const s2=draw();
       if(s2.round<best.round) best=s2;
     }
+  }
+  if(!inFree&&!force&&best.round===0&&Math.random()<SMALL_WIN_P){
+    for(let k=0;k<12;k++){const s2=draw();if(s2.round>0&&s2.round<bet*1.5&&s2.round<=room()){best=s2;break;}}
   }
   return best;
 }
@@ -628,12 +651,16 @@ function autoNext(){
 }
 
 /* فيديو البونص (~3 ثواني): images/bonus-video.mp4. إذا الملف مو موجود أو ما تحمّل بيتخطّاه بدون ما يعلّق اللعبة. اللمس بيتخطّاه */
+let vidPrimed=false;
+function primeVideo(){const v=$('bonusVideo');if(vidPrimed||!v)return;vidPrimed=true;try{v.muted=true;const p=v.play();if(p&&p.then)p.then(()=>{v.pause();v.currentTime=0;v.muted=false;}).catch(()=>{v.muted=false;});}catch(e){}}
 function playBonusVideo(cb){
   const ov=$('bonusOverlay'),v=$('bonusVideo');
-  if(!v||v.error||v.readyState<2){cb();return;}
+  if(!v||v.error){cb();return;}
+  if(v.readyState<2){try{v.load();}catch(e){}}
   let done=false;
-  const end=()=>{if(done)return;done=true;clearTimeout(cap);try{v.pause();}catch(e){}ov.style.display='none';ov.onclick=null;cb();};
+  const end=()=>{if(done)return;done=true;clearTimeout(cap);clearTimeout(stall);try{v.pause();}catch(e){}ov.style.display='none';ov.onclick=null;cb();};
   const cap=setTimeout(end,5000);
+  const stall=setTimeout(()=>{if(v.readyState<2)end();},3000);
   ov.style.display='flex';ov.onclick=end;v.onended=end;v.onerror=end;
   try{
     v.currentTime=0;v.muted=false;
@@ -662,7 +689,9 @@ window.confirmBuy=async()=>{
   if(balance<cost){$('result').innerHTML=`<span class="lose-t">رصيدك غير كافي (${cost.toLocaleString()})</span>`;return;}
   balance=R(balance-cost);totalSpins++;govAcc().wager+=cost;sess.w+=cost;dc=false;
   buying=true;update();
-  Sound.unlock();Sound.free();await save();spin();
+  Sound.unlock();primeVideo();Sound.free();
+  buyPlan=await planBuy(cost);
+  await save();spin();
 };
 window.openInfo=()=>{
   const order=['native','bandit','eagle','bison','wolf','revolver','hat','bottle','card_a','card_k','card_q','card_j'];
@@ -698,11 +727,16 @@ window.spin=function(){
   if(spinning)return;
   const cost=spinCost();
   if(!inFree&&!buying&&balance<cost){$('result').innerHTML='<span class="lose-t">رصيدك غير كافي</span>';return;}
-  spinning=true;lockUI(true);Sound.unlock();Sound.click();
+  spinning=true;lockUI(true);Sound.unlock();primeVideo();Sound.click();
+  if(!window.__bvWarm){window.__bvWarm=1;try{$('bonusVideo').load();}catch(e){}}
   $('result').textContent='';setGlow(false);
   if(!inFree){if(!buying){balance=R(balance-cost);totalSpins++;govAcc().wager+=cost;sess.w*=SESS_DECAY;sess.p*=SESS_DECAY;sess.n++;sess.w+=cost;}setMult(0);}
   update();
-  const sim=simGoverned(buying);buying=false;
+  let sim;
+  if(buying&&buyPlan){sim=buyPlan.first;bonusQueue=buyPlan.frees.slice();buyPlan=null;}
+  else if(inFree&&bonusQueue&&bonusQueue.length){sim=bonusQueue.shift();}
+  else sim=simGoverned(buying);
+  buying=false;
   const grid=sim.g0.slice();const old=currentGrid||grid;
   const base=[900,650,450][speed];
   /* أوقات توقف البكرات: بعد ما ينزل سكاترين، باقي البكرات بتتبطّأ وبتتوهّج بالذهبي */
@@ -805,7 +839,7 @@ async function finishSpin(grid,roundTotal,sc){
     if(inFree){
       freeLeft--;update();
       if(freeLeft<=0){
-        inFree=false;setMult(0);
+        inFree=false;setMult(0);bonusQueue=null;
         $('result').innerHTML+=(msg?'<br>':'')+`<span class="win-t">مجموع اللفات المجانية: ${freeWin.toLocaleString()}</span>`;
         update();showTotalWin(freeWin,()=>{lockUI(false);autoNext();});
       }else{ setMult(3); setTimeout(()=>spin(),1200); }
@@ -835,5 +869,4 @@ Promise.all([loadUser(),preloadAll(),capped(Sound.preload(),60000)]).then(([data
 </script>
 </body>
 </html>
-<!--  -->
 <!--  -->
