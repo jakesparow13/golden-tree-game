@@ -1,6 +1,6 @@
 // db.js — ملف الربط مع Firebase (مشترك بين كل الألعاب)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getDatabase, ref, get, set, update } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+import { getDatabase, ref, get, set, update, increment } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAfsY0dQI9qnIrksRqY4TvOe7YtPhig_Pg",
@@ -26,15 +26,23 @@ export async function loadBalance(userId, name){
     return {
       balance: typeof d.balance === 'number' ? d.balance : 0,
       totalSpins: d.totalSpins || 0,
-      totalWins: d.totalWins || 0
+      totalWins: d.totalWins || 0,
+      gov: d.govWildBounty || null   // [إضافة] حساب ضابط لعبة Wild Bounty (بيتخزّن مع اللاعب)
     };
   }
   const fresh = { name, balance: 1000, totalSpins: 0, totalWins: 0, createdAt: Date.now() };
   await set(r, fresh);
-  return { balance: 1000, totalSpins: 0, totalWins: 0 };
+  return { balance: 1000, totalSpins: 0, totalWins: 0, gov: null };
 }
 
 // حفظ الرصيد والإحصائيات
 export async function saveBalance(userId, data){
   await update(ref(db, 'users/' + userId), { ...data, lastPlayed: Date.now() });
+}
+
+// [إضافة] إحصائيات المنصّة لكل لعبة: مجموع الرهانات والأرباح وعدد اللفات لكل اللاعبين
+export async function addGameStats(game, wager, paid, spins){
+  await update(ref(db, 'game_stats/' + game), {
+    wager: increment(wager), paid: increment(paid), spins: increment(spins)
+  });
 }
