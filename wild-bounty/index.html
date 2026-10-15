@@ -34,6 +34,7 @@ body::before{content:'';position:fixed;inset:0;background:url('images/bg.jpg') c
 .reels{position:absolute;left:2.5%;right:2.5%;top:58%;transform:translateY(-50%);z-index:3;direction:ltr;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:2px;align-items:center;}
 .reel{position:relative;display:flex;flex-direction:column;gap:2px;min-width:0;overflow:visible;border-radius:6px;}
 .reel.rolling{overflow:hidden;}
+.reel.drop{clip-path:inset(0 -60% -60% -60%);}
 .reel.gold{background:rgba(232,189,34,.08);box-shadow:0 0 10px rgba(232,189,34,.25) inset;}
 .strip{display:flex;flex-direction:column;gap:2px;will-change:transform;}
 .cell{width:100%;aspect-ratio:1/1;position:relative;border-radius:6px;display:flex;align-items:center;justify-content:center;flex:none;overflow:visible;background:transparent;}
@@ -52,7 +53,7 @@ body::before{content:'';position:fixed;inset:0;background:url('images/bg.jpg') c
 @keyframes anticPulse{from{opacity:.55;}to{opacity:1;}}
 .cell.emptyglow{background:radial-gradient(circle,rgba(255,225,140,.2),transparent 70%);}
 @keyframes emptyPulse{from{opacity:.7;}to{opacity:1;}}
-.cell.fall{animation:fallIn .95s cubic-bezier(.25,.7,.3,1) both;}
+.cell.fall{animation:fallIn .26s cubic-bezier(.45,0,.85,.55) both;}
 @keyframes fallIn{from{transform:translateY(calc(var(--fall,1)*-104%));}to{transform:translateY(0);}}
 .cell.win{border-radius:50%;box-shadow:0 0 0 2px rgba(255,214,90,.9) inset,0 0 12px rgba(232,189,34,.8) inset;z-index:2;}
 .cell.win.wildc{border-radius:50%;box-shadow:0 0 0 2px rgba(255,214,90,.9) inset,0 0 12px rgba(232,189,34,.8) inset;}
@@ -114,6 +115,11 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 #winTitle{margin-top:6px;font-family:'Rye',serif;font-size:34px;font-weight:800;color:var(--gold);-webkit-text-stroke:5px #5a2e0a;paint-order:stroke fill;text-shadow:0 0 16px rgba(255,160,40,.9);}
 #bonusOverlay{display:none;position:fixed;inset:0;z-index:195;align-items:center;justify-content:center;background:#000;}
 #bonusVideo{width:100%;height:100%;object-fit:cover;}
+#totalOverlay{display:none;position:fixed;inset:0;z-index:190;align-items:center;justify-content:center;background:#1a0e04;overflow:hidden;}
+#totalImg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.totalcont{position:absolute;left:0;right:0;top:var(--total-top,46%);text-align:center;z-index:1;}
+#totalAmt{font-family:'Rye',serif;font-size:52px;font-weight:800;color:#fff6cf;-webkit-text-stroke:6px #6b3610;paint-order:stroke fill;text-shadow:0 0 18px rgba(255,200,60,.9);}
+#totalBtn{margin-top:26px;padding:13px 46px;border-radius:14px;border:2px solid var(--gold);background:linear-gradient(180deg,#d98a1a,#7a3a0a);color:#fff;font-weight:800;font-size:18px;box-shadow:0 4px 14px rgba(0,0,0,.6);}
 .modal{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);align-items:center;justify-content:center;padding:14px;}
 .card{width:100%;max-width:340px;max-height:88vh;overflow:auto;background:linear-gradient(180deg,#241408,#0d0704);border:2px solid var(--gold);border-radius:16px;padding:14px;}
 .card h3{text-align:center;font-family:'Rye',serif;color:var(--gold);font-size:20px;margin-bottom:8px;}
@@ -174,6 +180,7 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 <div class="fs-intro" id="fsIntro"><div>لديك<b id="fsCount">10</b>لفات مجانية</div></div>
 <div class="win-overlay" id="winOverlay"><div class="winbox"><img id="winImg" src="images/win.jpg" alt="" onerror="this.style.display='none'"><div class="wincont"><div id="winAmt">0</div><div id="winTitle">BIG WIN</div></div></div></div>
 <div id="bonusOverlay"><video id="bonusVideo" playsinline preload="auto" src="images/bonus-video.mp4"></video></div>
+<div id="totalOverlay"><img id="totalImg" src="images/total.jpg" alt="" onerror="this.style.display='none'"><div class="totalcont"><div id="totalAmt">0</div><button id="totalBtn">متابعة</button></div></div>
 
 <div class="modal" id="buyModal"><div class="card buyconfirm">
   <h3>شراء البونص</h3>
@@ -240,6 +247,7 @@ const REELS=6,FREE_SPINS=10;
 const REEL_HEIGHTS=[3,4,5,5,4,3];
 const BUY_COST_MULT=44;
 const HOLE=['images/hole1.png','images/hole2.png','images/hole3.png'];
+new Image().src='images/total.jpg';
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function setGlow(on){const b=document.querySelector('.board');if(b)b.classList.toggle('glow',!!on);}
 const IMG={wild:'images/wild.png',scatter:'images/scatter.png',bandit:'images/bandit.png',hat:'images/hat.png',
@@ -269,7 +277,7 @@ const BASE_SYMS=[{key:'native',weight:5},{key:'bandit',weight:7},{key:'eagle',we
 function buildPool(wildW,scatW){ return [...BASE_SYMS,{key:'wild',weight:wildW},{key:'scatter',weight:scatW}]; }
 const POOL_BASE=buildPool(2,2.6);
 const POOL_DC=buildPool(2,3.03);
-const POOL_FREE=buildPool(2.2,2.6);
+const POOL_FREE=buildPool(2.2,1.5);
 const BETS=[300,600,1200,1500,3000,6000,10000,15000,20000,25000,30000,35000,40000,50000,60000,100000,120000,160000,200000,250000,300000,600000,650000,700000,800000];
 /* حجم كل رمز داخل الخانة (1 = حجم الخانة). كبّر/صغّر حسب ذوقك */
 const SYM_SCALE={native:1.32,bandit:1.26,wild:1.34,scatter:1.24,eagle:1.2,bison:1.2,wolf:1.2,revolver:1.14,hat:1.14,bottle:1.1,card_a:1.04,card_k:1.04,card_q:1.04,card_j:1.04};
@@ -302,6 +310,8 @@ const WILD_EDGE_KEEP=0.25; /* نسبة الـWild المسموحة على الب
 const goldP=()=>inFree?0.12:(dc?0.16:0.10);
 /* مدة التبطيء (مللي ثانية) لكل بكرة بعد ما ينزل سكاترين، حسب السرعة */
 const ANTIC_MS=[1300,1000,800];
+/* نزول الرموز الجديدة بالوضع البطيء (سكاترين + تطابق): FALL_STEP = الفاصل بين رمز والتاني، FALL_MS = مدة نزول الرمز الواحد (مللي ثانية) */
+const FALL_STEP=260,FALL_MS=260;
 const MULT_LADDER=[1,2,4,8,16,32,64,128,256,512,1024];
 
 let balance=0,bet=300,betIdx=0,spinning=false,totalSpins=0,totalWins=0;
@@ -451,6 +461,10 @@ function tumble(grid,clearSet,slow,pre){
   return new Promise(res=>{
     const {newCols,fallRows,newFlags}=pre;
     let done=0;
+    /* ترتيب نزول الرموز الجديدة بالوضع البطيء: بكرة بكرة من اليسار، وجوا البكرة من الخانة الأوطى لفوق */
+    const slowBase=[];let slowN=0;
+    for(let r=0;r<REELS;r++){slowBase.push(slowN);slowN+=newFlags[r].filter(Boolean).length;}
+    const slowTotal=Math.max(0,slowN-1)*FALL_STEP+FALL_MS+150;
     for(let r=0;r<REELS;r++){
       const col=$('reelCol'+r);
       const phase=slow
@@ -462,10 +476,19 @@ function tumble(grid,clearSet,slow,pre){
       col.innerHTML='<div class="strip">'+phase.join('')+'</div>';
       setTimeout(()=>{
         if(slow){
-          col.innerHTML=newCols[r].map((c,row)=>{const n=fallRows[r][row];const h=cellHTML(c,false,n>0?' fall':'');
-            return n>0?h.replace('<div class="cell','<div style="--fall:'+n+';animation-delay:'+((REEL_HEIGHTS[r]-row)*.06)+'s" class="cell'):h;}).join('');
+          /* كل رمز جديد بينزل لحاله من ورا حافة اللوح، والتالي ما بينزل إلا لما اللي قبله يوصل */
+          let j=0;
+          for(let row=REEL_HEIGHTS[r]-1;row>=0;row--){
+            if(!newFlags[r][row])continue;
+            const at=(slowBase[r]+j)*FALL_STEP;j++;
+            setTimeout(()=>{
+              col.classList.add('drop');
+              const strip=col.firstChild,slot=strip&&strip.children?strip.children[row]:null;
+              if(slot)slot.outerHTML=cellHTML(newCols[r][row],false,' fall').replace('<div class="cell','<div style="--fall:'+(row+1)+';animation-duration:'+FALL_MS+'ms" class="cell');
+            },at);
+          }
         } else renderReelColumn(r,newCols[r],[]);
-        done++; if(done===REELS){grid.forEach((_,i)=>grid[i]=newCols[i]);if(slow)setTimeout(res,1000);else res();}
+        done++; if(done===REELS){grid.forEach((_,i)=>grid[i]=newCols[i]);if(slow)setTimeout(()=>{for(let q=0;q<REELS;q++){const cq=$('reelCol'+q);if(cq){cq.classList.remove('drop');renderReelColumn(q,newCols[q],[]);}}res();},slowTotal);else res();}
       },slow?1100:520);
     }
   });
@@ -591,6 +614,19 @@ function playBonusVideo(cb){
     const pr=v.play();
     if(pr&&pr.catch)pr.catch(()=>{v.muted=true;const p2=v.play();if(p2&&p2.catch)p2.catch(end);});
   }catch(e){end();}
+}
+/* نافذة نهاية البونص: صورة images/total.jpg + مجموع أرباح اللفات المجانية بيعدّ لفوق + زر متابعة. اللعبة بتوقف لحد ما يضغط (الضغطة الأولى أثناء العدّ بتنهي العدّ، والتانية بتكمّل) */
+function showTotalWin(amount,cb){
+  const ov=$('totalOverlay'),el=$('totalAmt'),btn=$('totalBtn');
+  let fin=false,raf=0,closed=false;
+  const t0=performance.now(),dur=2200;
+  el.textContent='0';ov.style.display='flex';
+  (function step(now){const p=Math.min(1,(now-t0)/dur),e=1-Math.pow(1-p,3);el.textContent=R(amount*e).toLocaleString();
+    if(p<1)raf=requestAnimationFrame(step);else fin=true;})(performance.now());
+  btn.onclick=()=>{
+    if(!fin){fin=true;cancelAnimationFrame(raf);el.textContent=R(amount).toLocaleString();return;}
+    if(closed)return;closed=true;ov.style.display='none';btn.onclick=null;cb();
+  };
 }
 window.openBuy=()=>{ if(spinning||inFree)return; $('buyCost').textContent=R(bet*BUY_COST_MULT).toLocaleString(); playBonusVideo(()=>{$('buyModal').style.display='flex';}); };
 window.closeBuy=()=>{$('buyModal').style.display='none';};
@@ -742,7 +778,7 @@ async function finishSpin(grid,roundTotal,sc){
       if(freeLeft<=0){
         inFree=false;setMult(0);
         $('result').innerHTML+=(msg?'<br>':'')+`<span class="win-t">مجموع اللفات المجانية: ${freeWin.toLocaleString()}</span>`;
-        update();lockUI(false);autoNext();
+        update();showTotalWin(freeWin,()=>{lockUI(false);autoNext();});
       }else{ setMult(3); setTimeout(()=>spin(),1200); }
     }else{lockUI(false);autoNext();}
   },big?(bigMs+1100):(roundTotal>0?700:250));
