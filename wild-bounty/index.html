@@ -321,6 +321,8 @@ const goldP=()=>inFree?0.12:(dc?0.16:0.10);
 const ANTIC_MS=[1300,1000,800];
 /* نزول الرموز الجديدة بالوضع البطيء (سكاترين + تطابق): FALL_STEP = الفاصل بين رمز والتاني، FALL_MS = مدة نزول الرمز الواحد (مللي ثانية) */
 const FALL_STEP=260,FALL_MS=260;
+/* معامل سرعة الأوقات بين الخطوات: ⚡ الأولى أسرع بـ35% من قبل، التانية والتالتة أسرع */
+const TK=()=>[0.65,0.45,0.3][speed];
 const MULT_LADDER=[1,2,4,8,16,32,64,128,256,512,1024];
 
 let balance=0,bet=300,betIdx=0,spinning=false,totalSpins=0,totalWins=0;
@@ -599,7 +601,7 @@ function simSpin(force){
 /* ضابط النسبة + توازن الجلسة. الجلسة بتتذكر آخر ~30 لفة: لاعب بارد (استرجع أقل من SESS_COLD) بيجيه فوز متوسط، ولاعب ساخن (فوق SESS_HOT) بتخف أرباحه.
    السقف الصلب (room) فوق كل شي: ما في ربح بيتخطى نسبة الضابط أبداً، يعني البيت ما بيخسر */
 const SESS_MIN=15,SESS_COLD=0.2,SESS_HOT=2.0,SESS_DECAY=0.97,SESS_TRIES=6;
-const SMALL_WIN_P=0.15; /* نسبة اللفات الفاضية اللي بتتحول لفوز صغير (0.5-1.5× الرهان) ضمن السقف */
+const SMALL_WIN_P=0.10; /* نسبة اللفات الفاضية اللي بتتحول لفوز صغير (1-2× الرهان) ضمن السقف */
 function simGoverned(force){
   const acc=govAcc(), tier=govTier();
   const room=()=>acc.wager*tier.ratio + bet*tier.buf - acc.paid;
@@ -619,7 +621,7 @@ function simGoverned(force){
     }
   }
   if(!inFree&&!force&&best.round===0&&Math.random()<SMALL_WIN_P){
-    for(let k=0;k<12;k++){const s2=draw();if(s2.round>0&&s2.round<bet*1.5&&s2.round<=room()){best=s2;break;}}
+    for(let k=0;k<12;k++){const s2=draw();if(s2.round>=bet&&s2.round<bet*2&&s2.round<=room()){best=s2;break;}}
   }
   return best;
 }
@@ -647,7 +649,7 @@ window.chooseAuto=n=>{toggleAutoMenu(false);if(spinning||inFree)return;if(n==='i
 function autoNext(){
   if(!autoInfinite&&autoLeft<=0)return;
   if(!autoInfinite){autoLeft--;showAuto();if(autoLeft<=0)return;}
-  setTimeout(()=>{if(!autoInfinite&&autoLeft<=0)return;if(balance<spinCost()){autoInfinite=false;autoLeft=0;showAuto();return;}spin();},600);
+  setTimeout(()=>{if(!autoInfinite&&autoLeft<=0)return;if(balance<spinCost()){autoInfinite=false;autoLeft=0;showAuto();return;}spin();},R(600*TK()));
 }
 
 /* فيديو البونص (~3 ثواني): images/bonus-video.mp4. إذا الملف مو موجود أو ما تحمّل بيتخطّاه بدون ما يعلّق اللعبة. اللمس بيتخطّاه */
@@ -738,12 +740,12 @@ window.spin=function(){
   else sim=simGoverned(buying);
   buying=false;
   const grid=sim.g0.slice();const old=currentGrid||grid;
-  const base=[900,650,450][speed];
+  const base=[650,450,300][speed];
   /* أوقات توقف البكرات: بعد ما ينزل سكاترين، باقي البكرات بتتبطّأ وبتتوهّج بالذهبي */
   const stops=[],anticReel=[];let scatSoFar=0,anticFrom=-1;
   for(let r=0;r<REELS;r++){
     const antic=scatSoFar===2;anticReel[r]=antic;if(antic&&anticFrom<0)anticFrom=r;
-    stops[r]=r===0?base:stops[r-1]+(antic?ANTIC_MS[speed]:180);
+    stops[r]=r===0?base:stops[r-1]+(antic?ANTIC_MS[speed]:130);
     scatSoFar+=grid[r].filter(c=>c.key==='scatter').length;
   }
   if(anticFrom>0){setTimeout(()=>{Sound.antic();for(let r=anticFrom;r<REELS;r++){const el=$('reelCol'+r);if(el)el.classList.add('antic');}},stops[anticFrom-1]);}
@@ -832,9 +834,9 @@ async function finishSpin(grid,roundTotal,sc){
     if(!inFree){inFree=true;freeLeft=FREE_SPINS;freeWin=roundTotal;started=true;}
     else{freeLeft+=5;msg+=(msg?'<br>':'')+'<span class="win-t">+5 لفات مجانية</span>';Sound.free();}
   }
-  $('result').innerHTML=msg;update();await save();
-  setTimeout(()=>{
-    spinning=false;
+  $('result').innerHTML=msg;update();const sv=save();
+  setTimeout(async()=>{
+    await sv;spinning=false;
     if(started){setMult(3);update();playBonusVideo(()=>{showFreeIntro(FREE_SPINS,()=>spin());});return;}
     if(inFree){
       freeLeft--;update();
@@ -842,9 +844,9 @@ async function finishSpin(grid,roundTotal,sc){
         inFree=false;setMult(0);bonusQueue=null;
         $('result').innerHTML+=(msg?'<br>':'')+`<span class="win-t">مجموع اللفات المجانية: ${freeWin.toLocaleString()}</span>`;
         update();showTotalWin(freeWin,()=>{lockUI(false);autoNext();});
-      }else{ setMult(3); setTimeout(()=>spin(),1200); }
+      }else{ setMult(3); setTimeout(()=>spin(),R(1200*TK())); }
     }else{lockUI(false);autoNext();}
-  },big?(bigMs+1100):(roundTotal>0?700:250));
+  },big?(bigMs+1100):(roundTotal>0?R(700*TK()):R(250*TK())));
 }
 
 function preloadAll(){
