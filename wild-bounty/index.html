@@ -846,7 +846,7 @@ async function finishSpin(grid,roundTotal,sc){
         inFree=false;setMult(0);bonusQueue=null;
         $('result').innerHTML+=(msg?'<br>':'')+`<span class="win-t">مجموع اللفات المجانية: ${freeWin.toLocaleString()}</span>`;
         update();showTotalWin(freeWin,()=>{lockUI(false);autoNext();});
-      }else{ setMult(3); setTimeout(()=>spin(),R(1200*TK())); }
+      }else{ setMult(3); setTimeout(()=>spin(),R(300*TK())); }
     }else{lockUI(false);autoNext();}
   },big?(bigMs+1100):(roundTotal>0?R(700*TK()):R(250*TK())));
 }
