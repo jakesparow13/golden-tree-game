@@ -125,6 +125,7 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 .introT b{display:block;font-size:64px;color:#fff6cf;}
 .introS{margin-top:18px;font-weight:700;font-size:18px;color:#fff6cf;-webkit-text-stroke:4px #5a2e0a;paint-order:stroke fill;animation:introBlink 1.2s ease-in-out infinite alternate;}
 @keyframes introBlink{from{opacity:.45;}to{opacity:1;}}
+.cell[data-k] img.sym.baked{filter:none;}
 .modal{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);align-items:center;justify-content:center;padding:14px;}
 .card{width:100%;max-width:340px;max-height:88vh;overflow:auto;background:linear-gradient(180deg,#241408,#0d0704);border:2px solid var(--gold);border-radius:16px;padding:14px;}
 .card h3{text-align:center;font-family:'Rye',serif;color:var(--gold);font-size:20px;margin-bottom:8px;}
@@ -315,6 +316,20 @@ function measureSym(u,im){
     SYMFIT[key]={w,h,x0:x0/cw,y0:y0/ch,x1:(x1+1)/cw,y1:(y1+1)/ch};
   }catch(e){console.warn('measureSym',key,e);}
 }
+/* تطبيق الفلاتر (تلوين + ظل) مرة وحدة وقت التحميل وحفظ نسخة جاهزة بالذاكرة، بدل ما المتصفح يحسبها كل مرة بيتعاد رسم الرمز. إذا المتصفح ما بيدعم (مثلاً بعض الآيفون) بترجع للطريقة القديمة تلقائياً */
+const BAKED={};
+function bakeSym(u,im){
+  const key=Object.keys(IMG).find(k=>IMG[k]===u);if(!key)return;
+  try{
+    const w=im.naturalWidth,h=im.naturalHeight;if(!w||!h)return;
+    const sc=Math.min(1,256/Math.max(w,h)),cw=Math.max(1,Math.round(w*sc)),ch=Math.max(1,Math.round(h*sc));
+    const cv=document.createElement('canvas');cv.width=cw;cv.height=ch;
+    const cx=cv.getContext('2d');if(!cx||typeof cx.filter!=='string')return;
+    cx.filter=key==='scatter'?'saturate(1.2) brightness(1.06) drop-shadow(0 0 21px rgba(255,200,60,.5))':'saturate(1.35) contrast(1.1) brightness(1.08) drop-shadow(0 7px 11px rgba(0,0,0,.6))';
+    cx.drawImage(im,0,0,cw,ch);
+    BAKED[key]=cv.toDataURL('image/png');
+  }catch(e){console.warn('bakeSym',key,e);}
+}
 const WILD_EDGE_KEEP=0.25; /* نسبة الـWild المسموحة على البكرتين 1 و2 (0 = ممنوع تماماً، 1 = متل باقي البكرات) */
 const goldP=()=>inFree?0.12:(dc?0.16:0.10);
 /* مدة التبطيء (مللي ثانية) لكل بكرة بعد ما ينزل سكاترين، حسب السرعة */
@@ -349,8 +364,8 @@ const Sound=(()=>{
   function startMusic(){if(!on)return;if(musicBroken){ambient();return;}bg.play().catch(()=>ambient());}
   function stopMusic(){bg.pause();stopAmb();}
   /* أصوات الربح والبونص: ملفات بالذاكرة (نفس لعبة الكونت). إذا الملف مو موجود بيشتغل الصوت المولّد القديم */
-  const SRC={win:'images/win-small.mp3',big:'images/win-big.mp3',bonus:'images/bonus-select.mp3',scatter:'images/scatter.mp3'};
-  const VOLB={win:.5,big:.6,bonus:.6,scatter:.7};
+  const SRC={win:'images/win-small.mp3',big:'images/win-big.mp3',bonus:'images/bonus-select.mp3',scatter:'images/scatter.mp3',shot:'images/gunshot.mp3',click:'images/spin-click.mp3'};
+  const VOLB={win:.5,big:.6,bonus:.6,scatter:.7,shot:.6,click:.4};
   const bufs={};
   async function preload(){
     const c=ac();if(!c)return;
@@ -373,8 +388,8 @@ const Sound=(()=>{
     preload,
     unlock(){ac();if(!started){started=true;startMusic();}},
     toggle(){on=!on;if(on)startMusic();else stopMusic();return on;},
-    click(){if(!on)return;if(!sSb){try{sS.currentTime=0;sS.play().catch(()=>{});return;}catch(e){}}noise(.05,.1,4000);tone(900,.04,'square',.04);},
-    shot(){if(!on)return;if(!sWb){try{sW.currentTime=0;sW.play().catch(()=>{});return;}catch(e){}}noise(.1,.25,1200);tone(120,.08,'square',.2);},
+    click(){if(!on)return;if(bufs.click){playBuf('click');return;}if(!sSb){try{sS.currentTime=0;sS.play().catch(()=>{});return;}catch(e){}}noise(.05,.1,4000);tone(900,.04,'square',.04);},
+    shot(){if(!on)return;if(bufs.shot){playBuf('shot');return;}if(!sWb){try{sW.currentTime=0;sW.play().catch(()=>{});return;}catch(e){}}noise(.1,.25,1200);tone(120,.08,'square',.2);},
     cascade(mult){tone(440+mult*8,.15,'triangle',.18);},
     win(){if(on&&bufs.win){playBuf('win');return;}[523,659,784].forEach((f,i)=>tone(f,.22,'triangle',.18,i*.09));},
     nice(){if(on&&bufs.win){playBuf('win');return;}[587,740,880,987].forEach((f,i)=>tone(f,.25,'triangle',.19,i*.08));},
@@ -430,7 +445,7 @@ function cellHTML(c,isWin,extra=''){
   let st='';
   if(f) st=fitStyle(f,(g?GOLD_T:(SYM_T[c.key]||1.1))*SYM_BOOST);
   else if(!g) st=` style="inset:${off}%;width:${sc*100}%;height:${sc*100}%"`;
-  return `<div class="cell ${isWin?'win':''}${c.key==='wild'?' wildc':''}${g?' goldc':''}${extra}" data-k="${c.key}"><img class="sym" src="${IMG[c.key]}" alt=""${st} onerror="this.style.display='none'">${g?'<img class="gframe" src="images/gold_frame.png" alt="">':''}</div>`;
+  return `<div class="cell ${isWin?'win':''}${c.key==='wild'?' wildc':''}${g?' goldc':''}${extra}" data-k="${c.key}"><img class="sym${BAKED[c.key]?' baked':''}" src="${BAKED[c.key]||IMG[c.key]}" alt=""${st} onerror="this.style.display='none'">${g?'<img class="gframe" src="images/gold_frame.png" alt="">':''}</div>`;
 }
 function render(grid){
   $('reels').innerHTML=Array.from({length:REELS},(_,r)=>`<div class="reel" id="reelCol${r}"></div>`).join('');
@@ -855,7 +870,7 @@ function preloadAll(){
   const urls=[...Object.values(IMG),...HOLE,'images/board.png','images/gold_frame.png','images/bg.jpg'];let ok=true;
   return Promise.all(urls.map(u=>new Promise(res=>{
     const im=new Image(),t=setTimeout(()=>{ok=false;res();},15000);
-    im.onload=()=>{clearTimeout(t);measureSym(u,im);(im.decode?im.decode():Promise.resolve()).catch(()=>{}).then(res);};
+    im.onload=()=>{clearTimeout(t);measureSym(u,im);bakeSym(u,im);(im.decode?im.decode():Promise.resolve()).catch(()=>{}).then(res);};
     im.onerror=()=>{clearTimeout(t);ok=false;console.warn('ما تحمّلت:',u);res();};
     im.src=u;
   }))).then(()=>ok);
