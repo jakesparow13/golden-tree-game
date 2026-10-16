@@ -560,8 +560,8 @@ function makeForcedGrid(){
   rs.forEach(r=>{g[r][Math.floor(Math.random()*REEL_HEIGHTS[r])]={key:'scatter'};});
   return g;
 }
-/* خطة الشراء: بتحدد مسبقاً نتيجة البونص كله. 40% بترجّع 0.2-0.8× السعر، 40% حوالي السعر (0.9-1.1×)، 20% 1.4-2× السعر. جوا كل فئة النتيجة عشوائية */
-const BUY_BANDS=[[0.4,0.2,0.8],[0.8,0.9,1.1],[1.01,1.4,2.0]];
+/* خطة الشراء: بتحدد مسبقاً نتيجة البونص كله. 47% بترجّع 0.2-0.8× السعر، 38% حوالي السعر (0.9-1.1×)، 10% 1.4-2×، 5% 3-4×. جوا كل فئة النتيجة عشوائية */
+const BUY_BANDS=[[0.47,0.2,0.8],[0.85,0.9,1.1],[0.95,1.4,2.0],[1.01,3.0,4.0]];
 async function planBuy(cost){
   const u=Math.random(),bd=BUY_BANDS.find(b=>u<b[0]),lo=bd[1],hi=bd[2];
   let best=null,bestD=1e18;const saveF=inFree,saveM=multIdx;
@@ -702,7 +702,9 @@ window.openInfo=()=>{
 };
 window.closeInfo=()=>{$('infoModal').style.display='none';};
 
-async function save(){
+let saveQ=Promise.resolve();
+function save(){saveQ=saveQ.then(saveNow);return saveQ;}
+async function saveNow(){
   if(!dbApi)return;
   try{await dbApi.saveBalance(userId,{balance,totalSpins,totalWins,govWildBounty:govLedger});}catch(e){console.error('خطأ بالحفظ:',e);return;}
   /* إحصائيات المنصّة الحقيقية (مجموع الرهانات والأرباح لكل اللاعبين) - بتفشل بصمت إذا القواعد ما انضافت */
@@ -836,7 +838,7 @@ async function finishSpin(grid,roundTotal,sc){
   }
   $('result').innerHTML=msg;update();const sv=save();
   setTimeout(async()=>{
-    await sv;spinning=false;
+    spinning=false;
     if(started){setMult(3);update();playBonusVideo(()=>{showFreeIntro(FREE_SPINS,()=>spin());});return;}
     if(inFree){
       freeLeft--;update();
