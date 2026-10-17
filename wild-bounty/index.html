@@ -126,6 +126,7 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 .introS{margin-top:18px;font-weight:700;font-size:18px;color:#fff6cf;-webkit-text-stroke:4px #5a2e0a;paint-order:stroke fill;animation:introBlink 1.2s ease-in-out infinite alternate;}
 @keyframes introBlink{from{opacity:.45;}to{opacity:1;}}
 .cell[data-k] img.sym.baked{filter:none;}
+.back-btn{position:fixed;top:calc(8px + env(safe-area-inset-top));right:10px;width:36px;height:36px;border-radius:50%;border:1.5px solid rgba(232,189,34,.6);background:rgba(0,0,0,.6);color:#fff;font-size:16px;line-height:1;z-index:50;}
 .modal{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);align-items:center;justify-content:center;padding:14px;}
 .card{width:100%;max-width:340px;max-height:88vh;overflow:auto;background:linear-gradient(180deg,#241408,#0d0704);border:2px solid var(--gold);border-radius:16px;padding:14px;}
 .card h3{text-align:center;font-family:'Rye',serif;color:var(--gold);font-size:20px;margin-bottom:8px;}
@@ -151,7 +152,7 @@ button:disabled{opacity:.5;cursor:not-allowed;}
   <div id="loadingPct">0%</div>
 </div>
 
-<div id="gameScreen"><div id="stage"><div class="container">
+<div id="gameScreen"><button class="back-btn" id="backBtn" onclick="goLobby()" aria-label="رجوع للوبي">✕</button><div id="stage"><div class="container">
   <div id="freeBadge"></div>
   <div class="board">
     <img class="boardimg" src="images/board.png" alt="">
@@ -214,27 +215,49 @@ window.__dataReady=false;
 (function(){
   var vid=document.getElementById('splashVideo');
   var bar=document.getElementById('loadingBar'), pct=document.getElementById('loadingPct');
-  var videoDone=!vid, p=0, t0=Date.now(), iv=null;
+  var started=false, finished=false, lastT=-1, lastMove=Date.now(), p=0, t0=null, iv=null;
+
   function done(){
+    if(finished) return;
+    finished=true; clearInterval(iv);
+    try{ if(vid){ vid.pause(); vid.removeAttribute('src'); vid.load(); } }catch(e){}
     document.getElementById('splashScreen').style.display='none';
     document.getElementById('gameScreen').style.display='block';
     if(window.__fitStage) window.__fitStage();
   }
-  iv = setInterval(function(){
-    p += Math.random()*6+2;
-    var late = Date.now()-t0 > 90000;
-    var cap = !videoDone ? 50 : (window.__dataReady || late ? 100 : 90);
-    if(p>=cap) p=cap;
-    if(p>=100){ p=100; clearInterval(iv); setTimeout(done,300); }
-    bar.style.width=p+'%'; pct.textContent=Math.floor(p)+'%';
-  },130);
-  function markVideoDone(){ videoDone=true; }
+
+  // شريط التحميل وتحميل الصور والأصوات بيبدأوا بس يخلص فيديو المقدمة (أو لو الفيديو فشل/وقف)، عشان ما يتخانقوا مع الفيديو على النت
+  function beginProgress(){
+    if(started) return;
+    started=true;
+    t0=Date.now();
+    window.__loadRequested=true;
+    if(window.__startLoading) window.__startLoading();
+    iv=setInterval(function(){
+      if(p<50){ p=Math.min(50,p+Math.random()*6+3); }
+      else if(!window.__dataReady){
+        // واقف على 50 لحد ما يتأكد تحميل كل الرموز والرصيد، أو يمر 90 ثانية ويفتح
+        if(Date.now()-t0>90000){ window.__forced=true; window.__dataReady=true; }
+      }
+      else { p+=Math.random()*8+4; }
+      if(p>=100){ p=100; clearInterval(iv); setTimeout(done,300); }
+      bar.style.width=p+'%'; pct.textContent=Math.floor(p)+'%';
+    },130);
+  }
+
   if(vid){
-    vid.addEventListener('ended', markVideoDone);
-    vid.addEventListener('error', markVideoDone);
+    vid.addEventListener('ended', beginProgress);
+    vid.addEventListener('error', beginProgress);
     var playPromise = vid.play();
-    if(playPromise && playPromise.catch) playPromise.catch(markVideoDone);
-    setTimeout(markVideoDone, 16000);
+    if(playPromise && playPromise.catch) playPromise.catch(beginProgress);
+    // حارس: بيكمّل بس لو الفيديو واقف تماماً (ما تحرك) 60 ثانية، مو بسبب بطء النت
+    setInterval(function(){
+      if(started) return;
+      if(vid.currentTime!==lastT){ lastT=vid.currentTime; lastMove=Date.now(); }
+      else if(Date.now()-lastMove>60000) beginProgress();
+    },1000);
+  } else {
+    beginProgress();
   }
 })();
 </script>
@@ -319,16 +342,18 @@ function measureSym(u,im){
 /* تطبيق الفلاتر (تلوين + ظل) مرة وحدة وقت التحميل وحفظ نسخة جاهزة بالذاكرة، بدل ما المتصفح يحسبها كل مرة بيتعاد رسم الرمز. إذا المتصفح ما بيدعم (مثلاً بعض الآيفون) بترجع للطريقة القديمة تلقائياً */
 const BAKED={};
 function bakeSym(u,im){
-  const key=Object.keys(IMG).find(k=>IMG[k]===u);if(!key)return;
-  try{
-    const w=im.naturalWidth,h=im.naturalHeight;if(!w||!h)return;
-    const sc=Math.min(1,256/Math.max(w,h)),cw=Math.max(1,Math.round(w*sc)),ch=Math.max(1,Math.round(h*sc));
-    const cv=document.createElement('canvas');cv.width=cw;cv.height=ch;
-    const cx=cv.getContext('2d');if(!cx||typeof cx.filter!=='string')return;
-    cx.filter=key==='scatter'?'saturate(1.2) brightness(1.06) drop-shadow(0 0 21px rgba(255,200,60,.5))':'saturate(1.35) contrast(1.1) brightness(1.08) drop-shadow(0 7px 11px rgba(0,0,0,.6))';
-    cx.drawImage(im,0,0,cw,ch);
-    BAKED[key]=cv.toDataURL('image/png');
-  }catch(e){console.warn('bakeSym',key,e);}
+  const key=Object.keys(IMG).find(k=>IMG[k]===u);if(!key)return Promise.resolve();
+  return new Promise(res=>{
+    try{
+      const w=im.naturalWidth,h=im.naturalHeight;if(!w||!h){res();return;}
+      const sc=Math.min(1,256/Math.max(w,h)),cw=Math.max(1,Math.round(w*sc)),ch=Math.max(1,Math.round(h*sc));
+      const cv=document.createElement('canvas');cv.width=cw;cv.height=ch;
+      const cx=cv.getContext('2d');if(!cx||typeof cx.filter!=='string'||!cv.toBlob){res();return;}
+      cx.filter=key==='scatter'?'saturate(1.2) brightness(1.06) drop-shadow(0 0 21px rgba(255,200,60,.5))':'saturate(1.35) contrast(1.1) brightness(1.08) drop-shadow(0 7px 11px rgba(0,0,0,.6))';
+      cx.drawImage(im,0,0,cw,ch);
+      cv.toBlob(b=>{try{if(b)BAKED[key]=URL.createObjectURL(b);}catch(e){}res();},'image/png');
+    }catch(e){console.warn('bakeSym',key,e);res();}
+  });
 }
 const WILD_EDGE_KEEP=0.25; /* نسبة الـWild المسموحة على البكرتين 1 و2 (0 = ممنوع تماماً، 1 = متل باقي البكرات) */
 const goldP=()=>inFree?0.12:(dc?0.16:0.10);
@@ -343,7 +368,8 @@ const MULT_LADDER=[1,2,4,8,16,32,64,128,256,512,1024];
 let balance=0,bet=300,betIdx=0,spinning=false,totalSpins=0,totalWins=0;
 let inFree=false,freeLeft=0,freeWin=0,currentGrid=null,dc=false,speed=0,autoLeft=0,autoInfinite=false;
 let multIdx=0;
-let buying=false,noScat=false,buyPlan=null,bonusQueue=null;const sess={w:0,p:0,n:0};
+let buying=false,noScat=false,buyPlan=null,bonusQueue=null;
+let bonusCool=Math.round(Math.random()*45); /* عدد اللفات المتبقية قبل ما يسمح بونص جديد */const sess={w:0,p:0,n:0};
 
 const Sound=(()=>{
   let ctx=null,on=true,amb=null,musicBroken=false;
@@ -463,7 +489,14 @@ function rollReel(r,oldCells,finalCells,ms,extra=0){
     const strip=col.firstChild,h=strip.children[0].offsetHeight+2;
     strip.style.transform=`translateY(${-(all.length-REEL_HEIGHTS[r])*h}px)`;strip.getBoundingClientRect();
     strip.style.transition=`transform ${ms}ms cubic-bezier(.15,.7,.25,1)`;strip.style.transform='translateY(0)';
-    setTimeout(()=>{col.classList.remove('rolling');col.classList.remove('antic');renderReelColumn(r,finalCells,[]);res();},ms+30);
+    setTimeout(()=>{
+      /* بدل ما نمسح الشريط وننشئ الرموز من جديد (هاد اللي كان يسبب الرجفة)، بنشيل الرموز الزايدة وبنفرد الباقي بمكانه */
+      while(strip.children.length>REEL_HEIGHTS[r])strip.lastChild.remove();
+      strip.style.transition='none';strip.style.transform='none';
+      while(strip.firstChild)col.insertBefore(strip.firstChild,strip);
+      strip.remove();
+      col.classList.remove('rolling');col.classList.remove('antic');res();
+    },ms+30);
   });
 }
 /* الرمز بإطار ذهبي يشارك بفوز: ما بينشال، بيتحوّل Wild بنفس مكانه.
@@ -616,13 +649,24 @@ function simSpin(force){
 /* ضابط النسبة + توازن الجلسة. الجلسة بتتذكر آخر ~30 لفة: لاعب بارد (استرجع أقل من SESS_COLD) بيجيه فوز متوسط، ولاعب ساخن (فوق SESS_HOT) بتخف أرباحه.
    السقف الصلب (room) فوق كل شي: ما في ربح بيتخطى نسبة الضابط أبداً، يعني البيت ما بيخسر */
 const SESS_MIN=15,SESS_COLD=0.2,SESS_HOT=2.0,SESS_DECAY=0.97,SESS_TRIES=6;
+const BONUS_BOOST_P=0.018; /* بعد انتهاء الانتظار: احتمال إضافي إنه اللفة تكون بونص، ليرجع متوسط البونص نفس القديم */
 const SMALL_WIN_P=0.10; /* نسبة اللفات الفاضية اللي بتتحول لفوز صغير (1-2× الرهان) ضمن السقف */
 function simGoverned(force){
   const acc=govAcc(), tier=govTier();
   const room=()=>acc.wager*tier.ratio + bet*tier.buf - acc.paid;
   const mode=(!inFree&&!force&&sess.n>=SESS_MIN&&sess.w>0)?(sess.p<sess.w*SESS_COLD?'cold':(sess.p>sess.w*SESS_HOT?'hot':'')):'';
   const okCold=x=>x.round>=bet*0.5&&x.round<=bet*8&&x.round<=room();
-  const draw=()=>{let x=simSpin(force);if(force){for(let k=0;k<60&&x.sc!==3;k++)x=simSpin(force);}return x;};
+  const baseSpin=!inFree&&!force;
+  let wantTrig=baseSpin&&bonusCool<=0&&Math.random()<BONUS_BOOST_P;
+  const draw=()=>{
+    let x=simSpin(force);
+    if(force){for(let k=0;k<60&&x.sc!==3;k++)x=simSpin(force);}
+    else if(baseSpin){
+      if(bonusCool>0){for(let k=0;k<40&&x.sc>=3;k++)x=simSpin(force);}
+      else if(wantTrig){wantTrig=false;for(let k=0;k<500&&x.sc<3;k++)x=simSpin(force);}
+    }
+    return x;
+  };
   let best=draw();
   if(mode==='cold'){
     for(let k=0;k<SESS_TRIES&&!okCold(best);k++){const s2=draw();if(okCold(s2))best=s2;}
@@ -654,6 +698,15 @@ window.stepBet=d=>{if(spinning||inFree)return;betIdx=Math.max(0,Math.min(BETS.le
 window.toggleDC=()=>{if(spinning||inFree)return;dc=!dc;update();};
 window.cycleSpeed=()=>{speed=(speed+1)%3;$('speedBtn').textContent='⚡'.repeat(speed+1);};
 window.toggleSound=()=>{$('soundBtn').textContent=Sound.toggle()?'🔊':'🔇';};
+
+// زر الرجوع للوبي (نفس الكونت): بيحفظ الرصيد وبيرجع بالتاريخ، وإذا ما في تاريخ بيفتح اللوبي (الصفحة الأم) مع بيانات تيليغرام
+const LOBBY_URL='../index.html';
+window.goLobby=()=>{
+  if(spinning||inFree){$('result').innerHTML='<span class="lose-t">استنّى تخلص اللفة الحالية</span>';return;}
+  const go=()=>{if(history.length>1){history.back();return;}location.href=LOBBY_URL+location.hash;};
+  Promise.race([Promise.resolve(save()),new Promise(r=>setTimeout(r,1500))]).then(go,go);
+};
+try{tg?.BackButton?.show();tg?.BackButton?.onClick(()=>window.goLobby());}catch(e){}
 
 function showAuto(){const c=$('autoCnt');
   if(autoInfinite){c.textContent='∞';c.style.display='flex';}else if(autoLeft>0){c.textContent=autoLeft;c.style.display='flex';}else c.style.display='none';
@@ -749,7 +802,7 @@ window.spin=function(){
   spinning=true;lockUI(true);Sound.unlock();primeVideo();Sound.click();
   if(!window.__bvWarm){window.__bvWarm=1;try{$('bonusVideo').load();}catch(e){}}
   $('result').textContent='';setGlow(false);
-  if(!inFree){if(!buying){balance=R(balance-cost);totalSpins++;govAcc().wager+=cost;sess.w*=SESS_DECAY;sess.p*=SESS_DECAY;sess.n++;sess.w+=cost;}setMult(0);}
+  if(!inFree){if(!buying){balance=R(balance-cost);totalSpins++;govAcc().wager+=cost;sess.w*=SESS_DECAY;sess.p*=SESS_DECAY;sess.n++;sess.w+=cost;if(bonusCool>0)bonusCool--;}setMult(0);}
   update();
   let sim;
   if(buying&&buyPlan){sim=buyPlan.first;bonusQueue=buyPlan.frees.slice();buyPlan=null;}
@@ -848,7 +901,7 @@ async function finishSpin(grid,roundTotal,sc){
   }
   let started=false;
   if(sc>=3){
-    if(!inFree){inFree=true;freeLeft=FREE_SPINS;freeWin=roundTotal;started=true;}
+    if(!inFree){inFree=true;freeLeft=FREE_SPINS;freeWin=roundTotal;started=true;bonusCool=Math.round(30+Math.random()*30);}
     else{freeLeft+=5;msg+=(msg?'<br>':'')+'<span class="win-t">+5 لفات مجانية</span>';Sound.free();}
   }
   $('result').innerHTML=msg;update();const sv=save();
@@ -870,7 +923,7 @@ function preloadAll(){
   const urls=[...Object.values(IMG),...HOLE,'images/board.png','images/gold_frame.png','images/bg.jpg'];let ok=true;
   return Promise.all(urls.map(u=>new Promise(res=>{
     const im=new Image(),t=setTimeout(()=>{ok=false;res();},15000);
-    im.onload=()=>{clearTimeout(t);measureSym(u,im);bakeSym(u,im);(im.decode?im.decode():Promise.resolve()).catch(()=>{}).then(res);};
+    im.onload=()=>{clearTimeout(t);measureSym(u,im);bakeSym(u,im).then(()=>(im.decode?im.decode():Promise.resolve()).catch(()=>{})).then(res);};
     im.onerror=()=>{clearTimeout(t);ok=false;console.warn('ما تحمّلت:',u);res();};
     im.src=u;
   }))).then(()=>ok);
@@ -884,7 +937,11 @@ function fitStage(){
 }
 window.__fitStage=fitStage;addEventListener('resize',fitStage);addEventListener('orientationchange',fitStage);
 const capped=(p,ms)=>Promise.race([p,new Promise(r=>setTimeout(r,ms))]);
-Promise.all([loadUser(),preloadAll(),capped(Sound.preload(),60000)]).then(([dataOk,imgsOk])=>{if(currentGrid&&!spinning)render(currentGrid);if(dataOk&&imgsOk)window.__dataReady=true;setTimeout(fitStage,0);requestAnimationFrame(fitStage);});
+window.__startLoading=function(){
+  if(window.__loadStarted)return;window.__loadStarted=true;
+  Promise.all([loadUser(),preloadAll(),capped(Sound.preload(),60000)]).then(([dataOk,imgsOk])=>{if(currentGrid&&!spinning)render(currentGrid);if(dataOk&&imgsOk)window.__dataReady=true;setTimeout(fitStage,0);requestAnimationFrame(fitStage);});
+};
+if(window.__loadRequested)window.__startLoading();
 </script>
 </body>
 </html>
