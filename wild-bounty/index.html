@@ -81,7 +81,9 @@ body::before{content:'';position:fixed;inset:0;background:url('images/bg.jpg') c
 @keyframes flashA{0%{opacity:1;transform:scale(.3);}100%{opacity:0;transform:scale(1.4);}}
 .cell.recoil{animation:recoil .17s ease-out;}
 @keyframes recoil{0%{transform:scale(1.07) rotate(-1.5deg);}100%{transform:scale(1) rotate(0);}}
-.result{min-height:26px;margin:0 0 4px;text-align:center;font-weight:700;font-size:16px;}
+.result{position:relative;min-height:44px;margin:14px 2px 8px;padding:9px 16px;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:700;font-size:16px;line-height:1.35;color:#fff3c4;border:3px solid #3d2410;border-radius:10px;background:repeating-linear-gradient(90deg,rgba(0,0,0,.06) 0 3px,transparent 3px 7px),linear-gradient(180deg,#8a5a30,#6b4423 55%,#4f3119);box-shadow:inset 0 2px 0 rgba(255,220,160,.35),inset 0 -3px 6px rgba(0,0,0,.45),0 3px 8px rgba(0,0,0,.55);text-shadow:0 2px 3px rgba(0,0,0,.7);}
+.result::before{content:'';position:absolute;top:-17px;left:50%;width:30px;height:22px;margin-left:-15px;border:5px solid #e0b24a;border-bottom:0;border-radius:20px 20px 0 0;filter:drop-shadow(0 2px 2px rgba(0,0,0,.6));}
+.result .win-t{color:#fff3c4;}.result .lose-t{color:#ffc2b0;}
 .win-t{color:#00ff88}.lose-t{color:#ff6b6b}
 button{font-family:'Cairo',sans-serif;cursor:pointer;}
 button:disabled{opacity:.5;cursor:not-allowed;}
@@ -156,7 +158,7 @@ button:disabled{opacity:.5;cursor:not-allowed;}
   <div id="freeBadge"></div>
   <div class="board">
     <img class="boardimg" src="images/board.png" alt="">
-    <svg class="rimglow" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><defs><filter id="rg1" x="-10%" y="-40%" width="120%" height="180%"><feGaussianBlur stdDeviation="2.4"/></filter><filter id="rg2" x="-10%" y="-40%" width="120%" height="180%"><feGaussianBlur stdDeviation=".7"/></filter></defs><path d="M -2,39 C 10,32 22,26 34,24.5 C 44,23.8 56,23.8 66,24.5 C 78,26 90,32 102,39" fill="none" stroke="#ff9a1e" stroke-width="7" opacity=".8" filter="url(#rg1)"/><path d="M -2,39 C 10,32 22,26 34,24.5 C 44,23.8 56,23.8 66,24.5 C 78,26 90,32 102,39" fill="none" stroke="#ffd870" stroke-width="1.7" filter="url(#rg2)"/></svg>
+    <svg class="rimglow" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><defs><filter id="rg1" x="-10%" y="-40%" width="120%" height="180%"><feGaussianBlur stdDeviation="4"/></filter><filter id="rg2" x="-10%" y="-40%" width="120%" height="180%"><feGaussianBlur stdDeviation="2.2"/></filter><clipPath id="rgc"><path d="M -2,39 C 10,32 22,26 34,24.5 C 44,23.8 56,23.8 66,24.5 C 78,26 90,32 102,39 L 102,100 L -2,100 Z"/></clipPath></defs><path d="M -2,39 C 10,32 22,26 34,24.5 C 44,23.8 56,23.8 66,24.5 C 78,26 90,32 102,39" fill="none" stroke="#ff9a1e" stroke-width="14" opacity=".5" filter="url(#rg1)" clip-path="url(#rgc)"/><path d="M -2,39 C 10,32 22,26 34,24.5 C 44,23.8 56,23.8 66,24.5 C 78,26 90,32 102,39" fill="none" stroke="#ffc65a" stroke-width="4" opacity=".55" filter="url(#rg2)" clip-path="url(#rgc)"/></svg>
     <div class="multsign" id="multSign"></div>
     <div class="reels" id="reels"></div>
     <div class="fx" id="fx"></div>
