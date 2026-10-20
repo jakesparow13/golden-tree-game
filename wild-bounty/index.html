@@ -181,6 +181,10 @@ body.bonusmode .container>.result,body.bonusmode .container>.ctl,body.bonusmode 
 .board.bonus .cell.win{border-radius:14px;}
 .board.bonus .reel:first-child,.board.bonus .reel:last-child{margin-top:calc(var(--bh,570px)*.018);} /* [تعديل 7] بالبونص بنخبّي صف (أوتو / الرهان / السرعة) فاللوحة بتكبر */
 .board.bonus .freeplate{top:88.4%;height:8%;}
+/* [تعديل 9] جديد: بالبونص بس - البكرات القصيرة (3 و4 خانات) بتتمركز عمودياً متل اللعبة الأصلية بدل ما تكون ملزوقة من فوق، فبتختفي الفراغات بالزوايا السفلية */
+.board.bonus .reels{align-items:center;}
+/* [تعديل 10] جديد: بالبونص بس - تكبير الرموز 15% (بدون الرموز اللي بإطار ذهبي) عشان تغطي الفراغات بين الخانات */
+.board.bonus .cell:not(.goldc) img.sym{scale:1.15;}
 </style>
 </head>
 <body>
