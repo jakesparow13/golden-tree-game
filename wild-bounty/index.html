@@ -29,10 +29,14 @@ body::before{content:'';position:fixed;inset:0;background:url('images/bg.jpg') c
 .board{position:relative;width:380px;margin:0 -10px;aspect-ratio:449/555;direction:ltr;}
 .boardimg{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;filter:brightness(1.3) saturate(1.2) contrast(1.05) drop-shadow(0 6px 8px rgba(0,0,0,.55));}
 .multsign{position:absolute;inset:0;z-index:2;pointer-events:none;}
-.multsign .step{position:absolute;font-family:'Rye',serif;font-weight:800;white-space:nowrap;color:#f0c98a;text-shadow:0 2px 0 #5a3410,0 -1px 0 #fff0c8,0 3px 5px rgba(0,0,0,.65);transition:opacity .25s;}
-.multsign .step.cur{background:linear-gradient(180deg,#fffbd0,#ffd860 45%,#e39a1c);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;text-shadow:none;filter:drop-shadow(0 2px 0 #6b3d0b) drop-shadow(0 0 9px rgba(255,205,90,.9));animation:multbump .35s ease-out;}
+.multsign .step,.bsSteps .step{position:absolute;font-family:'Rye',serif;font-weight:800;white-space:nowrap;color:#f0c98a;text-shadow:0 2px 0 #5a3410,0 -1px 0 #fff0c8,0 3px 5px rgba(0,0,0,.65);transition:opacity .25s;} /* [تعديل] انضاف .bsSteps .step عشان أرقام اللوح النازل */
+.multsign .step.cur,.bsSteps .step.cur{background:linear-gradient(180deg,#fffbd0,#ffd860 45%,#e39a1c);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;text-shadow:none;filter:drop-shadow(0 2px 0 #6b3d0b) drop-shadow(0 0 9px rgba(255,205,90,.9));animation:multbump .35s ease-out;} /* [تعديل] نفس الإضافة */
 @keyframes multbump{0%{transform:translate(-50%,-50%) scale(1.5);}100%{transform:translate(-50%,-50%) scale(1);}}
-.reels{position:absolute;left:2.5%;right:2.5%;top:58%;transform:translateY(-50%);z-index:3;direction:ltr;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:2px;align-items:center;}
+.reels{position:absolute;left:4.5%;right:4.5%;top:59.2%;transform:translateY(-50%);z-index:3;direction:ltr;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:2px;align-items:center;} /* [تعديل] left/right من 2.5% إلى 4.5% و top من 58% إلى 59.2%: عشان الرموز تضل جوا المنطقة الخضراء */
+/* [تعديل] جديد: اللوح العلوي (قصة من صورة البونص) بيظهر بس بوضع البونص، بنفس مكانه الأصلي. نفس فلتر اللوحة عشان يتطابق اللون */
+.topplank{position:absolute;left:3.906%;top:6.635%;width:91.99%;height:17.54%;z-index:1;display:none;pointer-events:none;filter:brightness(1.3) saturate(1.2) contrast(1.05);}
+/* [تعديل] جديد: نص 3600 WAYS على المستطيل الأخضر */
+.waysplate{position:absolute;left:24.9%;top:22.7%;width:50.1%;height:5.6%;z-index:2;display:flex;align-items:center;justify-content:center;pointer-events:none;font-family:'Rye',serif;font-size:15px;letter-spacing:1px;color:#9db89a;text-shadow:0 1px 0 #0b1a12,0 -1px 0 rgba(255,255,255,.18);}
 .reel{position:relative;display:flex;flex-direction:column;gap:2px;min-width:0;overflow:visible;border-radius:6px;}
 .reel.rolling{overflow:hidden;}
 .reel.drop{clip-path:inset(0 -60% -60% -60%);}
@@ -132,17 +136,17 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 .back-btn{position:fixed;top:calc(8px + env(safe-area-inset-top));right:10px;width:36px;height:36px;border-radius:50%;border:1.5px solid rgba(232,189,34,.6);background:rgba(0,0,0,.6);color:#fff;font-size:16px;line-height:1;z-index:50;}
 body.bonusmode::before{background:url('images/bonus-bg.jpg') center/cover no-repeat;}
 #bonusScene{display:none;position:fixed;inset:0;z-index:191;background:rgba(0,0,0,.5);overflow:hidden;}
-.bsPlank{position:absolute;left:50%;top:50%;width:92%;max-width:460px;aspect-ratio:2.4/1;transform:translate(-50%,-190%);transition:transform .7s cubic-bezier(.3,1.25,.5,1);display:flex;align-items:center;justify-content:center;}
-.bsPlank.down{transform:translate(-50%,-50%);}
-.bsPlank>img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;}
+/* [تعديل] اللوح النازل صار بنفس حجم ومكان اللوح العلوي (الموضع بيجي من الجافاسكربت)، وبينزل بـ --dy لنص الشاشة */
+.bsPlank{position:absolute;display:flex;align-items:center;justify-content:center;transition:transform .7s cubic-bezier(.3,1.25,.5,1);}
+.bsPlank.down{transform:translateY(var(--dy,0px)) scale(1.12);}
+.bsPlank>img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:brightness(1.3) saturate(1.2) contrast(1.05);} /* [تعديل] انضاف الفلتر عشان لون اللوح يتطابق مع اللي فوق */
 .bsPlank.nopic{background:linear-gradient(180deg,#8a5a30,#4f3119);border:4px solid #3d2410;border-radius:16px;box-shadow:0 6px 16px rgba(0,0,0,.6);}
-.bsChain{position:absolute;bottom:70%;height:120vh;width:12px;background:repeating-linear-gradient(180deg,#8a8f94 0 9px,#2c3033 9px 14px);}
-.bsChain.l{left:12%;}.bsChain.r{right:12%;}
-.bsChain.pic{width:26px;background:url('images/chain.png') repeat-y center top/100% auto;}
-.bsChain.pic.l{left:calc(9% - 13px);}.bsChain.pic.r{right:calc(9.4% - 13px);}
-.bsNum{position:relative;font-family:'Rye',serif;font-weight:800;font-size:64px;color:#ffe9a8;text-shadow:0 3px 0 #5a3410,0 0 14px rgba(255,200,60,.8);}
-.bsNum.hit{animation:bsHit .25s ease-out;}
-@keyframes bsHit{0%{transform:scale(1.5);}100%{transform:scale(1);}}
+/* [تعديل] السلاسل: بتتعلّق من زوايا اللوح العلوية، حجمها نسبة من عرض اللوح */
+.bsChain{position:absolute;bottom:94%;height:120vh;width:12px;background:repeating-linear-gradient(180deg,#8a8f94 0 9px,#2c3033 9px 14px);}
+.bsChain.l{left:4.2%;}.bsChain.r{right:4%;}
+.bsChain.pic{width:6%;background:url('images/chain.png') repeat-y center top/100% auto;}
+.bsChain.pic.l{left:2.9%;}.bsChain.pic.r{right:2.7%;}
+.bsSteps{position:absolute;inset:0;} /* [تعديل] بدل .bsNum: حاوية الأرقام الخمسة على اللوح */
 .bsBal{position:absolute;bottom:calc(10px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:min(360px,92vw);justify-content:center;}
 .modal{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);align-items:center;justify-content:center;padding:14px;}
 .card{width:100%;max-width:340px;max-height:88vh;overflow:auto;background:linear-gradient(180deg,#241408,#0d0704);border:2px solid var(--gold);border-radius:16px;padding:14px;}
@@ -172,8 +176,10 @@ body.bonusmode::before{background:url('images/bonus-bg.jpg') center/cover no-rep
 <div id="gameScreen"><button class="back-btn" id="backBtn" onclick="goLobby()" aria-label="رجوع للوبي">✕</button><div id="stage"><div class="container">
   <div class="board">
     <img class="boardimg" src="images/board.png" alt="">
+    <img class="topplank" id="topPlank" src="images/top-plank.png" alt=""><!-- [تعديل] جديد: اللوح العلوي لوضع البونص -->
     <svg class="rimglow" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><defs><filter id="rg1" x="-10%" y="-40%" width="120%" height="180%"><feGaussianBlur stdDeviation="4"/></filter><filter id="rg2" x="-10%" y="-40%" width="120%" height="180%"><feGaussianBlur stdDeviation="2.2"/></filter><clipPath id="rgc"><path d="M -2,39 C 10,32 22,26 34,24.5 C 44,23.8 56,23.8 66,24.5 C 78,26 90,32 102,39 L 102,100 L -2,100 Z"/></clipPath></defs><path d="M -2,39 C 10,32 22,26 34,24.5 C 44,23.8 56,23.8 66,24.5 C 78,26 90,32 102,39" fill="none" stroke="#ff9a1e" stroke-width="14" opacity=".5" filter="url(#rg1)" clip-path="url(#rgc)"/><path d="M -2,39 C 10,32 22,26 34,24.5 C 44,23.8 56,23.8 66,24.5 C 78,26 90,32 102,39" fill="none" stroke="#ffc65a" stroke-width="4" opacity=".55" filter="url(#rg2)" clip-path="url(#rgc)"/></svg>
     <div class="multsign" id="multSign"></div>
+    <div class="waysplate">3600 WAYS</div><!-- [تعديل] جديد: نص المستطيل الأخضر -->
     <div class="reels" id="reels"></div>
     <div class="fx" id="fx"></div>
   </div>
@@ -201,7 +207,7 @@ body.bonusmode::before{background:url('images/bonus-bg.jpg') center/cover no-rep
   </div>
 </div></div></div>
 
-<div id="bonusScene"><div class="bsPlank" id="bsPlank"><i class="bsChain l"></i><i class="bsChain r"></i><img src="images/mult-plank.png" alt="" onerror="this.style.display='none';this.parentNode.classList.add('nopic')"><div class="bsNum" id="bsNum">x1</div></div><div class="balbar bsBal"><span>NSP <b id="bsBal">...</b></span></div></div>
+<div id="bonusScene"><div class="bsPlank" id="bsPlank"><i class="bsChain l"></i><i class="bsChain r"></i><img src="images/top-plank.png" alt="" onerror="this.style.display='none';this.parentNode.classList.add('nopic')"><div class="bsSteps" id="bsSteps"></div></div><div class="balbar bsBal"><span>NSP <b id="bsBal">...</b></span></div></div><!-- [تعديل] اللوح النازل: الصورة صارت top-plank.png، وبدل رقم x8 الكبير صارت الأرقام الخمسة -->
 <div class="fs-intro" id="fsIntro"><div>لديك<b id="fsCount">10</b>لفات مجانية</div></div>
 <div class="win-overlay" id="winOverlay"><div class="winbox"><img id="winImg" src="images/win.jpg" alt="" onerror="this.style.display='none'"><div class="wincont"><div id="winAmt">0</div><div id="winTitle">BIG WIN</div></div></div></div>
 <div id="bonusOverlay"><video id="bonusVideo" playsinline preload="auto" src="images/bonus-video.mp4"></video></div>
@@ -844,7 +850,7 @@ window.spin=function(){
 /* ===== مشهد البونص: خلفية ولوح بونص منفصلين، واللوح الخشبي بينزل ويعدّ x1 > x2 > x4 > x8 وبيطلع صوت ٣ رصاصات وبيرجع يطلع. الصور (bonus-bg.jpg, bonus-board.png, mult-plank.png, chain.png, free-plank.png) إذا موجودة بتتبدّل تلقائياً، وإذا لا بيشتغل برسم مؤقت ===== */
 const BONUS_IMG={};
 function warmBonusImages(){
-  ['images/bonus-bg.jpg','images/bonus-board.png','images/free-plank.png','images/chain.png'].forEach(u=>{
+  ['images/bonus-bg.jpg','images/bonus-board.png','images/top-plank.png','images/free-plank.png','images/chain.png'].forEach(u=>{ /* [تعديل] انضاف images/top-plank.png للقائمة */
     const i=new Image();
     i.onload=()=>{BONUS_IMG[u]=true;if(u==='images/free-plank.png'){const f=$('freeBadge');if(f)f.classList.add('pic');}if(u==='images/chain.png')document.querySelectorAll('.bsChain').forEach(c=>c.classList.add('pic'));};
     i.src=u;
@@ -854,24 +860,50 @@ function setBonusSkin(on){
   document.body.classList.toggle('bonusmode',!!(on&&BONUS_IMG['images/bonus-bg.jpg']));
   const im=document.querySelector('.boardimg');
   if(im)im.src=(on&&BONUS_IMG['images/bonus-board.png'])?'images/bonus-board.png':'images/board.png';
+  const tp=$('topPlank'); /* [تعديل] جديد: اللوح العلوي بيظهر بس لما لوحة البونص (بدون لوح) + صورة اللوح الجاهزة موجودين */
+  if(tp)tp.style.display=(on&&BONUS_IMG['images/bonus-board.png']&&BONUS_IMG['images/top-plank.png'])?'block':'none';
 }
+/* [تعديل] جديد: مكان وحجم اللوح العلوي كنسبة من اللوحة (من صورة 1024×1266: x=40, y=84, عرض 942, ارتفاع 222) */
+const PLANK_BOX={x:0.03906,y:0.06635,w:0.9199,h:0.1754};
+/* [تعديل] جديد: بيرسم الأرقام الخمسة (×512 ×1024 [×1] ×2 ×4 …) على اللوح النازل. k = مقياس اللوحة على الشاشة */
+function renderBsSteps(idx,k){
+  const box=$('bsSteps'); if(!box) return;
+  const N=MULT_LADDER.length;
+  box.innerHTML=[-2,-1,0,1,2].map((o,j)=>{
+    const v=MULT_LADDER[(idx+o+N)%N];
+    const [x,y,rot,fs0]=MULT_SLOTS[j];
+    let fs=fs0;
+    if(o===0){const len=String(v).length; fs=len>=4?29:(len===3?35:40);}
+    else if(String(v).length>=4) fs=fs0-2;
+    const rx=(x-PLANK_BOX.x*100)/(PLANK_BOX.w*100)*100, ry=(y-PLANK_BOX.y*100)/(PLANK_BOX.h*100)*100;
+    return `<div class="step ${o===0?'cur':''}" style="left:${rx}%;top:${ry}%;font-size:${fs*k}px;transform:translate(-50%,-50%) rotate(${rot}deg)">x${v}</div>`;
+  }).join('');
+}
+/* [تعديل] showBonusScene انكتبت من جديد: اللوح العلوي هو نفسو اللي بينزل (لوح واحد)، بيبدأ من مكانو بالظبط، وبيرجع يطلع لمكانو */
 function showBonusScene(cb){
-  const sc=$('bonusScene'),pl=$('bsPlank'),num=$('bsNum');
+  const sc=$('bonusScene'),pl=$('bsPlank'),tp=$('topPlank'),ms=$('multSign');
   setBonusSkin(true);
-  num.textContent='x1';pl.classList.remove('down');sc.style.display='block';
+  const br=document.querySelector('.board').getBoundingClientRect(),k=(br.width/380)||1;
+  const pw=br.width*PLANK_BOX.w,ph=br.height*PLANK_BOX.h,py=br.top+br.height*PLANK_BOX.y;
+  pl.style.left=(br.left+br.width*PLANK_BOX.x)+'px';pl.style.top=py+'px';pl.style.width=pw+'px';pl.style.height=ph+'px';
+  pl.style.setProperty('--dy',(innerHeight/2-(py+ph/2))+'px');
+  pl.classList.remove('down');
+  pl.classList.toggle('nopic',!BONUS_IMG['images/top-plank.png']);
+  renderBsSteps(0,k);
+  tp.style.visibility='hidden';ms.style.visibility='hidden'; /* بنخبّي اللوح العلوي وأرقامو وقت ما النازل شغّال، عشان ما يصيروا لوحين */
+  sc.style.display='block';
   Sound.free();
-  const seq=[1,2,4,8];let i=0;
-  const bump=()=>{num.classList.remove('hit');void num.offsetWidth;num.classList.add('hit');};
+  const seq=[0,1,2,3];let i=0;
   const tick=()=>{
-    num.textContent='x'+seq[i];bump();Sound.cascade(seq[i]);i++;
+    renderBsSteps(seq[i],k);Sound.cascade(MULT_LADDER[seq[i]]);i++;
     if(i<seq.length)setTimeout(tick,380);else setTimeout(shots,300);
   };
   const shots=async()=>{
-    for(let n=0;n<3;n++){Sound.shot();bump();await sleep(230);}
+    for(let n=0;n<3;n++){Sound.shot();renderBsSteps(3,k);await sleep(230);}
     await sleep(450);
     pl.classList.remove('down');
     await sleep(750);
-    sc.style.display='none';setMult(3);cb();
+    sc.style.display='none';tp.style.visibility='';ms.style.visibility='';setMult(3);cb();
   };
   setTimeout(()=>pl.classList.add('down'),50);
   setTimeout(tick,900);
