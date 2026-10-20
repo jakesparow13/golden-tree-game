@@ -22,7 +22,8 @@ body::before{content:'';position:fixed;inset:0;background:url('images/bg.jpg') c
 #stage{position:absolute;top:50%;left:50%;transform-origin:center center;}
 .container{width:380px;padding:6px 10px calc(8px + env(safe-area-inset-bottom));}
 .logo{text-align:center;font-family:'Rye',serif;font-size:24px;color:var(--gold);margin:2px 0 4px;text-shadow:0 0 14px rgba(232,189,34,.9),0 3px 0 #3a2208;}
-#freeBadge{display:none;text-align:center;color:var(--green);font-weight:700;margin-bottom:4px;}
+#freeBadge{display:none;text-align:center;color:#fff3c4;font-weight:800;font-size:18px;letter-spacing:1px;margin:2px 6px 8px;padding:8px 10px;border-radius:12px;border:3px solid #3d2410;background:linear-gradient(180deg,#8a5a30,#4f3119);text-shadow:0 2px 3px rgba(0,0,0,.7);}
+#freeBadge.pic{border:none;background:url('images/free-plank.png') center/100% 100% no-repeat;padding:14px 10px;}
 
 /* اللوحة الخشبية (صورة) + لوحة المضاعف فوقها + البكرات داخل الدرع */
 .board{position:relative;width:380px;margin:0 -10px;aspect-ratio:449/555;direction:ltr;}
@@ -110,7 +111,7 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 .fs-intro b{display:block;font-size:34px;}
 .win-overlay{display:none;position:fixed;inset:0;z-index:180;overflow:hidden;pointer-events:none;background:#1a0e04;}
 .win-overlay.show{display:flex;}
-.winbox{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:max(100vw,calc(100vh * 688 / 1256));aspect-ratio:688/1256;}
+.winbox{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:max(100vw,calc(100vh * 2 / 3));aspect-ratio:2/3;}
 .winbox img{position:absolute;inset:0;width:100%;height:100%;display:block;}
 .wincont{position:absolute;left:0;right:0;top:37%;text-align:center;}
 #winAmt{font-family:'Rye',serif;font-size:46px;font-weight:800;color:#fff6cf;-webkit-text-stroke:6px #6b3610;paint-order:stroke fill;text-shadow:0 0 18px rgba(255,200,60,.9);}
@@ -123,12 +124,26 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 #totalAmt{font-family:'Rye',serif;font-size:52px;font-weight:800;color:#fff6cf;-webkit-text-stroke:6px #6b3610;paint-order:stroke fill;text-shadow:0 0 18px rgba(255,200,60,.9);}
 #totalBtn{margin-top:26px;padding:13px 46px;border-radius:14px;border:2px solid var(--gold);background:linear-gradient(180deg,#d98a1a,#7a3a0a);color:#fff;font-weight:800;font-size:18px;box-shadow:0 4px 14px rgba(0,0,0,.6);}
 #introOverlay{display:none;position:fixed;inset:0;z-index:192;align-items:center;justify-content:center;background:#1a0e04;overflow:hidden;}
-.introT{font-family:'Cairo',sans-serif;font-weight:800;font-size:30px;line-height:1.3;color:var(--gold);-webkit-text-stroke:5px #5a2e0a;paint-order:stroke fill;text-shadow:0 0 16px rgba(255,160,40,.9);}
+.introT{font-family:'Rye',serif;font-weight:800;font-size:30px;line-height:1.3;color:var(--gold);-webkit-text-stroke:5px #5a2e0a;paint-order:stroke fill;text-shadow:0 0 16px rgba(255,160,40,.9);}
 .introT b{display:block;font-size:64px;color:#fff6cf;}
-.introS{margin-top:18px;font-weight:700;font-size:18px;color:#fff6cf;-webkit-text-stroke:4px #5a2e0a;paint-order:stroke fill;animation:introBlink 1.2s ease-in-out infinite alternate;}
+.introS{margin-top:18px;font-family:'Rye',serif;font-weight:700;font-size:18px;color:#fff6cf;-webkit-text-stroke:4px #5a2e0a;paint-order:stroke fill;animation:introBlink 1.2s ease-in-out infinite alternate;}
 @keyframes introBlink{from{opacity:.45;}to{opacity:1;}}
 .cell[data-k] img.sym.baked{filter:none;}
 .back-btn{position:fixed;top:calc(8px + env(safe-area-inset-top));right:10px;width:36px;height:36px;border-radius:50%;border:1.5px solid rgba(232,189,34,.6);background:rgba(0,0,0,.6);color:#fff;font-size:16px;line-height:1;z-index:50;}
+body.bonusmode::before{background:url('images/bonus-bg.jpg') center/cover no-repeat;}
+#bonusScene{display:none;position:fixed;inset:0;z-index:191;background:rgba(0,0,0,.5);overflow:hidden;}
+.bsPlank{position:absolute;left:50%;top:50%;width:92%;max-width:460px;aspect-ratio:2.4/1;transform:translate(-50%,-190%);transition:transform .7s cubic-bezier(.3,1.25,.5,1);display:flex;align-items:center;justify-content:center;}
+.bsPlank.down{transform:translate(-50%,-50%);}
+.bsPlank>img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;}
+.bsPlank.nopic{background:linear-gradient(180deg,#8a5a30,#4f3119);border:4px solid #3d2410;border-radius:16px;box-shadow:0 6px 16px rgba(0,0,0,.6);}
+.bsChain{position:absolute;bottom:70%;height:120vh;width:12px;background:repeating-linear-gradient(180deg,#8a8f94 0 9px,#2c3033 9px 14px);}
+.bsChain.l{left:12%;}.bsChain.r{right:12%;}
+.bsChain.pic{width:26px;background:url('images/chain.png') repeat-y center top/100% auto;}
+.bsChain.pic.l{left:calc(9% - 13px);}.bsChain.pic.r{right:calc(9.4% - 13px);}
+.bsNum{position:relative;font-family:'Rye',serif;font-weight:800;font-size:64px;color:#ffe9a8;text-shadow:0 3px 0 #5a3410,0 0 14px rgba(255,200,60,.8);}
+.bsNum.hit{animation:bsHit .25s ease-out;}
+@keyframes bsHit{0%{transform:scale(1.5);}100%{transform:scale(1);}}
+.bsBal{position:absolute;bottom:calc(10px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:min(360px,92vw);justify-content:center;}
 .modal{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);align-items:center;justify-content:center;padding:14px;}
 .card{width:100%;max-width:340px;max-height:88vh;overflow:auto;background:linear-gradient(180deg,#241408,#0d0704);border:2px solid var(--gold);border-radius:16px;padding:14px;}
 .card h3{text-align:center;font-family:'Rye',serif;color:var(--gold);font-size:20px;margin-bottom:8px;}
@@ -155,7 +170,6 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 </div>
 
 <div id="gameScreen"><button class="back-btn" id="backBtn" onclick="goLobby()" aria-label="رجوع للوبي">✕</button><div id="stage"><div class="container">
-  <div id="freeBadge"></div>
   <div class="board">
     <img class="boardimg" src="images/board.png" alt="">
     <svg class="rimglow" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><defs><filter id="rg1" x="-10%" y="-40%" width="120%" height="180%"><feGaussianBlur stdDeviation="4"/></filter><filter id="rg2" x="-10%" y="-40%" width="120%" height="180%"><feGaussianBlur stdDeviation="2.2"/></filter><clipPath id="rgc"><path d="M -2,39 C 10,32 22,26 34,24.5 C 44,23.8 56,23.8 66,24.5 C 78,26 90,32 102,39 L 102,100 L -2,100 Z"/></clipPath></defs><path d="M -2,39 C 10,32 22,26 34,24.5 C 44,23.8 56,23.8 66,24.5 C 78,26 90,32 102,39" fill="none" stroke="#ff9a1e" stroke-width="14" opacity=".5" filter="url(#rg1)" clip-path="url(#rgc)"/><path d="M -2,39 C 10,32 22,26 34,24.5 C 44,23.8 56,23.8 66,24.5 C 78,26 90,32 102,39" fill="none" stroke="#ffc65a" stroke-width="4" opacity=".55" filter="url(#rg2)" clip-path="url(#rgc)"/></svg>
@@ -164,6 +178,7 @@ button:disabled{opacity:.5;cursor:not-allowed;}
     <div class="fx" id="fx"></div>
   </div>
   <div class="result" id="result"></div>
+  <div id="freeBadge"></div>
   <div class="ctl">
     <button class="buy" id="buyBtn" onclick="openBuy()">BUY<br>BONUS</button>
     <button class="spin" id="spinBtn" onclick="spin()">SPIN</button>
@@ -186,11 +201,12 @@ button:disabled{opacity:.5;cursor:not-allowed;}
   </div>
 </div></div></div>
 
+<div id="bonusScene"><div class="bsPlank" id="bsPlank"><i class="bsChain l"></i><i class="bsChain r"></i><img src="images/mult-plank.png" alt="" onerror="this.style.display='none';this.parentNode.classList.add('nopic')"><div class="bsNum" id="bsNum">x1</div></div><div class="balbar bsBal"><span>NSP <b id="bsBal">...</b></span></div></div>
 <div class="fs-intro" id="fsIntro"><div>لديك<b id="fsCount">10</b>لفات مجانية</div></div>
 <div class="win-overlay" id="winOverlay"><div class="winbox"><img id="winImg" src="images/win.jpg" alt="" onerror="this.style.display='none'"><div class="wincont"><div id="winAmt">0</div><div id="winTitle">BIG WIN</div></div></div></div>
 <div id="bonusOverlay"><video id="bonusVideo" playsinline preload="auto" src="images/bonus-video.mp4"></video></div>
 <div id="totalOverlay"><img id="totalImg" src="images/total.jpg" alt="" onerror="this.style.display='none'"><div class="totalcont"><div id="totalAmt">0</div><button id="totalBtn">متابعة</button></div></div>
-<div class="win-overlay" id="introOverlay" style="pointer-events:auto"><div class="winbox"><img src="images/win.jpg" alt="" onerror="this.style.display='none'"><div class="wincont"><div class="introT">لديك<b id="introCount">10</b>لفات مجانية</div><div class="introS">اضغط في أي مكان للبدء</div></div></div></div>
+<div class="win-overlay" id="introOverlay" style="pointer-events:auto"><div class="winbox"><img src="images/win.jpg" alt="" onerror="this.style.display='none'"><div class="wincont"><div class="introT">YOU HAVE<b id="introCount">10</b>FREE SPINS</div><div class="introS">TAP TO START</div></div></div></div>
 
 <div class="modal" id="buyModal"><div class="card buyconfirm">
   <h3>شراء البونص</h3>
@@ -690,7 +706,8 @@ function simGoverned(force){
 const spinCost=()=>dc?R(bet*1.25):bet;
 function update(){
   $('balance').textContent=R(balance).toLocaleString();
-  const b=$('freeBadge');b.style.display=inFree?'block':'none';b.textContent=`لفات مجانية متبقية: ${freeLeft}`;
+  const bb=$('bsBal');if(bb)bb.textContent=R(balance).toLocaleString();
+  const b=$('freeBadge');b.style.display=inFree?'block':'none';b.textContent=freeLeft===1?'LAST FREE SPIN':'REMAINING FREE SPINS '+freeLeft;
   $('betDisp').textContent=bet.toLocaleString();
   $('dcCost').textContent=R(bet*1.25).toLocaleString()+' NSP';
   $('dcBtn').classList.toggle('on',dc);
@@ -824,6 +841,41 @@ window.spin=function(){
   Promise.all(grid.map((_,r)=>rollReel(r,old[r],grid[r],stops[r],anticReel[r]?14:0).then(()=>{if(grid[r].some(c=>c.key==='scatter'))Sound.scatter();}))).then(()=>{currentGrid=grid;document.querySelectorAll('.reel').forEach(el=>el.classList.remove('gold'));resolveCascade(grid,sim,0,0);});
 };
 
+/* ===== مشهد البونص: خلفية ولوح بونص منفصلين، واللوح الخشبي بينزل ويعدّ x1 > x2 > x4 > x8 وبيطلع صوت ٣ رصاصات وبيرجع يطلع. الصور (bonus-bg.jpg, bonus-board.png, mult-plank.png, chain.png, free-plank.png) إذا موجودة بتتبدّل تلقائياً، وإذا لا بيشتغل برسم مؤقت ===== */
+const BONUS_IMG={};
+function warmBonusImages(){
+  ['images/bonus-bg.jpg','images/bonus-board.png','images/free-plank.png','images/chain.png'].forEach(u=>{
+    const i=new Image();
+    i.onload=()=>{BONUS_IMG[u]=true;if(u==='images/free-plank.png'){const f=$('freeBadge');if(f)f.classList.add('pic');}if(u==='images/chain.png')document.querySelectorAll('.bsChain').forEach(c=>c.classList.add('pic'));};
+    i.src=u;
+  });
+}
+function setBonusSkin(on){
+  document.body.classList.toggle('bonusmode',!!(on&&BONUS_IMG['images/bonus-bg.jpg']));
+  const im=document.querySelector('.boardimg');
+  if(im)im.src=(on&&BONUS_IMG['images/bonus-board.png'])?'images/bonus-board.png':'images/board.png';
+}
+function showBonusScene(cb){
+  const sc=$('bonusScene'),pl=$('bsPlank'),num=$('bsNum');
+  setBonusSkin(true);
+  num.textContent='x1';pl.classList.remove('down');sc.style.display='block';
+  Sound.free();
+  const seq=[1,2,4,8];let i=0;
+  const bump=()=>{num.classList.remove('hit');void num.offsetWidth;num.classList.add('hit');};
+  const tick=()=>{
+    num.textContent='x'+seq[i];bump();Sound.cascade(seq[i]);i++;
+    if(i<seq.length)setTimeout(tick,380);else setTimeout(shots,300);
+  };
+  const shots=async()=>{
+    for(let n=0;n<3;n++){Sound.shot();bump();await sleep(230);}
+    await sleep(450);
+    pl.classList.remove('down');
+    await sleep(750);
+    sc.style.display='none';setMult(3);cb();
+  };
+  setTimeout(()=>pl.classList.add('down'),50);
+  setTimeout(tick,900);
+}
 function showFreeIntro(n,cb){
   const ov=$('introOverlay');$('introCount').textContent=n;ov.style.display='flex';Sound.free();
   const go=()=>{ov.style.display='none';ov.onclick=null;if(cb)cb();};
@@ -909,11 +961,11 @@ async function finishSpin(grid,roundTotal,sc){
   $('result').innerHTML=msg;update();const sv=save();
   setTimeout(async()=>{
     spinning=false;
-    if(started){setMult(3);update();playBonusVideo(()=>{showFreeIntro(FREE_SPINS,()=>spin());});return;}
+    if(started){setMult(3);update();playBonusVideo(()=>{showBonusScene(()=>showFreeIntro(FREE_SPINS,()=>spin()));});return;}
     if(inFree){
       freeLeft--;update();
       if(freeLeft<=0){
-        inFree=false;setMult(0);bonusQueue=null;
+        inFree=false;setMult(0);bonusQueue=null;setBonusSkin(false);
         $('result').innerHTML+=(msg?'<br>':'')+`<span class="win-t">مجموع اللفات المجانية: ${freeWin.toLocaleString()}</span>`;
         update();showTotalWin(freeWin,()=>{lockUI(false);autoNext();});
       }else{ setMult(3); setTimeout(()=>spin(),R(300*TK())); }
@@ -940,7 +992,7 @@ function fitStage(){
 window.__fitStage=fitStage;addEventListener('resize',fitStage);addEventListener('orientationchange',fitStage);
 const capped=(p,ms)=>Promise.race([p,new Promise(r=>setTimeout(r,ms))]);
 window.__startLoading=function(){
-  if(window.__loadStarted)return;window.__loadStarted=true;
+  if(window.__loadStarted)return;window.__loadStarted=true;warmBonusImages();
   Promise.all([loadUser(),preloadAll(),capped(Sound.preload(),60000)]).then(([dataOk,imgsOk])=>{if(currentGrid&&!spinning)render(currentGrid);if(dataOk&&imgsOk)window.__dataReady=true;setTimeout(fitStage,0);requestAnimationFrame(fitStage);});
 };
 if(window.__loadRequested)window.__startLoading();
