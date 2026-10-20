@@ -169,10 +169,17 @@ body.bonusmode::before{background:url('images/bonus-bg.jpg') center/cover no-rep
 .board.bonus{aspect-ratio:1024/1536;}
 .board.bonus .boardimg{object-fit:fill;}
 .board.bonus .rimglow{display:none;}
-.board.bonus .reels{left:4.6%;right:4.6%;top:24.2%;transform:none;align-items:start;} /* [تعديل 7] البكرات ملزوقة بأول الخافية الخضراء من فوق بدون فراغ */
-.board.bonus .topplank{top:5.468%;height:14.45%;}
-.board.bonus .waysplate{left:24.9%;top:20.9%;width:50.1%;height:3.2%;font-size:13px;} /* [تعديل 7] أصغر شوي عشان تفسح مكان للرموز */
-body.bonusmode .ctl2{display:none;} /* [تعديل 7] بالبونص بنخبّي صف (أوتو / الرهان / السرعة) فاللوحة بتكبر */
+.board.bonus .reels{left:4.6%;right:4.6%;top:24%;transform:none;align-items:start;} /* [تعديل 7] البكرات ملزوقة بأول الخافية الخضراء من فوق بدون فراغ */
+.board.bonus .topplank{top:31.2px;height:82.4px;} /* [تعديل 8] اللوح العلوي بنفس حجمو الطبيعي (بدون تمطيط) */
+.board.bonus .waysplate{left:36%;top:20.6%;width:28%;height:3.2%;font-size:12px;} /* [تعديل 7] أصغر شوي عشان تفسح مكان للرموز */
+body.bonusmode .ctl2{display:none;}
+/* [تعديل 8] البونص: صورة اللوحة تاخد الشاشة كلها بدون أي أزرار (سبين / شراء / رصيد / نتيجة) */
+body.bonusmode .container{padding:0;}
+body.bonusmode .container>.result,body.bonusmode .container>.ctl,body.bonusmode .container>.balbar{display:none;}
+.board.bonus{margin:0;}
+.board.bonus .cell{aspect-ratio:auto;height:var(--cellh,auto);}
+.board.bonus .cell.win{border-radius:14px;}
+.board.bonus .reel:first-child,.board.bonus .reel:last-child{margin-top:calc(var(--bh,570px)*.018);} /* [تعديل 7] بالبونص بنخبّي صف (أوتو / الرهان / السرعة) فاللوحة بتكبر */
 .board.bonus .freeplate{top:88.4%;height:8%;}
 </style>
 </head>
@@ -496,7 +503,7 @@ function layoutMult(){
     let fs=fs0;
     if(o===0){const len=String(v).length; fs=len>=4?29:(len===3?35:40);}
     else if(String(v).length>=4) fs=fs0-2;
-    return `<div class="step ${o===0?'cur':''}" style="left:${x}%;top:${bonusSkin?y*0.824:y}%;font-size:${fs}px;transform:translate(-50%,-50%) rotate(${rot}deg)">x${v}</div>`; /* [تعديل 3] top صار يتحوّل لنسبة اللوحة الأطول بوضع البونص */
+    return `<div class="step ${o===0?'cur':''}" style="left:${x}%;top:${bonusSkin?(y*4.697).toFixed(1)+'px':y+'%'};font-size:${fs}px;transform:translate(-50%,-50%) rotate(${rot}deg)">x${v}</div>`; /* [تعديل 3] top صار يتحوّل لنسبة اللوحة الأطول بوضع البونص */
   }).join('');
 }
 function setMult(idx){multIdx=Math.max(0,Math.min(MULT_LADDER.length-1,idx));layoutMult();}
@@ -868,19 +875,20 @@ function warmBonusImages(){
   ['images/bonus-bg.jpg','images/bonus-board.png','images/top-plank.png','images/free-plank.png','images/chain.png'].forEach(u=>{ /* [تعديل] انضاف images/top-plank.png للقائمة */
     const i=new Image();
     i.onload=()=>{BONUS_IMG[u]=true;if(u==='images/free-plank.png'){const f=$('freeBadge');if(f)f.classList.add('pic');}if(u==='images/chain.png')document.querySelectorAll('.bsChain').forEach(c=>c.classList.add('pic'));};
+    i.onerror=()=>{BONUS_IMG[u]=false;}; /* [تعديل 8] */
     i.src=u;
   });
 }
 /* [تعديل 2] setBonusSkin انكتبت من جديد: بتفعّل كلاس .bonus على اللوحة (نسبة 1024/1536) وبتعيد رسم المضاعف وبتعيد ضبط حجم الشاشة */
 function setBonusSkin(on){
-  const ok=!!(on&&BONUS_IMG['images/bonus-board.png']);
+  const ok=!!(on&&BONUS_IMG['images/bonus-board.png']!==false); /* [تعديل 8] ما بنستنى علم التحميل، بس إذا الصورة فعلاً فشلت */
   bonusSkin=ok;
-  document.body.classList.toggle('bonusmode',!!on);
+  document.body.classList.toggle('bonusmode',ok);
   document.querySelector('.board').classList.toggle('bonus',ok);
   const im=document.querySelector('.boardimg');
   if(im)im.src=ok?'images/bonus-board.png':'images/board.png';
   const tp=$('topPlank');
-  if(tp)tp.style.display=(ok&&BONUS_IMG['images/top-plank.png'])?'block':'none';
+  if(tp)tp.style.display=(ok&&BONUS_IMG['images/top-plank.png']!==false)?'block':'none';
   const fpl=$('freePlate');
   if(fpl)fpl.style.display=ok?'flex':'none';
   layoutMult();update();
@@ -908,7 +916,7 @@ function showBonusScene(cb){
   const sc=$('bonusScene'),pl=$('bsPlank'),tp=$('topPlank'),ms=$('multSign');
   setBonusSkin(true);
   const br=document.querySelector('.board').getBoundingClientRect(),k=(br.width/380)||1;
-  const PB=bonusSkin?PLANK_NEW:PLANK_BOX; /* [تعديل 5] */
+  const PB=bonusSkin?{x:PLANK_NEW.x,y:31.2*k/br.height,w:PLANK_NEW.w,h:82.4*k/br.height}:PLANK_BOX; /* [تعديل 5] */
   const pw=br.width*PB.w,ph=br.height*PB.h,py=br.top+br.height*PB.y; /* [تعديل 5] */
   pl.style.left=(br.left+br.width*PB.x)+'px';pl.style.top=py+'px';pl.style.width=pw+'px';pl.style.height=ph+'px'; /* [تعديل 5] بس تغيّر PLANK_BOX.x لـ PB.x */
   pl.style.setProperty('--dy',(innerHeight/2-(py+ph/2))+'px');
@@ -1042,6 +1050,11 @@ function preloadAll(){
 if(!tg?.initDataUnsafe?.user){document.addEventListener('keydown',e=>{if((e.key||'').toLowerCase()==='m'){balance=R(balance+10000);update();}});}
 function fitStage(){
   const stage=$('stage'),cont=document.querySelector('.container');if(!stage||!cont)return;
+  const bd=document.querySelector('.board');
+  if(bd){ /* [تعديل 8] بالبونص اللوحة بتاخد نسبة الشاشة كلها، والخانات بتطول لتملّا الخافية الخضراء */
+    if(bonusSkin){const H=Math.max(570,Math.floor(innerHeight*380/innerWidth));bd.style.height=H+'px';bd.style.setProperty('--bh',H+'px');bd.style.setProperty('--cellh',Math.floor((H*0.535-14)/5)+'px');}
+    else{bd.style.height='';bd.style.removeProperty('--bh');bd.style.removeProperty('--cellh');}
+  }
   const cw=cont.offsetWidth,ch=cont.offsetHeight;if(!cw||!ch)return;
   const s=Math.min(innerWidth/cw,innerHeight/ch);
   stage.style.width=cw+'px';stage.style.height=ch+'px';stage.style.transform=`translate(-50%,-50%) scale(${s})`;
