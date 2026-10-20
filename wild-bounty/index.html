@@ -164,6 +164,15 @@ body.bonusmode::before{background:url('images/bonus-bg.jpg') center/cover no-rep
 .prow div{font-size:13px;line-height:1.5;}
 .buyconfirm p{font-size:15px;margin:10px 0;}
 .buyconfirm b{color:var(--gold);font-size:20px;}
+/* [تعديل 1] جديد: وضع البونص - لوحة بنسبتها الحقيقية 1024/1536 بدون تمطيط، وخلفية غامقة بدل الصحراء */
+body.bonusmode::before{background:url('images/bonus-bg.jpg') center/cover no-repeat,#120a04;}
+.board.bonus{aspect-ratio:1024/1536;}
+.board.bonus .boardimg{object-fit:fill;}
+.board.bonus .rimglow{display:none;}
+.board.bonus .reels{left:6%;right:6%;top:50.5%;}
+.board.bonus .topplank{top:5.468%;height:14.45%;}
+.board.bonus .waysplate{left:24.9%;top:22%;width:50.1%;height:4%;}
+.board.bonus .freeplate{top:88.4%;height:8%;}
 </style>
 </head>
 <body>
@@ -395,6 +404,7 @@ const MULT_LADDER=[1,2,4,8,16,32,64,128,256,512,1024];
 let balance=0,bet=300,betIdx=0,spinning=false,totalSpins=0,totalWins=0;
 let inFree=false,freeLeft=0,freeWin=0,currentGrid=null,dc=false,speed=0,autoLeft=0,autoInfinite=false;
 let multIdx=0;
+let bonusSkin=false; /* [تعديل 2] جديد: بيحدد إذا لوحة البونص الجديدة شغّالة حالياً */
 let buying=false,noScat=false,buyPlan=null,bonusQueue=null;
 let bonusCool=Math.round(Math.random()*45); /* عدد اللفات المتبقية قبل ما يسمح بونص جديد */const sess={w:0,p:0,n:0};
 
@@ -485,7 +495,7 @@ function layoutMult(){
     let fs=fs0;
     if(o===0){const len=String(v).length; fs=len>=4?29:(len===3?35:40);}
     else if(String(v).length>=4) fs=fs0-2;
-    return `<div class="step ${o===0?'cur':''}" style="left:${x}%;top:${y}%;font-size:${fs}px;transform:translate(-50%,-50%) rotate(${rot}deg)">x${v}</div>`;
+    return `<div class="step ${o===0?'cur':''}" style="left:${x}%;top:${bonusSkin?y*0.824:y}%;font-size:${fs}px;transform:translate(-50%,-50%) rotate(${rot}deg)">x${v}</div>`; /* [تعديل 3] top صار يتحوّل لنسبة اللوحة الأطول بوضع البونص */
   }).join('');
 }
 function setMult(idx){multIdx=Math.max(0,Math.min(MULT_LADDER.length-1,idx));layoutMult();}
@@ -716,7 +726,7 @@ const spinCost=()=>dc?R(bet*1.25):bet;
 function update(){
   $('balance').textContent=R(balance).toLocaleString();
   const bb=$('bsBal');if(bb)bb.textContent=R(balance).toLocaleString();
-  const b=$('freeBadge');b.style.display=inFree?'block':'none';b.textContent=freeLeft===1?'LAST FREE SPIN':'REMAINING FREE SPINS '+freeLeft;
+  const b=$('freeBadge');b.style.display=(inFree&&!bonusSkin)?'block':'none';b.textContent=freeLeft===1?'LAST FREE SPIN':'REMAINING FREE SPINS '+freeLeft; /* [تعديل 6] الشريط التحتاني بيختفي بلوحة البونص عشان ما يتكرر العدّاد */
   const fpl=$('freePlate');if(fpl)fpl.textContent=freeLeft===1?'LAST FREE SPIN':'REMAINING FREE SPINS '+freeLeft; /* [تعديل] جديد: نص عداد اللوح السفلي */
   $('betDisp').textContent=bet.toLocaleString();
   $('dcCost').textContent=R(bet*1.25).toLocaleString()+' NSP';
@@ -860,17 +870,24 @@ function warmBonusImages(){
     i.src=u;
   });
 }
+/* [تعديل 2] setBonusSkin انكتبت من جديد: بتفعّل كلاس .bonus على اللوحة (نسبة 1024/1536) وبتعيد رسم المضاعف وبتعيد ضبط حجم الشاشة */
 function setBonusSkin(on){
-  document.body.classList.toggle('bonusmode',!!(on&&BONUS_IMG['images/bonus-bg.jpg']));
+  const ok=!!(on&&BONUS_IMG['images/bonus-board.png']);
+  bonusSkin=ok;
+  document.body.classList.toggle('bonusmode',!!on);
+  document.querySelector('.board').classList.toggle('bonus',ok);
   const im=document.querySelector('.boardimg');
-  if(im)im.src=(on&&BONUS_IMG['images/bonus-board.png'])?'images/bonus-board.png':'images/board.png';
-  const tp=$('topPlank'); /* [تعديل] جديد: اللوح العلوي بيظهر بس لما لوحة البونص (بدون لوح) + صورة اللوح الجاهزة موجودين */
-  if(tp)tp.style.display=(on&&BONUS_IMG['images/bonus-board.png']&&BONUS_IMG['images/top-plank.png'])?'block':'none';
-  const fpl=$('freePlate'); /* [تعديل] جديد: عداد اللوح السفلي بيظهر بس بلوحة البونص */
-  if(fpl)fpl.style.display=(on&&BONUS_IMG['images/bonus-board.png'])?'flex':'none';
+  if(im)im.src=ok?'images/bonus-board.png':'images/board.png';
+  const tp=$('topPlank');
+  if(tp)tp.style.display=(ok&&BONUS_IMG['images/top-plank.png'])?'block':'none';
+  const fpl=$('freePlate');
+  if(fpl)fpl.style.display=ok?'flex':'none';
+  layoutMult();update();
+  if(window.__fitStage)window.__fitStage();
 }
 /* [تعديل] جديد: مكان وحجم اللوح العلوي كنسبة من اللوحة (من صورة 1024×1266: x=40, y=84, عرض 942, ارتفاع 222) */
 const PLANK_BOX={x:0.03906,y:0.06635,w:0.9199,h:0.1754};
+const PLANK_NEW={x:0.03906,y:0.05468,w:0.9199,h:0.1445}; /* [تعديل 4] جديد: نفس اللوح بس بنسب لوحة البونص الأطول */
 /* [تعديل] جديد: بيرسم الأرقام الخمسة (×512 ×1024 [×1] ×2 ×4 …) على اللوح النازل. k = مقياس اللوحة على الشاشة */
 function renderBsSteps(idx,k){
   const box=$('bsSteps'); if(!box) return;
@@ -890,8 +907,9 @@ function showBonusScene(cb){
   const sc=$('bonusScene'),pl=$('bsPlank'),tp=$('topPlank'),ms=$('multSign');
   setBonusSkin(true);
   const br=document.querySelector('.board').getBoundingClientRect(),k=(br.width/380)||1;
-  const pw=br.width*PLANK_BOX.w,ph=br.height*PLANK_BOX.h,py=br.top+br.height*PLANK_BOX.y;
-  pl.style.left=(br.left+br.width*PLANK_BOX.x)+'px';pl.style.top=py+'px';pl.style.width=pw+'px';pl.style.height=ph+'px';
+  const PB=bonusSkin?PLANK_NEW:PLANK_BOX; /* [تعديل 5] */
+  const pw=br.width*PB.w,ph=br.height*PB.h,py=br.top+br.height*PB.y; /* [تعديل 5] */
+  pl.style.left=(br.left+br.width*PB.x)+'px';pl.style.top=py+'px';pl.style.width=pw+'px';pl.style.height=ph+'px'; /* [تعديل 5] بس تغيّر PLANK_BOX.x لـ PB.x */
   pl.style.setProperty('--dy',(innerHeight/2-(py+ph/2))+'px');
   pl.classList.remove('down');
   pl.classList.toggle('nopic',!BONUS_IMG['images/top-plank.png']);
