@@ -37,6 +37,8 @@ body::before{content:'';position:fixed;inset:0;background:url('images/bg.jpg') c
 .topplank{position:absolute;left:3.906%;top:6.635%;width:91.99%;height:17.54%;z-index:1;display:none;pointer-events:none;filter:brightness(1.3) saturate(1.2) contrast(1.05);}
 /* [تعديل] جديد: نص 3600 WAYS على المستطيل الأخضر */
 .waysplate{position:absolute;left:24.9%;top:22.7%;width:50.1%;height:5.6%;z-index:2;display:flex;align-items:center;justify-content:center;pointer-events:none;font-family:'Rye',serif;font-size:15px;letter-spacing:1px;color:#9db89a;text-shadow:0 1px 0 #0b1a12,0 -1px 0 rgba(255,255,255,.18);}
+/* [تعديل] جديد: عداد اللفات المجانية على اللوح الخشبي السفلي، بيظهر بس بوضع البونص */
+.freeplate{position:absolute;left:12%;right:12%;top:90.6%;height:8.6%;z-index:4;display:none;align-items:center;justify-content:center;pointer-events:none;white-space:nowrap;font-family:'Rye',serif;font-size:17px;letter-spacing:1px;color:#f6d36a;text-shadow:0 2px 0 #3a2208,0 0 8px rgba(255,200,80,.6);}
 .reel{position:relative;display:flex;flex-direction:column;gap:2px;min-width:0;overflow:visible;border-radius:6px;}
 .reel.rolling{overflow:hidden;}
 .reel.drop{clip-path:inset(0 -60% -60% -60%);}
@@ -180,6 +182,7 @@ body.bonusmode::before{background:url('images/bonus-bg.jpg') center/cover no-rep
     <svg class="rimglow" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><defs><filter id="rg1" x="-10%" y="-40%" width="120%" height="180%"><feGaussianBlur stdDeviation="4"/></filter><filter id="rg2" x="-10%" y="-40%" width="120%" height="180%"><feGaussianBlur stdDeviation="2.2"/></filter><clipPath id="rgc"><path d="M -2,39 C 10,32 22,26 34,24.5 C 44,23.8 56,23.8 66,24.5 C 78,26 90,32 102,39 L 102,100 L -2,100 Z"/></clipPath></defs><path d="M -2,39 C 10,32 22,26 34,24.5 C 44,23.8 56,23.8 66,24.5 C 78,26 90,32 102,39" fill="none" stroke="#ff9a1e" stroke-width="14" opacity=".5" filter="url(#rg1)" clip-path="url(#rgc)"/><path d="M -2,39 C 10,32 22,26 34,24.5 C 44,23.8 56,23.8 66,24.5 C 78,26 90,32 102,39" fill="none" stroke="#ffc65a" stroke-width="4" opacity=".55" filter="url(#rg2)" clip-path="url(#rgc)"/></svg>
     <div class="multsign" id="multSign"></div>
     <div class="waysplate">3600 WAYS</div><!-- [تعديل] جديد: نص المستطيل الأخضر -->
+    <div class="freeplate" id="freePlate"></div><!-- [تعديل] جديد: عداد اللفات المجانية على اللوح الخشبي السفلي -->
     <div class="reels" id="reels"></div>
     <div class="fx" id="fx"></div>
   </div>
@@ -714,6 +717,7 @@ function update(){
   $('balance').textContent=R(balance).toLocaleString();
   const bb=$('bsBal');if(bb)bb.textContent=R(balance).toLocaleString();
   const b=$('freeBadge');b.style.display=inFree?'block':'none';b.textContent=freeLeft===1?'LAST FREE SPIN':'REMAINING FREE SPINS '+freeLeft;
+  const fpl=$('freePlate');if(fpl)fpl.textContent=freeLeft===1?'LAST FREE SPIN':'REMAINING FREE SPINS '+freeLeft; /* [تعديل] جديد: نص عداد اللوح السفلي */
   $('betDisp').textContent=bet.toLocaleString();
   $('dcCost').textContent=R(bet*1.25).toLocaleString()+' NSP';
   $('dcBtn').classList.toggle('on',dc);
@@ -862,6 +866,8 @@ function setBonusSkin(on){
   if(im)im.src=(on&&BONUS_IMG['images/bonus-board.png'])?'images/bonus-board.png':'images/board.png';
   const tp=$('topPlank'); /* [تعديل] جديد: اللوح العلوي بيظهر بس لما لوحة البونص (بدون لوح) + صورة اللوح الجاهزة موجودين */
   if(tp)tp.style.display=(on&&BONUS_IMG['images/bonus-board.png']&&BONUS_IMG['images/top-plank.png'])?'block':'none';
+  const fpl=$('freePlate'); /* [تعديل] جديد: عداد اللوح السفلي بيظهر بس بلوحة البونص */
+  if(fpl)fpl.style.display=(on&&BONUS_IMG['images/bonus-board.png'])?'flex':'none';
 }
 /* [تعديل] جديد: مكان وحجم اللوح العلوي كنسبة من اللوحة (من صورة 1024×1266: x=40, y=84, عرض 942, ارتفاع 222) */
 const PLANK_BOX={x:0.03906,y:0.06635,w:0.9199,h:0.1754};
