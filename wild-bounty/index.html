@@ -1056,7 +1056,7 @@ function fitStage(){
   const stage=$('stage'),cont=document.querySelector('.container');if(!stage||!cont)return;
   const bd=document.querySelector('.board');
   if(bd){ /* [تعديل 8] بالبونص اللوحة بتاخد نسبة الشاشة كلها، والخانات بتطول لتملّا الخافية الخضراء */
-    if(bonusSkin){const H=Math.max(570,Math.floor(innerHeight*380/innerWidth));bd.style.height=H+'px';bd.style.setProperty('--bh',H+'px');bd.style.setProperty('--cellh',Math.floor((H*0.535-14)/5)+'px');}
+    if(bonusSkin){const H=Math.max(570,Math.floor(innerHeight*380/innerWidth));bd.style.height=H+'px';bd.style.setProperty('--bh',H+'px');bd.style.setProperty('--cellh',Math.floor((H*0.455-14)/5)+'px');}
     else{bd.style.height='';bd.style.removeProperty('--bh');bd.style.removeProperty('--cellh');}
   }
   const cw=cont.offsetWidth,ch=cont.offsetHeight;if(!cw||!ch)return;
