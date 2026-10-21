@@ -185,6 +185,17 @@ body.bonusmode .container>.result,body.bonusmode .container>.ctl,body.bonusmode 
 .board.bonus .reels{align-items:center;}
 /* [تعديل 10] جديد: بالبونص بس - تكبير الرموز 15% (بدون الرموز اللي بإطار ذهبي) عشان تغطي الفراغات بين الخانات */
 .board.bonus .cell:not(.goldc) img.sym{scale:1.15;}
+
+/* [إضافة A] اللفة العادية: لوح الجمجمة والمسدسين بدل المستطيل والحدوة */
+.result{background:url('images/result-plank.png') center/100% 100% no-repeat;border:none;box-shadow:none;border-radius:0;aspect-ratio:900/245;min-height:0;margin-top:-27px;padding:40px 16% 0;z-index:5;pointer-events:none;font-size:15px;}
+.result::before{display:none;}
+/* [إضافة B] البونص: الرصيد (يسار) والربح (يمين) على الخشب الفاضي تحت لوح MULTIPLIER */
+.bonusinfo{position:absolute;top:84.5%;height:6.5%;width:38%;z-index:4;display:none;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;font-family:'Rye',serif;color:#f6d36a;text-shadow:0 2px 0 #3a2208,0 0 8px rgba(255,200,80,.6);white-space:nowrap;}
+.bonusinfo small{font-size:9px;letter-spacing:1px;color:#d9b36a;line-height:1;}
+.bonusinfo b{font-size:15px;line-height:1.2;}
+.bonusinfo.l{left:10%;}
+.bonusinfo.r{right:10%;}
+.board.bonus .bonusinfo{display:flex;}
 </style>
 </head>
 <body>
@@ -1070,6 +1081,17 @@ window.__startLoading=function(){
   Promise.all([loadUser(),preloadAll(),capped(Sound.preload(),60000)]).then(([dataOk,imgsOk])=>{if(currentGrid&&!spinning)render(currentGrid);if(dataOk&&imgsOk)window.__dataReady=true;setTimeout(fitStage,0);requestAnimationFrame(fitStage);});
 };
 if(window.__loadRequested)window.__startLoading();
+
+/* [إضافة C] رصيد وربح البونص: عنصرين جداد بينضافوا من الجافاسكربت، وبيتحدّثوا لما update() تكتب الرصيد */
+(function(){
+  const bd=document.querySelector('.board');
+  if(!bd)return;
+  const mk=(cls,label)=>{const d=document.createElement('div');d.className='bonusinfo '+cls;d.innerHTML='<small>'+label+'</small><b>0</b>';bd.appendChild(d);return d.querySelector('b');};
+  const bBal=mk('l','BALANCE'),bWin=mk('r','WIN');
+  const sync=()=>{bBal.textContent=$('balance').textContent;bWin.textContent=R(freeWin).toLocaleString();};
+  new MutationObserver(sync).observe($('balance'),{childList:true,characterData:true,subtree:true});
+  sync();
+})();
 </script>
 </body>
 </html>
