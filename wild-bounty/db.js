@@ -14,13 +14,24 @@ const firebaseConfig = {
 
 const db = getDatabase(initializeApp(firebaseConfig));
 
+// [تحديث] دالة جديدة: بتحاول تجيب البيانات لحد 3 مرات (12 ثانية لكل محاولة) بدل محاولة وحدة بمهلة 8 ثواني
+async function getWithRetry(r){
+  let lastErr;
+  for (let i = 0; i < 3; i++) {
+    try {
+      return await Promise.race([
+        get(r),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 12000))
+      ]);
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr;
+}
+
 // جلب بيانات المستخدم (مهلة 8 ثواني). إذا المستخدم جديد بينعمل له سجل برصيد ترحيبي 1000.
 export async function loadBalance(userId, name){
   const r = ref(db, 'users/' + userId);
-  const snap = await Promise.race([
-    get(r),
-    new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000))
-  ]);
+  const snap = await getWithRetry(r); // [تحديث] كان: Promise.race مع مهلة 8 ثواني (محاولة وحدة)
   if (snap.exists()) {
     const d = snap.val();
     return {
