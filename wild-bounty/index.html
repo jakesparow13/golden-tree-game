@@ -205,6 +205,13 @@ body.bonusmode .container>.result,body.bonusmode .container>.ctl,body.bonusmode 
 .reel.antic.antic-wait::after{display:none;}
 .reel.antic-wait.rolling .strip{filter:blur(3px) brightness(1.15);animation:anticSpin .3s linear infinite;}
 @keyframes anticSpin{from{transform:translateY(-70%);}to{transform:translateY(-5%);}}
+/* [إضافة F] ضوء أطراف البكرة (عنصر منفصل فوق اللوحة عشان ما ينقص) + تمويه البكرة الفعّالة بيخف وهي بتتباطأ */
+.anticlight{position:absolute;z-index:8;display:none;pointer-events:none;mix-blend-mode:screen;animation:anticPulse .4s ease-in-out infinite alternate;background:linear-gradient(90deg,rgba(255,170,40,.28),rgba(255,170,40,0) 28%,rgba(255,170,40,0) 72%,rgba(255,170,40,.28));}
+.anticlight::before,.anticlight::after{content:'';position:absolute;top:-3%;bottom:-3%;width:90%;background:linear-gradient(90deg,rgba(255,150,0,0) 0,rgba(255,176,40,.4) 25%,rgba(255,226,120,.95) 44%,#fff7cf 50%,rgba(255,226,120,.95) 56%,rgba(255,176,40,.4) 75%,rgba(255,150,0,0) 100%);-webkit-mask-image:linear-gradient(180deg,transparent,#000 6%,#000 94%,transparent);mask-image:linear-gradient(180deg,transparent,#000 6%,#000 94%,transparent);}
+.anticlight::before{left:-45%;}
+.anticlight::after{right:-45%;}
+.reel.antic-now.rolling .strip{animation:anticUnblur var(--ad,1s) ease-out forwards;}
+@keyframes anticUnblur{from{filter:blur(3px) brightness(1.15);}to{filter:none;}}
 </style>
 </head>
 <body>
@@ -1116,6 +1123,46 @@ if(window.__loadRequested)window.__startLoading();
     const on=sc===2;
     pend.forEach((el,i)=>{set(el,'antic-now',on&&i===0);set(el,'antic-wait',on&&i>0);});
     reels.forEach(el=>{if(!el.classList.contains('antic')){set(el,'antic-now',false);set(el,'antic-wait',false);}});
+  };
+  new MutationObserver(run).observe(box,{attributes:true,attributeFilter:['class'],subtree:true});
+})();
+
+/* [إضافة G] البكرة اللي دورها: بترجع تدور بسرعة من أول وجديد وبتتباطأ لحد ما توقف بنفس وقتها الأصلي، وضوء الأطراف بيتحرك معها.
+   بيقرا كلاس antic-now اللي حطّتو [إضافة E] وما بيلمس spin ولا rollReel */
+(function(){
+  const box=$('reels'),bd=document.querySelector('.board');
+  if(!box||!bd)return;
+  const g=document.createElement('div');g.className='anticlight';bd.appendChild(g);
+  const t0=new WeakMap(),fired=new WeakSet();
+  const toMs=d=>d?(d.endsWith('ms')?parseFloat(d):parseFloat(d)*1000):0;
+  const restart=el=>{
+    const info=t0.get(el),s=el.querySelector('.strip');
+    if(!info||!s||!s.children.length)return;
+    const left=info.t+info.ms-performance.now();
+    if(left<250)return;
+    const r=+el.id.replace('reelCol',''),h=s.children[0].offsetHeight+2;
+    const y=-(s.children.length-REEL_HEIGHTS[r])*h;
+    s.style.setProperty('--ad',left+'ms');
+    s.style.transition='none';s.style.transform='translateY('+y+'px)';s.getBoundingClientRect();
+    s.style.transition='transform '+(left+10)+'ms cubic-bezier(.2,.8,.3,1)';s.style.transform='translateY(0)';
+  };
+  const place=el=>{
+    const br=bd.getBoundingClientRect(),k=(br.width/bd.offsetWidth)||1,rr=el.getBoundingClientRect();
+    g.style.left=((rr.left-br.left)/k)+'px';g.style.top=((rr.top-br.top)/k)+'px';
+    g.style.width=(rr.width/k)+'px';g.style.height=(rr.height/k)+'px';
+  };
+  const run=()=>{
+    let act=null;
+    box.querySelectorAll('.reel').forEach(el=>{
+      const rolling=el.classList.contains('rolling');
+      if(rolling&&!t0.has(el)){const s=el.querySelector('.strip');t0.set(el,{t:performance.now(),ms:s?toMs(s.style.transitionDuration):0});}
+      if(!rolling){t0.delete(el);fired.delete(el);}
+      if(el.classList.contains('antic-now')){
+        act=el;
+        if(!fired.has(el)){fired.add(el);restart(el);}
+      }
+    });
+    if(act){place(act);g.style.display='block';}else g.style.display='none';
   };
   new MutationObserver(run).observe(box,{attributes:true,attributeFilter:['class'],subtree:true});
 })();
