@@ -1174,6 +1174,26 @@ if(window.__loadRequested)window.__startLoading();
   if(!rs)return;
   new MutationObserver(()=>{if((rs.textContent||'').includes('جلب الرصيد'))dbApi=null;}).observe(rs,{childList:true,characterData:true,subtree:true});
 })();
+
+/* [إضافة I] عدّاد بونص منفصل لكل مستوى رهان (بالذاكرة فقط، بدون حفظ).
+   بيشتغل بتبديل قيمة bonusCool الموجودة (بدون ما نلمس أي سطر بيستخدمها): لما يتغيّر الرهان بنحفظ عدّاد الرهان القديم وبنحمّل عدّاد الجديد.
+   رهان جديد ما لعبتي عليه بهالجلسة = بيبدأ بنافذة كاملة (30 لـ60 لفة).
+   لما اللاعب يسكّر اللعبة ويفتحها من جديد، كل العدّادات بتتصفّر وبتبدأ من 30 لـ60 (بدل 0 لـ45 اللي بالسطر الأصلي) */
+(function(){
+  const coolMap={};
+  const fresh=()=>Math.round(30+Math.random()*30);
+  bonusCool=fresh();
+  const stepOrig=window.stepBet;
+  window.stepBet=d=>{
+    const old=bet;
+    stepOrig(d);
+    if(bet!==old){
+      coolMap[String(old)]=bonusCool;
+      const k=String(bet);
+      bonusCool=(k in coolMap)?coolMap[k]:fresh();
+    }
+  };
+})();
 </script>
 </body>
 </html>
