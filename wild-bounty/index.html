@@ -1175,7 +1175,7 @@ if(window.__loadRequested)window.__startLoading();
   new MutationObserver(()=>{if((rs.textContent||'').includes('جلب الرصيد'))dbApi=null;}).observe(rs,{childList:true,characterData:true,subtree:true});
 })();
 
-/* [إضافة I] عدّاد بونص منفصل لكل مستوى رهان (بالذاكرة فقط، بدون حفظ).
+/* [إضافة I] عدّاد بونص منفصل لكل مستوى رهان (بالذاكرة فقط، بدون حفظ). وأي بونص بينزل بيصفّر كل العدّادات التانية.
    بيشتغل بتبديل قيمة bonusCool الموجودة (بدون ما نلمس أي سطر بيستخدمها): لما يتغيّر الرهان بنحفظ عدّاد الرهان القديم وبنحمّل عدّاد الجديد.
    رهان جديد ما لعبتي عليه بهالجلسة = بيبدأ بنافذة كاملة (30 لـ60 لفة).
    لما اللاعب يسكّر اللعبة ويفتحها من جديد، كل العدّادات بتتصفّر وبتبدأ من 30 لـ60 (بدل 0 لـ45 اللي بالسطر الأصلي) */
@@ -1192,6 +1192,13 @@ if(window.__loadRequested)window.__startLoading();
       const k=String(bet);
       bonusCool=(k in coolMap)?coolMap[k]:fresh();
     }
+  };
+  /* لما ينزل أي بونص: كل عدّادات الرهانات التانية بتبدأ من جديد (30 لـ60)، عشان ما يقدر اللاعب ياخد بونصات ورا بعض بتبديل الرهان.
+     عدّاد الرهان اللي نزل عليه البونص بيتعيّن بالسطر الأصلي بـfinishSpin */
+  const pvOrig=playBonusVideo;
+  playBonusVideo=function(cb){
+    Object.keys(coolMap).forEach(k=>{coolMap[k]=fresh();});
+    return pvOrig(cb);
   };
 })();
 </script>
