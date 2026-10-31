@@ -127,6 +127,12 @@ img{-webkit-user-drag:none;pointer-events:none;}
 #lmsg{font-size:22px;color:#ffd0d0;text-align:center;padding:0 24px;min-height:30px;text-shadow:0 2px 4px #000;}
 #lretry{display:none;}
 #res{left:0;right:0;top:690px;}
+/* سكاتر أكبر (للتكبير أكتر: زيدي الرقمين، للتصغير: نقّصيهم) */
+.sym img[src$="scatter.png"]{max-width:164px;max-height:124px;flex-shrink:0;}
+.sym:has(img[src$="scatter.png"]){z-index:3;}
+/* صاعقة المضاعف */
+.bolt{position:absolute;z-index:8;pointer-events:none;transform-origin:50% 0;opacity:0;filter:drop-shadow(0 0 3px #fff) drop-shadow(0 0 9px #9fd0ff) drop-shadow(0 0 18px #5b9bff);animation:boltA .6s ease-out forwards;}
+@keyframes boltA{0%{opacity:0;transform:scaleY(.25)}8%{opacity:1;transform:scaleY(1)}22%{opacity:.35}34%{opacity:1}60%{opacity:.5}100%{opacity:0}}
 </style>
 </head>
 <body>
@@ -335,6 +341,37 @@ const Snd = (()=>{
 })();
 window.toggleSound = () => { soundOn=!soundOn; Snd.setOn(soundOn); $('menuSound').textContent = 'الصوت: ' + (soundOn?'شغّال':'مطفي'); Snd.toggle(); };
 
+/* ===== أصوات من ملفات (مجلد sounds بجانب مجلد images) =====
+   كل صوت بيتحمّل من sounds/<الاسم>.mp3 ، وإذا الملف مو موجود بيضل الصوت المولّد بالكود متل ما هو.
+   الأسماء: click, spin, land, win, orb, thunder, scatter, big */
+(function(){
+  const NAMES=['click','spin','land','win','orb','thunder','scatter','big'];
+  const bufs={}; let fctx=null;
+  try{ fctx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){}
+  const resume=()=>{ try{ if(fctx && fctx.state==='suspended') fctx.resume(); }catch(e){} };
+  if(fctx){
+    NAMES.forEach(n=>{
+      fetch('sounds/'+n+'.mp3').then(r=>r.ok?r.arrayBuffer():null).then(ab=>{
+        if(!ab) return;
+        const p=fctx.decodeAudioData(ab,b=>{ bufs[n]=b; },()=>{});
+        if(p && p.catch) p.catch(()=>{});
+      }).catch(()=>{});
+    });
+  }
+  NAMES.forEach(n=>{
+    const orig=Snd[n];
+    Snd[n]=function(){
+      if(soundOn && fctx && bufs[n]){
+        resume();
+        const s=fctx.createBufferSource(); s.buffer=bufs[n]; s.connect(fctx.destination); s.start(0);
+        return;
+      }
+      return orig.apply(Snd,arguments);
+    };
+  });
+  const ou=Snd.unlock; Snd.unlock=function(){ resume(); return ou.apply(Snd,arguments); };
+})();
+
 /* ===== واجهة ===== */
 function toast(t){ const e=$('toast'); e.textContent=t; e.classList.remove('on'); void e.offsetWidth; e.classList.add('on'); }
 window.closeOv = id => $(id).classList.remove('show');
@@ -473,6 +510,29 @@ function charRaise(ms=900){
 }
 function lightning(){ const f=$('flash'); f.classList.remove('on'); void f.offsetWidth; f.classList.add('on'); Snd.thunder(); }
 
+/* ===== صاعقة المضاعف: صورة الصاعقة بتنزل على الكرة وقت رفع الإيد، مع وميض ورعد ===== */
+const BOLT_SRC='images/lightning.png';   /* اسم صورة الصاعقة (677×369، شفافة) */
+try{ new Image().src=BOLT_SRC; }catch(e){}
+function boltAt(c,r){
+  const x=c*CW+CW/2, y=252+r*CH+CH/2;      /* مركز الخلية بإحداثيات الـ stage (الـ reels ببدأ من 252) */
+  const W=460, H=(y-14)/0.984;             /* طرف الصاعقة (أسفل الصورة) بيوقع على مركز الكرة */
+  const im=new Image(); im.src=BOLT_SRC; im.className='bolt'; im.draggable=false;
+  im.style.cssText='left:'+(x-W*0.51)+'px;top:14px;width:'+W+'px;height:'+H+'px';
+  im.onerror=()=>im.remove();
+  im.addEventListener('animationend',()=>im.remove());
+  $('stage').appendChild(im);
+  setTimeout(()=>{ if(im.parentNode) im.remove(); },1200);
+}
+function strikeNewOrbs(landing){
+  const hits=[];
+  dom.forEach((col,c)=>col.forEach((d,r)=>{ if(d && d.cell && d.cell.s==='orb' && !d.struck){ d.struck=true; hits.push([c,r]); } }));
+  if(!hits.length) return;
+  hits.forEach(([c,r],i)=>{
+    const t=(landing ? 300+((r+1)*CH+60)*.35+c*30 : 0) + i*110;   /* بالهبوط: استنّى لحد ما الكرة توصل */
+    setTimeout(()=>{ if(i===0) lightning(); boltAt(c,r); }, t*F());
+  });
+}
+
 /* ===== تشغيل لفة وحدة (حركة) ===== */
 function addRow(icon,count,win){
   const l=$('list'); const r=document.createElement('div'); r.className='row';
@@ -486,7 +546,7 @@ async function playOutcome(o, ctx){
   Snd.spin();
   await fallOut();
   await fallIn(r.init);
-  if(newOrbs(r.init.flat())){ charRaise(1000); Snd.orb(); await sleep(250); }
+  if(newOrbs(r.init.flat())){ charRaise(1000); Snd.orb(); strikeNewOrbs(false); await sleep(250); }
   let running=0;
   for(const st of r.steps){
     st.removed.forEach(([c,rw])=>dom[c][rw].el.classList.add('win'));
@@ -508,7 +568,7 @@ async function playOutcome(o, ctx){
       nd[c]=col;
     }
     dom=nd;
-    if(gotOrb){ charRaise(900); Snd.orb(); }
+    if(gotOrb){ charRaise(900); Snd.orb(); strikeNewOrbs(true); }
     await sleep(maxT+60); Snd.land();
   }
   /* السكاتر */
