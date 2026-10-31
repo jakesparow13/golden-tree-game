@@ -1,1 +1,60 @@
 
+// db.js — ملف الربط مع Firebase (مشترك بين كل الألعاب)
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getDatabase, ref, get, set, update, increment } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAfsY0dQI9qnIrksRqY4TvOe7YtPhig_Pg",
+  authDomain: "chekinroad-afa14.firebaseapp.com",
+  databaseURL: "https://chekinroad-afa14-default-rtdb.firebaseio.com",
+  projectId: "chekinroad-afa14",
+  storageBucket: "chekinroad-afa14.firebasestorage.app",
+  messagingSenderId: "871996125208",
+  appId: "1:871996125208:web:7f98cf25c469ea0568536d"
+};
+
+const db = getDatabase(initializeApp(firebaseConfig));
+
+// [تحديث] دالة جديدة: بتحاول تجيب البيانات لحد 3 مرات (12 ثانية لكل محاولة) بدل محاولة وحدة بمهلة 8 ثواني
+async function getWithRetry(r){
+  let lastErr;
+  for (let i = 0; i < 3; i++) {
+    try {
+      return await Promise.race([
+        get(r),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 12000))
+      ]);
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr;
+}
+
+// جلب بيانات المستخدم (مهلة 8 ثواني). إذا المستخدم جديد بينعمل له سجل برصيد ترحيبي 1000.
+export async function loadBalance(userId, name){
+  const r = ref(db, 'users/' + userId);
+  const snap = await getWithRetry(r); // [تحديث] كان: Promise.race مع مهلة 8 ثواني (محاولة وحدة)
+  if (snap.exists()) {
+    const d = snap.val();
+    return {
+      balance: typeof d.balance === 'number' ? d.balance : 0,
+      totalSpins: d.totalSpins || 0,
+      totalWins: d.totalWins || 0,
+      gov: d.govWildBounty || null   // [إضافة] حساب ضابط لعبة Wild Bounty (بيتخزّن مع اللاعب)
+    };
+  }
+  const fresh = { name, balance: 1000, totalSpins: 0, totalWins: 0, createdAt: Date.now() };
+  await set(r, fresh);
+  return { balance: 1000, totalSpins: 0, totalWins: 0, gov: null };
+}
+
+// حفظ الرصيد والإحصائيات
+export async function saveBalance(userId, data){
+  await update(ref(db, 'users/' + userId), { ...data, lastPlayed: Date.now() });
+}
+
+// [إضافة] إحصائيات المنصّة لكل لعبة: مجموع الرهانات والأرباح وعدد اللفات لكل اللاعبين
+export async function addGameStats(game, wager, paid, spins){
+  await update(ref(db, 'game_stats/' + game), {
+    wager: increment(wager), paid: increment(paid), spins: increment(spins)
+  });
+}
