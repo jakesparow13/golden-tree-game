@@ -501,7 +501,7 @@ const GAMES = [
   { id:'wild-bounty',    name:'Wild Bounty Showdown',       img:'wild-bounty-showdown.jpg',   icon:ICONS.wildBounty,    tint:'rgba(138,90,43,0.3)',   tag:null,  ready:true },
   { id:'spicy-eight',    name:'Spicy Eight',                img:'spicy-eight.jpg',            icon:ICONS.spicyEight,    tint:'rgba(255,140,26,0.3)',  tag:null,  ready:false },
   { id:'golden-tree',    name:'Tree of Chronos Chronicles', img:'tree-of-chronos.jpg',        icon:ICONS.treeOfChronos, tint:'rgba(61,220,151,0.3)',  tag:'HOT', ready:true },
-  { id:'god-of-olympus', name:'God of Oly MP',              img:'god-of-olympus.jpg',         icon:ICONS.godOfOlympus,  tint:'rgba(212,175,55,0.3)',  tag:null,  ready:false }
+  { id:'god-of-olympus', name:'God of Oly MP',              img:'god-of-olympus.jpg',         icon:ICONS.godOfOlympus,  tint:'rgba(212,175,55,0.3)',  tag:null,  ready:true }
 ];
 
 function renderGrid(){
@@ -571,6 +571,9 @@ window.openGame = function(id){
   }
   if(id === 'wild-bounty'){ /* 🆕 */
     location.href = 'wild-bounty/index.html' + location.hash;
+  }
+  if(id === 'god-of-olympus'){ /* 🆕 */
+    location.href = 'god-of-olympus/index.html' + location.hash;
   }
 }
 
