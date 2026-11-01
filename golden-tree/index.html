@@ -197,6 +197,11 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 .wp-card.total .wp-title{display:none;}
 .wp-card.total .wp-amount{left:19.6%;right:19.6%;top:40.7%;height:35.6%;display:flex;align-items:center;justify-content:center;line-height:1;}
 .wp-card.total .wp-label{top:79%;}
+/* ===== فيديو شراء البونص: بملء الشاشة فوق كل شي، والخلفية نسخة مغبّشة من نفس الفيديو عشان ما تظهر شرايط سودا ===== */
+#buyVideoOverlay{display:none;position:fixed;inset:0;z-index:300;background:#000;overflow:hidden;cursor:pointer;}
+#buyVideoOverlay video{position:absolute;inset:0;width:100%;height:100%;}
+#buyVideoBg{object-fit:cover;filter:blur(28px) brightness(.7);transform:scale(1.15);}
+#buyVideo{object-fit:contain;}
 </style>
 </head>
 <body>
@@ -310,6 +315,11 @@ button:disabled{opacity:.5;cursor:not-allowed;}
       <button class="confirm" id="confirmBuyBtn" onclick="confirmBuy()" disabled>شراء</button>
     </div>
   </div>
+</div>
+
+<div id="buyVideoOverlay">
+  <video id="buyVideoBg" muted playsinline preload="auto" src="images/buy-bonus-video.mp4"></video>
+  <video id="buyVideo" playsinline preload="auto" src="images/buy-bonus-video.mp4"></video>
 </div>
 
 <audio id="bgMusic" src="images/bg-music.mp3" loop preload="auto" style="display:none"></audio>
@@ -943,6 +953,35 @@ function showPop(amount, title, label, collect, dur, total){
   });
 }
 
+/* فيديو شراء البونص: بيشتغل بملء الشاشة بعد خصم الرصيد، وبينتهي لحاله أو بالضغط على الشاشة. إذا ما اشتغل لأي سبب بيكمل اللعب عادي */
+function playBuyVideo(){
+  return new Promise(res=>{
+    const ov = $('buyVideoOverlay'), v = $('buyVideo'), bg = $('buyVideoBg');
+    if(!ov || !v){ res(); return; }
+    let finished = false, guard = null;
+    const finish = ()=>{
+      if(finished) return; finished = true;
+      clearTimeout(guard);
+      try{ v.pause(); bg && bg.pause(); }catch(e){}
+      ov.style.display = 'none';
+      ov.onclick = null; v.onended = null; v.onerror = null;
+      res();
+    };
+    ov.style.display = 'block';
+    ov.onclick = finish; v.onended = finish; v.onerror = finish;
+    try{ v.currentTime = 0; if(bg) bg.currentTime = 0; }catch(e){}
+    v.muted = false; v.volume = 1;
+    const p = v.play();
+    if(p && p.catch) p.catch(()=>{
+      v.muted = true;
+      const p2 = v.play();
+      if(p2 && p2.catch) p2.catch(finish);
+    });
+    if(bg){ const pb = bg.play(); if(pb && pb.catch) pb.catch(()=>{}); }
+    guard = setTimeout(finish, 20000);
+  });
+}
+
 window.confirmBuy = async () => {
   if(!pendingPkg) return;
   const cost = R(bet * BONUS_COST_MULT[pendingPkg]);
@@ -957,6 +996,7 @@ window.confirmBuy = async () => {
   guaranteedWildsPerSpin = pendingPkg==='1' ? 1 : pendingPkg==='2' ? 2 : pendingPkg==='3' ? 3 : (1+Math.floor(Math.random()*3));
   inFree=true; freeLeft=5; freeWin=0;
   closeBuyModal();
+  await playBuyVideo();
   enterBonus();
   update(); await save();
   await showFreeSpinsIntro(5);
