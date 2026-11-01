@@ -169,13 +169,13 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 
 /* ===== نافذة البونص ===== */
 #bonusScreen{position:absolute;inset:0;display:none;background:#0e0804;z-index:5;overflow:hidden;}
-.bonus-wrap{position:absolute;left:50%;bottom:0;transform:translateX(-50%);background:url(images/bonus-bg.jpg) center/100% 100% no-repeat;}
-#reels.bonus-mode{position:absolute;margin:0;left:5.84%;top:49.28%;width:85.92%;gap:0 2.11%;z-index:2;}
+.bonus-wrap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:url(images/bonus-bg.jpg) center/100% 100% no-repeat;}
+#reels.bonus-mode{position:absolute;margin:0;left:5.84%;top:34.92%;width:85.92%;gap:0 2.11%;z-index:2;}
 #reels.bonus-mode .reel{border:0;padding:0;background:none;box-shadow:none;border-radius:0;}
 #reels.bonus-mode .reel::before{display:none;}
 #reels.bonus-mode .cell{aspect-ratio:137.76/165.39;}
 #reels.bonus-mode .wild-mult{font-size:4em;line-height:1.5;padding:0 .6em;border-width:2px;bottom:.8em;}
-.bhud{position:absolute;left:0;right:0;top:17.4%;display:flex;justify-content:center;gap:1.5em;z-index:3;font-family:'Cairo',sans-serif;font-weight:800;font-size:4.6em;line-height:1.55;color:#ffd23a;white-space:nowrap;}
+.bhud{position:absolute;left:0;right:0;top:76.74%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.3em;z-index:3;font-family:'Cairo',sans-serif;font-weight:800;font-size:5.6em;line-height:1.55;color:#ffd23a;white-space:nowrap;}
 .bhud span{padding:0 .9em;border-radius:2em;background:rgba(0,0,0,.65);border:1px solid #b8862b;text-shadow:0 2px 3px #000;}
 .bhud b{color:#fff;}
 /* ===== نافذة BIG WIN / MEGA WIN / TOTAL WIN (بدون خلفية سودا) ===== */
@@ -892,7 +892,7 @@ window.selectPkg = (el, key) => {
 };
 
 /* ===== نافذة البونص: البكرات بتنتقل لجواها وبترجع بعد ما يخلص ===== */
-const BG_W = 889, BG_H = 1640, FR_R = 533/937;
+const BG_W = 889, BG_H = 1647, FR_R = 533/937;
 function fitBonus(){
   const vw = window.innerWidth, vh = window.innerHeight;
   const sc = vw/BG_W, w = BG_W*sc, bw = $('bonusWrap');
