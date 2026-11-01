@@ -197,11 +197,10 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 .wp-card.total .wp-title{display:none;}
 .wp-card.total .wp-amount{left:19.6%;right:19.6%;top:40.7%;height:35.6%;display:flex;align-items:center;justify-content:center;line-height:1;}
 .wp-card.total .wp-label{top:79%;}
-/* ===== فيديو شراء البونص: بملء الشاشة فوق كل شي، والخلفية نسخة مغبّشة من نفس الفيديو عشان ما تظهر شرايط سودا ===== */
-#buyVideoOverlay{display:none;position:fixed;inset:0;z-index:300;background:#000;overflow:hidden;cursor:pointer;}
-#buyVideoOverlay video{position:absolute;inset:0;width:100%;height:100%;}
-#buyVideoBg{object-fit:cover;filter:blur(28px) brightness(.7);transform:scale(1.15);}
-#buyVideo{object-fit:contain;}
+/* ===== فيديو شراء البونص: فيديو واحد بملء الشاشة فوق كل شي، وخلفية ذهبية غامقة بدل الشرايط السودا ===== */
+#buyVideoOverlay{display:none;position:fixed;inset:0;z-index:300;background:radial-gradient(circle at 50% 50%,#4a2c08,#000 80%);overflow:hidden;cursor:pointer;align-items:center;justify-content:center;}
+#buyVideo{width:100%;height:100%;object-fit:contain;}
+#buyVideoMsg{position:absolute;left:0;right:0;bottom:12%;padding:0 16px;text-align:center;direction:rtl;color:var(--gold2);font-size:14px;font-weight:700;text-shadow:0 2px 4px #000;pointer-events:none;}
 </style>
 </head>
 <body>
@@ -215,7 +214,7 @@ button:disabled{opacity:.5;cursor:not-allowed;}
   <div class="game-title">Tree of Chronos</div>
   <div class="loading-bar-wrap"><div id="loadingBar"></div></div>
   <div id="loadingPct">0%</div>
-  <div id="verTag" style="margin-top:6px;font-size:11px;color:#8f86b8;">v5</div>
+  <div id="verTag" style="margin-top:6px;font-size:11px;color:#8f86b8;">v6</div>
 </div>
 
 <div id="gameScreen">
@@ -318,8 +317,8 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 </div>
 
 <div id="buyVideoOverlay">
-  <video id="buyVideoBg" muted playsinline preload="auto" src="images/buy-bonus-video.mp4"></video>
   <video id="buyVideo" playsinline preload="auto" src="images/buy-bonus-video.mp4"></video>
+  <div id="buyVideoMsg"></div>
 </div>
 
 <audio id="bgMusic" src="images/bg-music.mp3" loop preload="auto" style="display:none"></audio>
@@ -953,32 +952,41 @@ function showPop(amount, title, label, collect, dur, total){
   });
 }
 
-/* فيديو شراء البونص: بيشتغل بملء الشاشة بعد خصم الرصيد، وبينتهي لحاله أو بالضغط على الشاشة. إذا ما اشتغل لأي سبب بيكمل اللعب عادي */
+/* فيديو شراء البونص (على نفس أسلوب لعبة Wild Bounty): فيديو واحد، بيتحمّل مسبقاً، وإذا ما كان جاهز بيطلب تحميله من جديد. إذا فشل بتظهر رسالة فيها سبب الفشل 3 ثواني وبعدها بتكمل اللعبة عادي. الضغط على الشاشة بيتخطّاه */
 function playBuyVideo(){
   return new Promise(res=>{
-    const ov = $('buyVideoOverlay'), v = $('buyVideo'), bg = $('buyVideoBg');
+    const ov = $('buyVideoOverlay'), v = $('buyVideo'), msg = $('buyVideoMsg');
     if(!ov || !v){ res(); return; }
-    let finished = false, guard = null;
+    let finished = false, stall = null, cap = null;
     const finish = ()=>{
       if(finished) return; finished = true;
-      clearTimeout(guard);
-      try{ v.pause(); bg && bg.pause(); }catch(e){}
-      ov.style.display = 'none';
+      clearTimeout(stall); clearTimeout(cap);
+      try{ v.pause(); }catch(e){}
+      ov.style.display = 'none'; msg.textContent = '';
       ov.onclick = null; v.onended = null; v.onerror = null;
       res();
     };
-    ov.style.display = 'block';
-    ov.onclick = finish; v.onended = finish; v.onerror = finish;
-    try{ v.currentTime = 0; if(bg) bg.currentTime = 0; }catch(e){}
+    const fail = why=>{
+      if(finished) return;
+      clearTimeout(stall); clearTimeout(cap);
+      try{ v.pause(); }catch(e){}
+      msg.textContent = 'تعذّر تشغيل الفيديو ('+why+') code='+(v.error?v.error.code:0)+' net='+v.networkState+' ready='+v.readyState;
+      ov.onclick = null; v.onended = null; v.onerror = null;
+      setTimeout(finish, 3000);
+    };
+    ov.style.display = 'flex';
+    ov.onclick = finish; v.onended = finish; v.onerror = ()=>fail('error');
+    if(v.readyState < 2){ try{ v.load(); }catch(e){} }
+    try{ v.currentTime = 0; }catch(e){}
     v.muted = false; v.volume = 1;
     const p = v.play();
     if(p && p.catch) p.catch(()=>{
       v.muted = true;
       const p2 = v.play();
-      if(p2 && p2.catch) p2.catch(finish);
+      if(p2 && p2.catch) p2.catch(()=>fail('play'));
     });
-    if(bg){ const pb = bg.play(); if(pb && pb.catch) pb.catch(()=>{}); }
-    guard = setTimeout(finish, 20000);
+    stall = setTimeout(()=>{ if(v.readyState < 2) fail('stall'); }, 6000);
+    cap = setTimeout(finish, 15000);
   });
 }
 
