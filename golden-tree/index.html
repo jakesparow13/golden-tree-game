@@ -197,9 +197,9 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 .wp-card.total .wp-title{display:none;}
 .wp-card.total .wp-amount{left:19.6%;right:19.6%;top:40.7%;height:35.6%;display:flex;align-items:center;justify-content:center;line-height:1;}
 .wp-card.total .wp-label{top:79%;}
-/* ===== فيديو شراء البونص: فيديو واحد بملء الشاشة فوق كل شي، وخلفية ذهبية غامقة بدل الشرايط السودا ===== */
-#buyVideoOverlay{display:none;position:fixed;inset:0;z-index:300;background:radial-gradient(circle at 50% 50%,#4a2c08,#000 80%);overflow:hidden;cursor:pointer;align-items:center;justify-content:center;}
-#buyVideo{width:100%;height:100%;object-fit:contain;}
+/* ===== فيديو شراء البونص: فيديو واحد بملء الشاشة (cover) فوق كل شي ===== */
+#buyVideoOverlay{display:none;position:fixed;inset:0;z-index:300;background:radial-gradient(circle at 50% 50%,#4a2c08,#000 80%);overflow:hidden;align-items:center;justify-content:center;}
+#buyVideo{width:100%;height:100%;object-fit:cover;}
 #buyVideoMsg{position:absolute;left:0;right:0;bottom:12%;padding:0 16px;text-align:center;direction:rtl;color:var(--gold2);font-size:14px;font-weight:700;text-shadow:0 2px 4px #000;pointer-events:none;}
 </style>
 </head>
@@ -214,7 +214,7 @@ button:disabled{opacity:.5;cursor:not-allowed;}
   <div class="game-title">Tree of Chronos</div>
   <div class="loading-bar-wrap"><div id="loadingBar"></div></div>
   <div id="loadingPct">0%</div>
-  <div id="verTag" style="margin-top:6px;font-size:11px;color:#8f86b8;">v6</div>
+  <div id="verTag" style="margin-top:6px;font-size:11px;color:#8f86b8;">v7</div>
 </div>
 
 <div id="gameScreen">
@@ -600,7 +600,7 @@ function poolForReel(r, avoidBlank, allowWild){
   if(r===1 || r===3) p = allowWild ? SYMS_NO_BLANK : SYMS_NO_BLANK_NO_WILD;
   else if(avoidBlank) p = allowWild ? SYMS_NO_BLANK : SYMS_NO_BLANK_NO_WILD;
   else p = allowWild ? SYMS : SYMS_NO_WILD;
-  return (r===1 || r===3) ? p.filter(x=>x.key!=='scatterStar') : p;
+  return (r===1 || r===3) ? p.filter(x=>x.key!=='scatterStar' && !(r===1 && x.key==='wild')) : p;
 }
 function randomCell(pool){
   const key = pick(pool).key, c={key};
@@ -637,8 +637,16 @@ function makeGrid(){
         : c);
     }
   }
+  for(let r=0;r<REELS;r++){
+    let seenScat=false;
+    grid[r] = grid[r].map(c=>{
+      if(c.key!=='scatterDollar' && c.key!=='scatterStar') return c;
+      if(!seenScat){ seenScat=true; return c; }
+      return randomCell(SYMS_NO_BLANK_NO_WILD.filter(x=>x.key!=='scatterDollar' && x.key!=='scatterStar'));
+    });
+  }
   if(guaranteedWildsPerSpin>0){
-    const reelOrder=[0,1,2,3,4].sort(()=>Math.random()-0.5);
+    const reelOrder=[0,2,3,4].sort(()=>Math.random()-0.5);
     for(let i=0;i<Math.min(guaranteedWildsPerSpin,REELS);i++){
       const r=reelOrder[i], row=Math.floor(Math.random()*ROWS);
       grid[r][row] = { key:'wild', mult: pick(WMULTS).val };
@@ -799,13 +807,11 @@ function evaluate(grid, b){
   if(dollarCells.length>=3 && PAY.scatterDollar[Math.min(dollarCells.length,5)]){
     total = R(total + b*PAY.scatterDollar[Math.min(dollarCells.length,5)]);
     wins.push(...dollarCells);
-    winLinesCells.push(dollarCells);
   }
   const starReels = new Set(starCells.map(([r])=>r));
   if(starReels.has(0) && starReels.has(2) && starReels.has(4)){
     total = R(total + b*PAY.scatterStar[3]);
     wins.push(...starCells);
-    winLinesCells.push(starCells);
   }
   total = Math.min(total, R(b*MAX_WIN_MULT));
   return {total, wins, sc, winLinesCells};
@@ -952,7 +958,7 @@ function showPop(amount, title, label, collect, dur, total){
   });
 }
 
-/* فيديو شراء البونص (على نفس أسلوب لعبة Wild Bounty): فيديو واحد، بيتحمّل مسبقاً، وإذا ما كان جاهز بيطلب تحميله من جديد. إذا فشل بتظهر رسالة فيها سبب الفشل 3 ثواني وبعدها بتكمل اللعبة عادي. الضغط على الشاشة بيتخطّاه */
+/* فيديو شراء البونص (على نفس أسلوب لعبة Wild Bounty): فيديو واحد، بيتحمّل مسبقاً، وإذا ما كان جاهز بيطلب تحميله من جديد. إذا فشل بتظهر رسالة فيها سبب الفشل 3 ثواني وبعدها بتكمل اللعبة عادي. ما بيتخطّى بالضغط، بيكمل للآخر */
 function playBuyVideo(){
   return new Promise(res=>{
     const ov = $('buyVideoOverlay'), v = $('buyVideo'), msg = $('buyVideoMsg');
@@ -975,7 +981,7 @@ function playBuyVideo(){
       setTimeout(finish, 3000);
     };
     ov.style.display = 'flex';
-    ov.onclick = finish; v.onended = finish; v.onerror = ()=>fail('error');
+    v.onended = finish; v.onerror = ()=>fail('error');
     if(v.readyState < 2){ try{ v.load(); }catch(e){} }
     try{ v.currentTime = 0; }catch(e){}
     v.muted = false; v.volume = 1;
