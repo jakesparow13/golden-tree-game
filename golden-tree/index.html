@@ -215,7 +215,7 @@ body.inbonus .orb,body.inbonus #stage::before,body.inbonus .logo::after,body.inb
   <div class="game-title">Tree of Chronos</div>
   <div class="loading-bar-wrap"><div id="loadingBar"></div></div>
   <div id="loadingPct">0%</div>
-  <div id="verTag" style="margin-top:6px;font-size:11px;color:#8f86b8;">v8</div>
+  <div id="verTag" style="margin-top:6px;font-size:11px;color:#8f86b8;">v9</div>
 </div>
 
 <div id="gameScreen">
@@ -432,7 +432,7 @@ function R(n){ return Math.round(n); }
 
 const SoundEngine = (() => {
   let ctx = null;
-  const VOL = { bg:0.12, reel:0.12, reelStop:0.6, wild:0.22, bonus:0.15, big:0.3, win:0.25, star:0.25, dollar:0.25, synth:0.6 };
+  const VOL = { bg:0.06, reel:0.2, reelStop:1.0, wild:0.22, bonus:0.15, big:0.3, win:0.25, star:0.25, dollar:0.25, synth:0.6 };
   function ac(){
     if(!ctx){ try{ ctx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ ctx=null; } }
     if(ctx && ctx.state === 'suspended') ctx.resume().catch(()=>{});
