@@ -4,15 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Tree of Chronos</title>
-<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@700&family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@700&family=Cairo:wght@400;700&family=Cinzel:wght@900&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;overflow:hidden;}
 :root{--gold:#d4a437;--gold2:#ffd700;--emerald:#3ddc97;}
-body{min-height:100vh;font-family:'Cairo',sans-serif;color:#f2f2f2;overflow-x:hidden;
-  background:#170a33 url('images/bg.jpg') center top/cover no-repeat;}
-#splashScreen{position:fixed;inset:0;z-index:999;background:#170a33;
-  display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:14%;overflow:hidden;}
+body{min-height:100vh;font-family:'Cairo',sans-serif;color:#f2f2f2;overflow-x:hidden;background:#170a33 url('images/bg.jpg') center top/cover no-repeat;}
+#splashScreen{position:fixed;inset:0;z-index:999;background:#170a33;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:14%;overflow:hidden;}
 #splashVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;}
 #splashScreen>:not(#splashVideo){position:relative;z-index:1;}
 .game-title{font-family:'Amiri',serif;font-size:34px;color:var(--gold2);margin-bottom:22px;text-shadow:0 0 12px rgba(255,215,0,.6),0 3px 6px #000;}
@@ -21,406 +19,186 @@ body{min-height:100vh;font-family:'Cairo',sans-serif;color:#f2f2f2;overflow-x:hi
 #loadingPct{margin-top:10px;color:var(--gold2);font-weight:700;text-shadow:0 2px 4px #000;}
 #gameScreen{display:none;position:fixed;inset:0;overflow:hidden;}
 #stage{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);transform-origin:center center;}
-#stage::before{
-  content:'';position:absolute;inset:-40%;pointer-events:none;z-index:0;
-  background:
-    radial-gradient(circle at 30% 20%, rgba(255,215,0,.10), transparent 42%),
-    radial-gradient(circle at 75% 65%, rgba(160,100,255,.10), transparent 46%);
-  animation:auraDrift 14s ease-in-out infinite alternate;
-}
-@keyframes auraDrift{
-  0%{ transform:translate(0,0) scale(1); opacity:.7; }
-  100%{ transform:translate(3%,-2%) scale(1.08); opacity:1; }
-}
-/* ===== بقع بنفسجية ضبابية متحركة ===== */
-.orb{position:fixed;border-radius:50%;filter:blur(40px);background:rgba(150,80,255,.35);
-  animation:orbF 12s ease-in-out infinite alternate;pointer-events:none;z-index:0;}
+#stage::before{content:'';position:absolute;inset:-40%;pointer-events:none;z-index:0;
+  background:radial-gradient(circle at 30% 20%,rgba(255,215,0,.10),transparent 42%),radial-gradient(circle at 75% 65%,rgba(160,100,255,.10),transparent 46%);
+  animation:auraDrift 14s ease-in-out infinite alternate;}
+@keyframes auraDrift{0%{transform:translate(0,0) scale(1);opacity:.7;}100%{transform:translate(3%,-2%) scale(1.08);opacity:1;}}
+.orb{position:fixed;border-radius:50%;filter:blur(40px);background:rgba(150,80,255,.35);animation:orbF 12s ease-in-out infinite alternate;pointer-events:none;z-index:0;}
 @keyframes orbF{to{transform:translate(40px,-60px) scale(1.3)}}
 .container{position:relative;z-index:1;width:380px;padding:10px 10px calc(10px + env(safe-area-inset-bottom));}
 .bottom{margin-top:12px;}
-.balance{font-weight:700;color:var(--gold2);}
 #freeSpinsBadge{display:none;text-align:center;color:var(--emerald);font-weight:700;margin-bottom:6px;}
 .logo-wrap{text-align:center;margin:6px 0 10px;}
-.logo{position:relative;display:inline-block;text-align:center;font-family:'Amiri',serif;font-weight:800;font-size:26px;letter-spacing:1px;
-  color:#fff6c8;padding:7px 22px;border-radius:10px;overflow:hidden;user-select:none;cursor:default;
-  background:linear-gradient(180deg,#2a1a5e,#140a38);
-  border:2px solid transparent;
-  border-image:linear-gradient(180deg,#f7e08a,#b8862b 50%,#f7e08a) 1;
-  box-shadow:0 0 14px rgba(255,215,0,.35), inset 0 2px 3px rgba(255,255,255,.15), inset 0 -3px 6px rgba(0,0,0,.5), 0 4px 10px rgba(0,0,0,.5);
-  text-shadow:0 0 12px rgba(255,215,0,.8),0 2px 0 #000;}
-.logo::after{
-  content:'';position:absolute;top:0;left:-60%;width:40%;height:100%;
-  background:linear-gradient(100deg, transparent, rgba(255,255,255,.55), transparent);
-  transform:skewX(-20deg);
-  animation:logoShine 5.5s ease-in-out infinite;
-}
-@keyframes logoShine{
-  0%,60%{ left:-60%; } 100%{ left:130%; }
-}
-.logo-max{margin-top:4px;font-family:'Cairo',sans-serif;font-weight:800;font-size:15px;color:var(--gold2);
-  text-shadow:0 0 8px rgba(255,215,0,.6),0 2px 3px #000;}
-.reels{position:relative;direction:ltr;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;align-items:start;}
-.reel{position:relative;display:flex;flex-direction:column;gap:0;padding:4px;border-radius:10px;min-width:0;
-  background:radial-gradient(ellipse at 50% 0%, #241a5c, #0c0826 85%);
-  border:2px solid transparent;
-  border-image:linear-gradient(180deg,#f7e08a,#b8862b 35%,#7a5418 60%,#f7e08a) 1;
-  box-shadow:0 0 10px rgba(184,134,43,.4), inset 0 2px 4px rgba(255,255,255,.08), inset 0 -3px 6px rgba(0,0,0,.5);
-}
-.reel::before{
-  content:'';position:absolute;top:0;left:0;right:0;height:35%;border-radius:6px 6px 0 0;
-  background:linear-gradient(180deg, rgba(255,255,255,.10), transparent);
-  pointer-events:none;z-index:1;
-}
+.logo{position:relative;display:inline-block;text-align:center;font-family:'Amiri',serif;font-weight:800;font-size:32px;padding:0 14px;line-height:1.2;letter-spacing:1px;
+  color:#ffd23a;border-radius:10px;overflow:hidden;user-select:none;cursor:default;background:linear-gradient(180deg,#2a1a5e,#140a38);
+  border:2px solid transparent;border-image:linear-gradient(180deg,#f7e08a,#b8862b 50%,#f7e08a) 1;
+  box-shadow:0 0 14px rgba(255,215,0,.35),inset 0 2px 3px rgba(255,255,255,.15),inset 0 -3px 6px rgba(0,0,0,.5),0 4px 10px rgba(0,0,0,.5);
+  text-shadow:0 2px 0 #7a4a00,0 0 12px rgba(255,200,0,.7);}
+.logo::after{content:'';position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-20deg);animation:logoShine 5.5s ease-in-out infinite;}
+@keyframes logoShine{0%,60%{left:-60%;}100%{left:130%;}}
+.logo-max{direction:ltr;unicode-bidi:isolate;margin-top:6px;font-family:'Amiri',serif;font-weight:800;font-size:46px;line-height:1.1;
+  background:linear-gradient(180deg,#fff3a8,#ffc83a 55%,#b8761a);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 2px 0 #4a2a00) drop-shadow(0 0 8px rgba(255,215,0,.6));}
+.reels{position:relative;direction:ltr;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;margin:0 -4px;align-items:start;}
+.reel{position:relative;display:flex;flex-direction:column;gap:0;padding:2px;border-radius:10px;min-width:0;overflow:hidden;
+  border:2px solid #d9962e;background:linear-gradient(180deg,#171152,#0c0826);
+  box-shadow:0 0 10px rgba(184,134,43,.4),inset 0 2px 4px rgba(255,255,255,.08),inset 0 -3px 6px rgba(0,0,0,.5);}
+.reel::before{content:'';position:absolute;top:0;left:0;right:0;height:35%;border-radius:6px 6px 0 0;background:linear-gradient(180deg,rgba(255,255,255,.10),transparent);pointer-events:none;z-index:1;}
 .strip{display:flex;flex-direction:column;gap:0;will-change:transform;}
-.cell{width:100%;aspect-ratio:1/1.12;min-height:0;overflow:hidden;position:relative;border-radius:0;font-size:30px;display:flex;align-items:center;justify-content:center;flex:none;}
+.cell{width:100%;aspect-ratio:1/1.12;min-height:0;overflow:hidden;position:relative;font-size:30px;display:flex;align-items:center;justify-content:center;flex:none;}
 .cell img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 3px 3px rgba(0,0,0,.55));}
+.cell img:not(.sym-blank){inset:-3%;width:106%;height:106%;}
 .cell img.sym-blank{inset:12%;width:76%;height:76%;}
-.cell.win{background:rgba(61,220,151,.18);z-index:2;animation:winCelebrate 1s ease-in-out infinite;box-shadow:0 0 14px var(--gold2);}
-@keyframes winCelebrate{
-  0%{transform:scale(1);}
-  30%{transform:scale(1.32);}
-  55%{transform:scale(1.08);}
-  75%{transform:scale(1.2);}
-  100%{transform:scale(1.08);}
-}
-.cell.win.wild-win{box-shadow:0 0 22px var(--gold2), 0 0 40px rgba(255,215,0,.6);}
-.cell.win.wild-win img{filter:drop-shadow(0 0 8px rgba(255,215,0,.9));}
+/* الخلية الرابحة: نبض بسيط بدون تكبير يطلع برا الخانة وبدون خلفية */
+.cell.win{z-index:2;box-shadow:inset 0 0 10px rgba(255,215,0,.55);}
+.cell.win img{animation:winPulse .9s ease-in-out infinite;filter:drop-shadow(0 0 6px rgba(255,215,0,.9));}
+@keyframes winPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.07);}}
 .badge{position:absolute;bottom:0;right:0;background:var(--gold2);color:#111;font-size:10px;font-weight:800;padding:0 4px;border-radius:6px;z-index:3;}
-.expand-wild{
-  position:absolute;inset:0;z-index:10;pointer-events:none;
-  display:flex;align-items:center;justify-content:center;
-  overflow:hidden;border-radius:8px;
-  background:linear-gradient(180deg,#1a1450,#0f0a35);
-  transform-origin:center;
-  animation:expandWildBurst .6s cubic-bezier(.2,.9,.3,1.3) forwards;
-}
-.expand-wild img{width:100%;height:100%;object-fit:cover;object-position:center;filter:drop-shadow(0 0 14px rgba(255,215,0,.95));position:relative;z-index:2;}
-@keyframes expandWildBurst{
-  0%{ transform:scaleY(.28) rotate(-2deg); opacity:.55; filter:brightness(1.9); }
-  40%{ transform:scaleY(1.14) rotate(1.5deg); opacity:1; filter:brightness(2.1); }
-  65%{ transform:scaleY(.94) rotate(-.8deg); filter:brightness(1.3); }
-  100%{ transform:scaleY(1) rotate(0); filter:brightness(1); }
-}
-.wild-glow{
-  position:absolute; inset:-25%;
-  border-radius:50%;
-  background:radial-gradient(circle, rgba(255,215,0,.65) 0%, rgba(255,215,0,.15) 45%, transparent 72%);
-  z-index:9;
-  pointer-events:none;
-  animation:wildGlowPulse .75s ease-out forwards;
-}
-@keyframes wildGlowPulse{
-  0%{ opacity:0; transform:scale(.35); }
-  45%{ opacity:1; transform:scale(1.25); }
-  100%{ opacity:0; transform:scale(1.7); }
-}
-.spark{
-  position:absolute; width:6px; height:6px; border-radius:50%;
-  background:radial-gradient(circle, #fff, var(--gold2) 55%, transparent 100%);
-  pointer-events:none; z-index:12;
-  box-shadow:0 0 6px 2px rgba(255,215,0,.85);
-  animation:sparkFly .8s ease-out forwards;
-}
-@keyframes sparkFly{
-  0%{ transform:translate(0,0) scale(1); opacity:1; }
-  100%{ transform:translate(var(--sx), var(--sy)) scale(0); opacity:0; }
-}
-.reel.spinning{ overflow:hidden; }
-.reel.spinning .cell img{
-  filter:blur(1.3px) brightness(1.04);
-  transition:filter .06s linear;
-}
-.cell.dropping img{ animation:cellDrop .22s cubic-bezier(.3,.9,.4,1); }
-@keyframes cellDrop{
-  0%{ transform:translateY(-30%) scaleY(1.15); opacity:.5; }
-  70%{ transform:translateY(4%) scaleY(1.02); opacity:1; }
-  100%{ transform:translateY(0) scaleY(1); opacity:1; }
-}
-.reels.shake{ animation:reelShake .35s ease-in-out; }
-@keyframes reelShake{
-  0%,100%{ transform:translate(0,0); }
-  20%{ transform:translate(-6px,-3px); }
-  40%{ transform:translate(5px,3px); }
-  60%{ transform:translate(-4px,-2px); }
-  80%{ transform:translate(3px,1px); }
-}
-#goldFlash{
-  position:fixed; inset:0; z-index:120; pointer-events:none; opacity:0;
-  background:radial-gradient(circle, rgba(255,215,0,.32), transparent 65%);
-}
-#goldFlash.on{ animation:goldFlashAnim .5s ease-out forwards; }
-@keyframes goldFlashAnim{
-  0%{ opacity:0; } 30%{ opacity:1; } 100%{ opacity:0; }
-}
+/* الشجرة: بنفس حجم البكرة وبتنمو من تحت وتغطي الرموز وما بتطلع برا */
+.expand-wild{position:absolute;inset:0;z-index:10;pointer-events:none;overflow:hidden;border-radius:8px;
+  background:linear-gradient(180deg,#171152,#0c0826);transform-origin:center bottom;animation:treeGrow .7s cubic-bezier(.2,.8,.3,1) both;}
+.expand-wild img{position:absolute;inset:0;width:100%;height:100%;max-width:none;max-height:none;object-fit:fill;}
+@keyframes treeGrow{0%{transform:scaleY(.08);filter:brightness(2);}65%{transform:scaleY(1);filter:brightness(1.8);}100%{transform:scaleY(1);filter:brightness(1);}}
+.wild-mult{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);z-index:20;pointer-events:none;direction:ltr;padding:0 12px;border-radius:14px;border:2px solid #e8892a;
+  background:linear-gradient(180deg,#ffeaa6,#f2b53e);font-family:'Cairo',sans-serif;font-size:18px;font-weight:800;line-height:26px;color:#2a1a00;
+  box-shadow:0 2px 6px rgba(0,0,0,.6),0 0 10px rgba(255,215,0,.6);animation:multPop .45s cubic-bezier(.2,.9,.3,1.4) both;}
+@keyframes multPop{0%{transform:translateX(-50%) scale(0);opacity:0;}100%{transform:translateX(-50%) scale(1);opacity:1;}}
+.wild-glow{position:absolute;inset:-25%;border-radius:50%;background:radial-gradient(circle,rgba(255,215,0,.65) 0%,rgba(255,215,0,.15) 45%,transparent 72%);z-index:9;pointer-events:none;animation:wildGlowPulse .75s ease-out forwards;}
+@keyframes wildGlowPulse{0%{opacity:0;transform:scale(.35);}45%{opacity:1;transform:scale(1.25);}100%{opacity:0;transform:scale(1.7);}}
+.spark{position:absolute;width:6px;height:6px;border-radius:50%;background:radial-gradient(circle,#fff,var(--gold2) 55%,transparent 100%);pointer-events:none;z-index:12;box-shadow:0 0 6px 2px rgba(255,215,0,.85);animation:sparkFly .8s ease-out forwards;}
+@keyframes sparkFly{0%{transform:translate(0,0) scale(1);opacity:1;}100%{transform:translate(var(--sx),var(--sy)) scale(0);opacity:0;}}
+.reel.spinning .cell img{filter:blur(1.3px) brightness(1.04);transition:filter .06s linear;}
+.cell.dropping img{animation:cellDrop .22s cubic-bezier(.3,.9,.4,1);}
+@keyframes cellDrop{0%{transform:translateY(-30%) scaleY(1.15);opacity:.5;}70%{transform:translateY(4%) scaleY(1.02);opacity:1;}100%{transform:translateY(0) scaleY(1);opacity:1;}}
+.reels.shake{animation:reelShake .35s ease-in-out;}
+@keyframes reelShake{0%,100%{transform:translate(0,0);}20%{transform:translate(-6px,-3px);}40%{transform:translate(5px,3px);}60%{transform:translate(-4px,-2px);}80%{transform:translate(3px,1px);}}
+#goldFlash{position:fixed;inset:0;z-index:120;pointer-events:none;opacity:0;background:radial-gradient(circle,rgba(255,215,0,.32),transparent 65%);}
+#goldFlash.on{animation:goldFlashAnim .5s ease-out forwards;}
+@keyframes goldFlashAnim{0%{opacity:0;}30%{opacity:1;}100%{opacity:0;}}
 #lineOverlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:5;}
-.win-line{
-  stroke:var(--gold2);
-  stroke-width:2.4;
-  fill:none;
-  stroke-linecap:round;
-  stroke-linejoin:round;
-  filter:drop-shadow(0 0 3px rgba(255,215,0,.95)) drop-shadow(0 0 6px rgba(255,215,0,.6));
-  opacity:0;
-  animation:lineFadeIn .3s ease-out forwards;
-  vector-effect:non-scaling-stroke;
-}
-@keyframes lineFadeIn{ to{ opacity:1; } }
-.suits{direction:ltr;display:flex;gap:5px;margin-top:38px;margin-bottom:10px;}
-.suit{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:4px;padding:6px 4px;border-radius:18px;
-  background:rgba(10,4,30,.55);border:1.5px solid #8a6a2a;font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;}
+.win-line{stroke:var(--gold2);stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round;
+  filter:drop-shadow(0 0 3px rgba(255,215,0,.95)) drop-shadow(0 0 6px rgba(255,215,0,.6));opacity:0;animation:lineFadeIn .3s ease-out forwards;vector-effect:non-scaling-stroke;}
+@keyframes lineFadeIn{to{opacity:1;}}
+.suits{direction:ltr;display:flex;gap:5px;margin-top:0;margin-bottom:8px;}
+.suit{position:relative;flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:4px;padding:6px 4px;border-radius:18px;
+  background:rgba(10,4,30,.55);border:1.5px solid #8a6a2a;font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;
+  animation:suitFloat 3.2s ease-in-out infinite,suitGlow 2.4s ease-in-out infinite;animation-delay:var(--d),var(--d);}
 .suit b{font-size:16px;line-height:1;} .suit .k{color:#e8e0ff;} .suit .r{color:#ff3b4f;}
-.balbar{margin-top:10px;padding:10px;border-radius:14px;text-align:center;background:rgba(10,4,30,.6);border:1.5px solid rgba(212,164,55,.45);font-weight:700;}
+.suit:nth-child(1){--d:0s;} .suit:nth-child(2){--d:-.8s;} .suit:nth-child(3){--d:-1.6s;} .suit:nth-child(4){--d:-2.4s;}
+.suit::after{content:'';position:absolute;top:0;left:-70%;width:45%;height:100%;pointer-events:none;background:linear-gradient(100deg,transparent,rgba(255,255,255,.35),transparent);transform:skewX(-20deg);animation:suitShine 4s ease-in-out infinite;animation-delay:var(--d);}
+@keyframes suitFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-3px);}}
+@keyframes suitGlow{0%,100%{box-shadow:0 0 0 rgba(255,215,0,0);border-color:#8a6a2a;}50%{box-shadow:0 0 10px rgba(255,215,0,.55);border-color:#e6bf5a;}}
+@keyframes suitShine{0%,55%{left:-70%;}100%{left:140%;}}
+.balbar{margin-top:10px;text-align:center;background:rgba(0,0,0,.88);border:1.5px solid #1d1d26;border-radius:16px;padding:12px 56px;font-weight:700;}
 .balbar b{color:var(--gold2);font-size:19px;margin:0 6px;}
-.balbar small{color:#ccc;font-weight:400;}
-.chips{direction:ltr;display:flex;gap:6px;justify-content:center;margin:12px 0 10px;}
-.chip{flex:1;padding:9px 0;border-radius:22px;border:1.5px solid #6b5a8f;background:rgba(255,255,255,.08);color:#fff;font-weight:700;font-size:14px;cursor:pointer;}
+.chips{direction:ltr;display:flex;gap:6px;justify-content:center;background:#0b0b0f;border:1.5px solid #1d1d26;border-radius:18px;padding:12px 8px;margin:12px 0 10px;}
+.chips:has(+ .levels[style*="flex"]){border-radius:18px 18px 0 0;margin-bottom:0;padding-bottom:6px;}
+.chip{flex:1;padding:9px 0;border-radius:22px;border:1.5px solid #4a4a55;background:#2a2a30;color:#f2f2f2;font-weight:700;font-size:13px;cursor:pointer;}
 .chip.active{border-color:var(--gold2);box-shadow:0 0 8px rgba(255,215,0,.5);}
-.actions{direction:ltr;position:relative;display:flex;align-items:center;justify-content:center;gap:8px;min-height:90px;}
+.actions{direction:ltr;position:relative;display:flex;align-items:center;justify-content:center;gap:10px;min-height:90px;}
 .buy{position:relative;overflow:hidden;width:60px;height:60px;padding:4px;border-radius:14px;border:2px solid var(--gold2);cursor:pointer;
   background:linear-gradient(180deg,#8a4dff,#4b1fa8);color:var(--gold2);font-weight:800;font-family:'Cairo',sans-serif;line-height:1.15;font-size:11px;flex:none;
-  box-shadow:inset 0 2px 3px rgba(255,255,255,.25), inset 0 -4px 8px rgba(0,0,0,.4), 0 3px 8px rgba(0,0,0,.4);}
+  box-shadow:inset 0 2px 3px rgba(255,255,255,.25),inset 0 -4px 8px rgba(0,0,0,.4),0 3px 8px rgba(0,0,0,.4);}
 .buy small{display:block;font-size:11px;color:#fff;}
 .spin-wrap{position:relative;display:inline-flex;flex:none;}
-.spin{position:relative;width:80px;height:80px;padding:3px;overflow:hidden;border-radius:50%;cursor:pointer;background:#0d0820;
-  display:flex;align-items:center;justify-content:center;
-  border:5px solid transparent;
-  border-image:linear-gradient(145deg,#ffffff,#b9b9c9 30%,#6b6b78 55%,#e4e4ee 75%,#8a8a96) 1;
-  box-shadow:0 0 20px rgba(160,140,255,.5), 0 4px 12px rgba(0,0,0,.6), inset 0 3px 6px rgba(255,255,255,.4), inset 0 -6px 10px rgba(0,0,0,.65);}
-.spin::after{
-  content:'';position:absolute;top:5%;left:12%;width:48%;height:30%;border-radius:50%;
-  background:radial-gradient(ellipse, rgba(255,255,255,.65), transparent 70%);
-  pointer-events:none;z-index:2;
-}
-.spin img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
-.spin.spinning img{animation:rot .5s linear infinite;}
+.spin{position:relative;width:100px;height:100px;padding:0;overflow:hidden;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;border:6px solid #cfcfdc;
+  background:radial-gradient(circle at 50% 35%,#2b2b33,#0a0a0e 75%);
+  box-shadow:0 0 0 2px #6b6b78,0 6px 14px rgba(0,0,0,.7),inset 0 3px 6px rgba(255,255,255,.25),inset 0 -8px 14px rgba(0,0,0,.7);}
+.spin::after{content:'';position:absolute;top:5%;left:12%;width:48%;height:30%;border-radius:50%;background:radial-gradient(ellipse,rgba(255,255,255,.65),transparent 70%);pointer-events:none;z-index:2;}
+.spin img{display:none;}
+.spin::before{content:'';position:absolute;inset:0;margin:auto;width:52%;height:52%;box-sizing:border-box;border-radius:50%;border:8px solid #e9e9f2;border-right-color:transparent;filter:drop-shadow(0 0 4px rgba(255,255,255,.5));}
+.spin.spinning::before{animation:rot .6s linear infinite;}
+.spin:disabled{opacity:.9;}
 @keyframes rot{to{transform:rotate(360deg);}}
-.rbtn{position:relative;overflow:hidden;width:42px;height:42px;border-radius:50%;border:2px solid #cfcfe8;background:rgba(20,10,50,.7);color:#fff;font-size:14px;cursor:pointer;flex:none;
-  box-shadow:inset 0 2px 3px rgba(255,255,255,.18), inset 0 -3px 6px rgba(0,0,0,.4);}
+.rbtn{position:relative;overflow:visible;width:46px;height:46px;border-radius:50%;border:3px solid #d5d5e3;background:radial-gradient(circle at 50% 35%,#2b2b33,#0a0a0e);color:#fff;font-size:14px;cursor:pointer;flex:none;
+  box-shadow:inset 0 2px 3px rgba(255,255,255,.18),inset 0 -3px 6px rgba(0,0,0,.4);}
 .rbtn.on{border-color:var(--gold2);color:var(--gold2);}
-.cnt{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;padding:0 4px;border-radius:10px;
-  background:var(--gold2);color:#111;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;
-  box-shadow:0 2px 4px rgba(0,0,0,.5);z-index:5;}
+#autoBtn{font-size:0;}
+#autoBtn::before{content:'';position:absolute;top:50%;left:50%;transform:translate(-35%,-50%);border-style:solid;border-width:9px 0 9px 15px;border-color:transparent transparent transparent #fff;}
+#autoBtn.on::before{border-left-color:var(--gold2);}
+.cnt{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;padding:0 4px;border-radius:10px;background:var(--gold2);color:#111;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,.5);z-index:5;}
 .cnt.emerald{background:var(--emerald);}
-.levels{direction:ltr;display:none;gap:8px;justify-content:center;margin-bottom:10px;}
-.lv{width:40px;height:40px;border-radius:50%;border:1.5px solid #6b5a8f;background:rgba(255,255,255,.1);color:#fff;font-weight:700;cursor:pointer;}
+.levels{direction:ltr;display:none;gap:8px;justify-content:center;background:#0b0b0f;border:1.5px solid #1d1d26;border-top:none;border-radius:0 0 18px 18px;padding:6px 0 12px;margin:0 0 12px;}
+.lv{width:44px;height:44px;border-radius:50%;background:#34343a;border:1.5px solid #34343a;color:#fff;font-size:16px;font-weight:700;cursor:pointer;}
 .lv.active{border-color:var(--gold2);}
 #result{min-height:48px;margin:8px 0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
 button:disabled{opacity:.5;cursor:not-allowed;}
 .result{margin-top:16px;min-height:26px;text-align:center;font-weight:700;font-size:16px;}
 .win-t{color:#00ff88;} .lose-t{color:#ff6b6b;}
-.stats,.pay{margin-top:14px;padding:12px;background:rgba(0,0,0,.35);border-radius:10px;font-size:13px;}
-.pay summary{cursor:pointer;font-weight:700;color:var(--gold2);}
-.prow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;}
-.prow .ic{width:28px;height:28px;display:flex;align-items:center;justify-content:center;}
-.prow img{width:26px;height:26px;object-fit:contain;}
-.prow .v{color:#ccc;font-size:12px;}
-.auto-menu{
-  display:none;position:absolute;bottom:52px;left:calc(50% - 116px);
-  flex-direction:column;gap:6px;background:rgba(10,4,30,.92);
-  border:1.5px solid rgba(212,164,55,.6);border-radius:14px;padding:8px;z-index:20;
-  box-shadow:0 8px 20px rgba(0,0,0,.5);
-}
-.auto-menu button{
-  width:56px;padding:9px 0;border-radius:10px;border:1.5px solid #6b5a8f;
-  background:rgba(255,255,255,.08);color:#fff;font-weight:700;font-size:14px;cursor:pointer;
-}
+.auto-menu{display:none;position:absolute;bottom:52px;left:calc(50% - 116px);flex-direction:column;gap:6px;background:rgba(10,4,30,.92);border:1.5px solid rgba(212,164,55,.6);border-radius:14px;padding:8px;z-index:20;box-shadow:0 8px 20px rgba(0,0,0,.5);}
+.auto-menu button{width:56px;padding:9px 0;border-radius:10px;border:1.5px solid #6b5a8f;background:rgba(255,255,255,.08);color:#fff;font-weight:700;font-size:14px;cursor:pointer;}
 .auto-menu button:hover,.auto-menu button:active{border-color:var(--gold2);background:rgba(255,215,0,.12);}
-.modal-overlay{
-  display:none;position:fixed;inset:0;z-index:200;
-  background:rgba(0,0,0,.7);align-items:center;justify-content:center;padding:16px;
-}
-.modal-card{
-  width:100%;max-width:340px;background:linear-gradient(180deg,#1c1050,#100a30);
-  border:2px solid var(--gold2);border-radius:18px;padding:16px;
-  box-shadow:0 0 30px rgba(255,215,0,.25);
-}
-.modal-title{text-align:center;font-family:'Amiri',serif;font-size:20px;color:var(--gold2);margin-bottom:2px;
-  text-shadow:0 0 10px rgba(255,215,0,.5);}
-.modal-title span{display:block;font-size:14px;color:#c9a5ff;margin-top:2px;}
-.bet-stepper{direction:ltr;display:flex;align-items:center;justify-content:center;gap:10px;margin:12px 0 4px;}
-.bet-stepper button{
-  width:38px;height:38px;border-radius:10px;border:1.5px solid var(--gold2);
-  background:rgba(255,215,0,.12);color:var(--gold2);font-size:20px;font-weight:800;cursor:pointer;
-}
-.bet-stepper button:disabled{opacity:.4;cursor:not-allowed;}
-.bet-disp{
-  min-width:120px;text-align:center;padding:9px 14px;border-radius:12px;
-  background:rgba(255,255,255,.08);border:1.5px solid #6b5a8f;font-weight:800;color:var(--gold2);font-size:15px;
-}
-.pkg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0 14px;}
-.pkg{
-  border:1.5px solid #6b5a8f;border-radius:12px;padding:8px;text-align:center;cursor:pointer;
-  background:rgba(255,255,255,.04);
-}
-.pkg.sel{border-color:var(--gold2);box-shadow:0 0 12px rgba(255,215,0,.4);background:rgba(255,215,0,.08);}
-.pkg-icons{display:flex;align-items:center;justify-content:center;gap:2px;height:54px;margin-bottom:4px;}
-.pkg-icons img{height:44px;object-fit:contain;}
-.pkg-icons.double img{height:38px;}
-.pkg-icons.triple img{height:32px;}
-.pkg-icons.quad{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px;height:54px;}
-.pkg-icons.quad img{height:22px;width:100%;object-fit:contain;}
-.pkg-icons.quad span{display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--gold2);font-size:16px;
-  background:rgba(255,255,255,.06);border-radius:4px;}
-.pkg-cost{font-weight:800;color:var(--gold2);font-size:14px;}
-.pkg-sub{font-size:11px;color:#c9c3e8;margin-top:2px;}
-.modal-actions{display:flex;gap:10px;margin-top:6px;}
-.modal-actions button{flex:1;padding:11px 0;border-radius:12px;border:none;font-weight:800;cursor:pointer;font-size:14px;}
-.modal-actions .cancel{background:rgba(255,255,255,.1);color:#fff;}
-.modal-actions .confirm{background:linear-gradient(180deg,#7ee89a,#2e9e57);color:#062;}
-.modal-actions .confirm:disabled{opacity:.5;cursor:not-allowed;}
-.fs-intro{display:none;position:fixed;inset:0;z-index:150;align-items:center;justify-content:center;background:rgba(0,0,0,.55);}
-.fs-intro-text{font-family:'Amiri',serif;font-size:24px;color:var(--gold2);background:rgba(20,10,50,.92);
-  border:2px solid var(--gold2);border-radius:20px;padding:22px 30px;text-align:center;
-  box-shadow:0 0 30px rgba(255,215,0,.4);line-height:1.6;}
-.fs-intro-text b{font-size:34px;display:block;margin-top:4px;}
-.win-overlay{
-  display:none;position:fixed;inset:0;z-index:180;align-items:center;justify-content:center;
-  flex-direction:column;pointer-events:none;
-  background:radial-gradient(circle, rgba(40,10,70,.5), rgba(0,0,0,.72));
-}
-.win-overlay.show{display:flex;animation:winOverlayIn .35s ease-out;}
-@keyframes winOverlayIn{ 0%{opacity:0;transform:scale(.7);} 100%{opacity:1;transform:scale(1);} }
-.win-overlay-title{
-  font-family:'Amiri',serif;font-size:38px;font-weight:800;color:var(--gold2);letter-spacing:2px;
-  text-shadow:0 0 22px rgba(255,215,0,.85),0 3px 6px #000;
-}
-.win-overlay-amount{
-  margin-top:12px;font-size:46px;font-weight:800;color:#fff;
-  text-shadow:0 0 16px rgba(255,215,0,.7),0 2px 4px #000;
-}
-.shock-ring{
-  position:fixed; top:50%; left:50%; width:10px; height:10px;
-  border-radius:50%; border:3px solid rgba(255,215,0,.9);
-  transform:translate(-50%,-50%); pointer-events:none; z-index:170;
-  animation:shockRingBurst 1s cubic-bezier(.15,.8,.3,1) forwards;
-}
-@keyframes shockRingBurst{
-  0%{ width:10px; height:10px; opacity:1; border-width:4px; }
-  100%{ width:900px; height:900px; opacity:0; border-width:0px; }
-}
-.sound-toggle{
-  position:absolute;top:6px;right:6px;width:34px;height:34px;border-radius:50%;
-  border:1.5px solid rgba(212,164,55,.6);background:rgba(10,4,30,.6);color:#fff;
-  font-size:15px;cursor:pointer;z-index:15;
-}
-.sound-toggle.off{opacity:.5;}
-.back-btn{position:absolute;top:6px;right:6px;width:34px;height:34px;border-radius:50%;
-  border:1.5px solid rgba(212,164,55,.6);background:rgba(10,4,30,.6);color:#fff;
-  font-size:16px;line-height:1;cursor:pointer;z-index:15;}
-</style>
-
-<!-- ============ PATCH UI v5 : الكتلة A (بداية) ============ -->
-<style id="patch-ui-v5">
-/* ---- 1) العنوان و x20,000 أكبر ---- */
-.logo{font-size:32px;padding:0 14px;line-height:1.2;letter-spacing:1px;color:#ffd23a;text-shadow:0 2px 0 #7a4a00,0 0 12px rgba(255,200,0,.7);}
-.logo-max{direction:ltr;unicode-bidi:isolate;margin-top:6px;font-family:'Amiri',serif;font-weight:800;font-size:46px;line-height:1.1;
-  background:linear-gradient(180deg,#fff3a8,#ffc83a 55%,#b8761a);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
-  filter:drop-shadow(0 2px 0 #4a2a00) drop-shadow(0 0 8px rgba(255,215,0,.6));}
-
-/* ---- 2) الرموز أكبر وتعبي الخانة مثل اللعبة الأصلية ---- */
-.reels{gap:4px;margin:0 -4px;}
-.reel{padding:2px;border:2px solid #d9962e;border-image:none;border-radius:10px;
-  background:linear-gradient(180deg,#171152,#0c0826);}
-.cell img:not(.sym-blank){inset:-3%;width:106%;height:106%;}
-
-/* ---- 3) المربعات العلوية: بأعلى الشاشة + متحركة ---- */
-.suits{margin-top:0;margin-bottom:8px;}
-.suit{position:relative;animation:suitFloat 3.2s ease-in-out infinite,suitGlow 2.4s ease-in-out infinite;animation-delay:var(--d),var(--d);}
-.suit:nth-child(1){--d:0s;}
-.suit:nth-child(2){--d:-.8s;}
-.suit:nth-child(3){--d:-1.6s;}
-.suit:nth-child(4){--d:-2.4s;}
-.suit::after{content:'';position:absolute;top:0;left:-70%;width:45%;height:100%;pointer-events:none;
-  background:linear-gradient(100deg,transparent,rgba(255,255,255,.35),transparent);
-  transform:skewX(-20deg);animation:suitShine 4s ease-in-out infinite;animation-delay:var(--d);}
-@keyframes suitFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-3px);}}
-@keyframes suitGlow{0%,100%{box-shadow:0 0 0 rgba(255,215,0,0);border-color:#8a6a2a;}50%{box-shadow:0 0 10px rgba(255,215,0,.55);border-color:#e6bf5a;}}
-@keyframes suitShine{0%,55%{left:-70%;}100%{left:140%;}}
-
-/* ---- 4) مستطيل الرهانات أسود + الأرقام 1-5 ظاهرة دائماً ---- */
-.chips{background:#0b0b0f;border:1.5px solid #1d1d26;border-radius:18px;padding:12px 8px 12px;margin:12px 0 10px;}
-.chips:has(+ .levels[style*="flex"]){border-radius:18px 18px 0 0;margin-bottom:0;padding-bottom:6px;}
-.chip{background:#2a2a30;border:1.5px solid #4a4a55;color:#f2f2f2;font-size:13px;}
-.chip.active{border-color:var(--gold2);box-shadow:0 0 8px rgba(255,215,0,.5);}
-.levels{background:#0b0b0f;border:1.5px solid #1d1d26;border-top:none;border-radius:0 0 18px 18px;padding:6px 0 12px;margin:0 0 12px;}
-.lv{width:44px;height:44px;background:#34343a;border:1.5px solid #34343a;color:#fff;font-size:16px;}
-.lv.active{border-color:var(--gold2);}
-
-/* ---- 5) زر السبين: دائرة سودا بإطار فضي وسهم أبيض ---- */
-.actions{gap:10px;}
-.spin{width:100px;height:100px;padding:0;border:6px solid #cfcfdc;border-image:none;border-radius:50%;
-  background:radial-gradient(circle at 50% 35%,#2b2b33,#0a0a0e 75%);
-  box-shadow:0 0 0 2px #6b6b78,0 6px 14px rgba(0,0,0,.7),inset 0 3px 6px rgba(255,255,255,.25),inset 0 -8px 14px rgba(0,0,0,.7);}
-.spin img{display:none;}
-.spin::before{content:'';position:absolute;inset:0;margin:auto;width:52%;height:52%;box-sizing:border-box;border-radius:50%;
-  border:8px solid #e9e9f2;border-right-color:transparent;filter:drop-shadow(0 0 4px rgba(255,255,255,.5));}
-.spin.spinning::before{animation:rot .6s linear infinite;}
-.spin:disabled{opacity:.9;}
-
-/* ---- 6) زر اللعب التلقائي + باقي الأزرار الدائرية ---- */
-.rbtn{overflow:visible;width:46px;height:46px;border:3px solid #d5d5e3;
-  background:radial-gradient(circle at 50% 35%,#2b2b33,#0a0a0e);color:#fff;}
-#autoBtn{font-size:0;}
-#autoBtn::before{content:'';position:absolute;top:50%;left:50%;transform:translate(-35%,-50%);
-  border-style:solid;border-width:9px 0 9px 15px;border-color:transparent transparent transparent #fff;}
-#autoBtn.on::before{border-left-color:var(--gold2);}
-
-/* ---- 7) شريط الرصيد أسود + زر الصوت تحت يمين ---- */
-.balbar{background:rgba(0,0,0,.88);border:1.5px solid #1d1d26;border-radius:16px;padding:12px 56px;}
-.sound-toggle{top:auto;bottom:calc(15px + env(safe-area-inset-bottom));right:12px;width:36px;height:36px;
-  border:none;background:transparent;font-size:18px;}
-</style>
-<style id="patch-ui-v6">
-/* ===== نافذة البونص مثل اللعبة الأصلية ===== */
-.modal-card{display:flex;flex-direction:column;max-width:360px;padding:14px 14px 16px;
-  background:linear-gradient(180deg,#2c1c68,#1b1050);border:3px solid #f0a238;border-radius:18px;
-  box-shadow:0 0 0 2px rgba(255,214,120,.35),0 0 28px rgba(255,170,40,.45);}
-.modal-title{order:1;font-family:'Amiri',serif;font-size:36px;font-weight:800;line-height:1.1;color:#ffd23a;margin-bottom:4px;
-  text-shadow:0 3px 0 #7a4a00,0 0 16px rgba(255,200,0,.65);}
-.modal-title span{font-size:0;margin-top:0;}
-.modal-title span::after{content:'x20,000';direction:ltr;unicode-bidi:isolate;display:block;font-size:40px;font-weight:800;color:#ffd23a;
-  text-shadow:0 3px 0 #7a4a00,0 0 18px rgba(255,200,0,.75);}
-.pkg-grid{order:2;direction:ltr;gap:10px;margin:8px 0 12px;}
-.pkg{direction:rtl;padding:0;overflow:hidden;border:3px solid #cfcfdc;border-radius:12px;background:#171048;}
+.modal-overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.7);align-items:center;justify-content:center;padding:16px;}
+.modal-card{display:flex;flex-direction:column;width:100%;max-width:360px;padding:14px 14px 16px;background:linear-gradient(180deg,#2c1c68,#1b1050);border:3px solid #f0a238;border-radius:18px;box-shadow:0 0 0 2px rgba(255,214,120,.35),0 0 28px rgba(255,170,40,.45);}
+.modal-title{order:1;text-align:center;font-family:'Amiri',serif;font-size:36px;font-weight:800;line-height:1.1;color:#ffd23a;margin-bottom:4px;text-shadow:0 3px 0 #7a4a00,0 0 16px rgba(255,200,0,.65);}
+.modal-title span{display:block;font-size:0;}
+.modal-title span::after{content:'x20,000';direction:ltr;unicode-bidi:isolate;display:block;font-size:40px;font-weight:800;color:#ffd23a;text-shadow:0 3px 0 #7a4a00,0 0 18px rgba(255,200,0,.75);}
+.bet-stepper{order:3;direction:ltr;display:flex;flex-direction:row-reverse;align-items:center;justify-content:center;gap:10px;margin:4px 0 12px;}
+.bet-stepper button{width:46px;height:46px;border-radius:10px;font-size:20px;font-weight:900;cursor:pointer;}
+.bet-stepper button:first-child{background:linear-gradient(180deg,#ffb94d,#f0781a);border:2px solid #ffd58a;color:#1a1250;}
+.bet-stepper button:last-child{background:linear-gradient(180deg,#eeeef4,#8d8d99);border:2px solid #fff;color:#1b1b24;}
+.bet-disp{min-width:150px;text-align:center;padding:10px 14px;border:3px solid #e8892a;border-radius:12px;font-size:20px;font-weight:800;color:#2a1a00;background:linear-gradient(180deg,#ffeaa6,#f2b53e);}
+.pkg-grid{order:2;direction:ltr;display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0 12px;}
+.pkg{direction:rtl;padding:0;overflow:hidden;border:3px solid #cfcfdc;border-radius:12px;text-align:center;cursor:pointer;background:#171048;}
 .pkg.sel{border-color:var(--gold2);box-shadow:0 0 14px rgba(255,215,0,.55);}
-.pkg-icons{height:88px;margin:0;padding:6px 4px 0;background:linear-gradient(180deg,#2a2152,#18123f);}
-.pkg-icons img{height:60px;border:2px solid #d4d4e0;border-radius:8px;background:#1d1559;filter:grayscale(1) brightness(1.15);}
+.pkg-icons{display:flex;align-items:center;justify-content:center;gap:2px;height:88px;padding:6px 4px 0;background:linear-gradient(180deg,#2a2152,#18123f);}
+.pkg-icons img{height:60px;object-fit:contain;border:2px solid #d4d4e0;border-radius:8px;background:#1d1559;filter:grayscale(1) brightness(1.15);}
 .pkg.sel .pkg-icons img{filter:none;border-color:var(--gold2);}
 .pkg-icons.double img{height:52px;}
 .pkg-icons.triple img{height:42px;margin:0 -9px;}
 .pkg-icons.triple img:nth-child(2){height:56px;position:relative;z-index:2;}
-.pkg-icons.quad{height:88px;padding:6px;gap:4px;}
+.pkg-icons.quad{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:4px;padding:6px;}
 .pkg-icons.quad img{height:100%;width:100%;object-fit:contain;}
-.pkg-icons.quad span{font-size:0;background:#101030;border:2px solid #cfcfdc;border-radius:6px;}
+.pkg-icons.quad span{display:flex;align-items:center;justify-content:center;font-size:0;background:#101030;border:2px solid #cfcfdc;border-radius:6px;}
 .pkg-icons.quad span::after{content:'?';font-size:24px;font-weight:800;color:#ffd23a;}
 .pkg-cost,.pkg-sub{background:#7e7e8d;color:#fff;}
-.pkg-cost{padding-top:5px;font-size:15px;}
-.pkg-sub{margin-top:0;padding-bottom:5px;font-size:11px;color:#f1f1f6;}
-.bet-stepper{order:3;flex-direction:row-reverse;margin:4px 0 12px;gap:10px;}
-.bet-disp{min-width:150px;padding:10px 14px;border:3px solid #e8892a;border-radius:12px;font-size:20px;font-weight:800;color:#2a1a00;
-  background:linear-gradient(180deg,#ffeaa6,#f2b53e);}
-.bet-stepper button{width:46px;height:46px;border-radius:10px;font-weight:900;}
-.bet-stepper button:first-child{background:linear-gradient(180deg,#ffb94d,#f0781a);border:2px solid #ffd58a;color:#1a1250;}
-.bet-stepper button:last-child{background:linear-gradient(180deg,#eeeef4,#8d8d99);border:2px solid #fff;color:#1b1b24;}
-.modal-actions{order:4;margin-top:0;}
+.pkg-cost{padding-top:5px;font-weight:800;font-size:15px;}
+.pkg-sub{padding-bottom:5px;font-size:11px;color:#f1f1f6;}
+.modal-actions{order:4;display:flex;gap:10px;}
+.modal-actions button{flex:1;padding:11px 0;border-radius:12px;border:none;font-weight:800;cursor:pointer;font-size:14px;}
+.modal-actions .cancel{background:rgba(255,255,255,.1);color:#fff;border:2px solid #4a4a60;}
 .modal-actions .confirm{background:linear-gradient(180deg,#bcd2bd,#6f8f78);color:#26352a;border:3px solid #dcdce6;}
-.modal-actions .cancel{border:2px solid #4a4a60;}
+.fs-intro{display:none;position:fixed;inset:0;z-index:150;align-items:center;justify-content:center;background:rgba(0,0,0,.55);}
+.fs-intro-text{font-family:'Amiri',serif;font-size:24px;color:var(--gold2);background:rgba(20,10,50,.92);border:2px solid var(--gold2);border-radius:20px;padding:22px 30px;text-align:center;box-shadow:0 0 30px rgba(255,215,0,.4);line-height:1.6;}
+.fs-intro-text b{font-size:34px;display:block;margin-top:4px;}
+.shock-ring{position:fixed;top:50%;left:50%;width:10px;height:10px;border-radius:50%;border:3px solid rgba(255,215,0,.9);transform:translate(-50%,-50%);pointer-events:none;z-index:170;animation:shockRingBurst 1s cubic-bezier(.15,.8,.3,1) forwards;}
+@keyframes shockRingBurst{0%{width:10px;height:10px;opacity:1;border-width:4px;}100%{width:900px;height:900px;opacity:0;border-width:0;}}
+.sound-toggle{position:absolute;bottom:calc(15px + env(safe-area-inset-bottom));right:12px;width:36px;height:36px;border:none;background:transparent;color:#fff;font-size:18px;cursor:pointer;z-index:15;}
+.sound-toggle.off{opacity:.5;}
+.back-btn{position:absolute;top:6px;right:6px;width:34px;height:34px;border-radius:50%;border:1.5px solid rgba(212,164,55,.6);background:rgba(10,4,30,.6);color:#fff;font-size:16px;line-height:1;cursor:pointer;z-index:15;}
+
+/* ===== نافذة البونص ===== */
+#bonusScreen{position:absolute;inset:0;display:none;background:#07040d;z-index:5;}
+.bonus-wrap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:url(images/bonus-bg.jpg) center/100% 100% no-repeat;}
+#reels.bonus-mode{position:absolute;margin:0;left:10.98%;top:36.61%;width:75.72%;gap:0 2.49%;z-index:2;}
+#reels.bonus-mode .reel{border:0;padding:0;background:none;box-shadow:none;border-radius:0;}
+#reels.bonus-mode .reel::before{display:none;}
+#reels.bonus-mode .cell{aspect-ratio:123/107.33;}
+#reels.bonus-mode .wild-mult{font-size:4em;line-height:1.5;padding:0 .6em;border-width:2px;bottom:.8em;}
+.bhud{position:absolute;left:0;right:0;top:80.3%;display:flex;justify-content:center;gap:2em;z-index:3;font-family:'Cairo',sans-serif;font-weight:700;font-size:3.2em;line-height:1.5;color:#ffd23a;}
+.bhud span{padding:0 1.2em;border-radius:2em;background:rgba(0,0,0,.65);border:1px solid #b8862b;text-shadow:0 2px 3px #000;}
+.bhud b{color:#fff;}
+/* ===== نافذة BIG WIN / MEGA WIN / TOTAL WIN (بدون خلفية سودا) ===== */
+#winPop{position:fixed;inset:0;z-index:190;display:none;align-items:center;justify-content:center;background:none;pointer-events:none;}
+#winPop.show{display:flex;animation:wpIn .35s ease-out;}
+#winPop.collect{pointer-events:auto;}
+@keyframes wpIn{from{opacity:0;transform:scale(.8);}to{opacity:1;transform:scale(1);}}
+.wp-card{position:relative;direction:ltr;text-align:center;background:url(images/win-frame.png) center/100% 100% no-repeat;filter:drop-shadow(0 .5em 1em rgba(0,0,0,.6));}
+.wp-title,.wp-amount{position:absolute;left:0;right:0;font-family:Cinzel,'Amiri',serif;font-weight:900;line-height:1.1;-webkit-background-clip:text;background-clip:text;color:transparent;}
+.wp-title{top:13%;font-size:9.5em;background-image:linear-gradient(180deg,#fff2a8,#f5b82e 55%,#a8661a);}
+.wp-amount{top:41%;font-size:12em;background-image:linear-gradient(180deg,#fff,#f3e6c2 55%,#c9a15a);}
+.wp-label{position:absolute;left:0;right:0;top:72%;direction:rtl;font-family:'Cairo',sans-serif;font-weight:700;font-size:4.2em;color:#f5e9c8;}
+.wp-collect{position:absolute;left:50%;bottom:-4%;transform:translateX(-50%);width:48%;padding:.35em 0;display:none;cursor:pointer;font-size:4em;font-weight:800;color:#ffd23a;border:.1em solid #d9ad55;border-radius:.35em;background:linear-gradient(180deg,#8b2a9e,#5a1470);box-shadow:0 .1em .3em rgba(0,0,0,.6),0 0 .6em rgba(180,80,220,.5);}
+.wp-collect span:first-child{font-family:Cinzel,serif;font-weight:900;margin-left:.3em;}
+.wp-collect span:last-child{font-family:'Cairo',sans-serif;}
+.wp-card.total{background-image:url(images/total-win-frame.png);}
+.wp-card.total .wp-title{display:none;}
+.wp-card.total .wp-amount{left:19.6%;right:19.6%;top:40.7%;height:35.6%;display:flex;align-items:center;justify-content:center;line-height:1;}
+.wp-card.total .wp-label{top:79%;}
 </style>
-<style id="patch-ui-v7">
-/* ===== الشجرة تغطي الرموز وتطلع فوق البكرة ===== */
-.expand-wild{overflow:visible;background:linear-gradient(180deg,#171152,#0c0826);border-radius:8px;transform-origin:center bottom;}
-.expand-wild img{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:115%;height:115%;max-width:none;max-height:none;object-fit:fill;-webkit-mask-image:none;mask-image:none;}
-.wild-mult{position:absolute;left:50%;bottom:-16px;transform:translateX(-50%);z-index:20;pointer-events:none;direction:ltr;
-  padding:0 12px;border-radius:14px;border:2px solid #e8892a;background:linear-gradient(180deg,#ffeaa6,#f2b53e);
-  font-family:'Cairo',sans-serif;font-size:18px;font-weight:800;line-height:26px;color:#2a1a00;
-  box-shadow:0 2px 6px rgba(0,0,0,.6),0 0 10px rgba(255,215,0,.6);animation:multPop .45s cubic-bezier(.2,.9,.3,1.4) both;}
-@keyframes multPop{0%{transform:translateX(-50%) scale(0);opacity:0;}100%{transform:translateX(-50%) scale(1);opacity:1;}}
-</style>
-<!-- ============ PATCH UI v5 : الكتلة A (نهاية) ============ -->
 </head>
 <body>
 
-<!-- بقع ضبابية متحركة -->
 <div class="orb" style="width:180px;height:180px;top:10%;left:5%"></div>
 <div class="orb" style="width:220px;height:220px;top:45%;right:-5%;animation-delay:-4s"></div>
 <div class="orb" style="width:160px;height:160px;bottom:8%;left:20%;animation-delay:-8s"></div>
@@ -430,7 +208,7 @@ button:disabled{opacity:.5;cursor:not-allowed;}
   <div class="game-title">Tree of Chronos</div>
   <div class="loading-bar-wrap"><div id="loadingBar"></div></div>
   <div id="loadingPct">0%</div>
-  <div id="verTag" style="margin-top:6px;font-size:11px;color:#8f86b8;">v4</div>
+  <div id="verTag" style="margin-top:6px;font-size:11px;color:#8f86b8;">v5</div>
 </div>
 
 <div id="gameScreen">
@@ -450,12 +228,11 @@ button:disabled{opacity:.5;cursor:not-allowed;}
       <div class="logo-max">×20,000</div>
     </div>
 
-    <div class="reels" id="reels"></div>
+    <div id="reelsHome"><div class="reels" id="reels"></div></div>
 
     <div class="result" id="result"></div>
 
     <div class="bottom">
-
     <div class="chips" id="chips"></div>
     <div class="levels" id="levels"></div>
     <div class="actions">
@@ -470,37 +247,40 @@ button:disabled{opacity:.5;cursor:not-allowed;}
       <button class="rbtn" id="autoBtn" onclick="startAuto()">▶<span class="cnt" id="autoCnt" style="display:none"></span></button>
       <div class="spin-wrap">
         <span class="cnt emerald" id="freeCnt" style="display:none;"></span>
-        <button class="spin" id="spinBtn" onclick="spin()"><img src="images/spin-icon.jpg" alt="" onerror="this.replaceWith(document.createTextNode('🔄'))"></button>
+        <button class="spin" id="spinBtn" onclick="spin()"><img src="images/spin-icon.jpg" alt=""></button>
       </div>
       <button class="rbtn" id="speedBtn" onclick="cycleSpeed()">⚡</button>
       <button class="rbtn" id="coinBtn" onclick="toggleLevels()">🪙</button>
     </div>
-
     <div class="balbar">NSP <b id="balance">...</b></div>
     </div>
   </div>
   </div>
+
+  <div id="bonusScreen">
+    <div class="bonus-wrap" id="bonusWrap">
+      <div class="bhud"><span>لفات متبقية: <b id="bLeft">0</b></span><span>مكسب البونص: <b id="bWin">0</b></span></div>
+    </div>
+  </div>
 </div>
 
-<div class="fs-intro" id="fsIntro">
-  <div class="fs-intro-text">لديك<b id="fsIntroCount">5</b>لفات مجانية</div>
-</div>
+<div id="winPop"><div class="wp-card" id="wpCard">
+  <div class="wp-title" id="wpTitle"></div>
+  <div class="wp-amount" id="wpAmount"></div>
+  <div class="wp-label" id="wpLabel"></div>
+  <button class="wp-collect" id="wpCollect"><span>COLLECT</span><span>الأرباح</span></button>
+</div></div>
 
-<div class="win-overlay" id="winOverlay">
-  <div class="win-overlay-title" id="winOverlayTitle">BIG WIN</div>
-  <div class="win-overlay-amount" id="winOverlayAmount">0</div>
-</div>
+<div class="fs-intro" id="fsIntro"><div class="fs-intro-text">لديك<b id="fsIntroCount">5</b>لفات مجانية</div></div>
 
 <div class="modal-overlay" id="buyModal">
   <div class="modal-card">
     <div class="modal-title">BUY BONUS<span>الحد الأقصى ×20,000</span></div>
-
     <div class="bet-stepper">
       <button onclick="bonusStepBet(1)">+</button>
       <div class="bet-disp" id="bonusBetDisplay">300 NSP</div>
       <button onclick="bonusStepBet(-1)">−</button>
     </div>
-
     <div class="pkg-grid">
       <div class="pkg" onclick="selectPkg(this,'1')">
         <div class="pkg-icons single"><img src="images/wild-base.png" alt=""></div>
@@ -545,28 +325,21 @@ window.__dataReady=false;
 (function(){
   var vid=document.getElementById('splashVideo');
   var bar=document.getElementById('loadingBar'), pct=document.getElementById('loadingPct');
-  var started=false, vidPlaying=false, waitingTap=false, lastT=-1, lastMove=Date.now(), p=0, t0=null, iv=null;
+  var started=false, waitingTap=false, lastT=-1, lastMove=Date.now(), p=0, t0=null, iv=null;
   function done(){
     document.getElementById('splashScreen').style.display='none';
     document.getElementById('gameScreen').style.display='block';
     if(window.__fitStage) window.__fitStage();
   }
   window.addEventListener('error',function(e){ pct.textContent='خطأ: '+e.message; console.error(e); });
-  /* 🆕 شريط التحميل بيبدأ بس يخلص فيديو المقدمة (أو لو الفيديو فشل/ما اشتغل بعد 8 ثواني) */
   function beginProgress(){
     if(started) return;
-    started=true;
-    t0=Date.now();
-    window.__loadRequested=true;
+    started=true; t0=Date.now(); window.__loadRequested=true;
     if(window.__startLoading) window.__startLoading();
     iv=setInterval(function(){
       if(p<50){ p=Math.min(50,p+Math.random()*6+3); }
       else if(!window.__dataReady){
-        /* واقف على 50 لحد ما يتأكد تحميل كل الرموز والرصيد، أو يمر 3 دقايق ويفتح */
-        if(Date.now()-t0>180000){
-          if(window.__forceEnter) window.__forceEnter();
-          window.__dataReady=true;
-        }
+        if(Date.now()-t0>180000){ if(window.__forceEnter) window.__forceEnter(); window.__dataReady=true; }
       }
       else { p+=Math.random()*8+4; }
       if(p>=100){ p=100; clearInterval(iv); setTimeout(done,300); }
@@ -574,11 +347,8 @@ window.__dataReady=false;
     },130);
   }
   if(vid){
-    function unmuteVid(){
-      try{ vid.muted=false; vid.volume=1; if(vid.paused && !vid.ended) vid.play().catch(function(){}); }catch(e){}
-    }
+    function unmuteVid(){ try{ vid.muted=false; vid.volume=1; if(vid.paused && !vid.ended) vid.play().catch(function(){}); }catch(e){} }
     ['click','touchend'].forEach(function(ev){ document.getElementById('splashScreen').addEventListener(ev, unmuteVid, {once:true}); });
-    vid.addEventListener('playing', function(){ vidPlaying=true; });
     vid.addEventListener('ended', beginProgress);
     vid.addEventListener('error', beginProgress);
     var playPromise=vid.play();
@@ -586,36 +356,24 @@ window.__dataReady=false;
       waitingTap=true;
       var sp=document.getElementById('splashScreen');
       pct.textContent='المسي الشاشة لتشغيل الفيديو';
-      sp.onclick=function(){
-        sp.onclick=null;
-        pct.textContent='0%';
-        var pp=vid.play();
-        if(pp && pp.catch) pp.catch(beginProgress);
-      };
+      sp.onclick=function(){ sp.onclick=null; pct.textContent='0%'; var pp=vid.play(); if(pp && pp.catch) pp.catch(beginProgress); };
     });
-    /* حارس: بيكمّل بس لو الفيديو واقف تماماً (ما تحرك) 60 ثانية، مو بسبب بطء النت */
     setInterval(function(){
       if(started) return;
       if(vid.currentTime!==lastT){ lastT=vid.currentTime; lastMove=Date.now(); }
       else if(Date.now()-lastMove>(waitingTap?120000:60000)) beginProgress();
     },1000);
-  } else {
-    beginProgress();
-  }
+  } else { beginProgress(); }
 })();
 </script>
 <script type="module">
 let dbApi = null;
-
 const tg = window.Telegram?.WebApp;
 try { tg?.expand(); tg?.ready(); } catch(e){}
 
-/* ===== زر الرجوع للوبي =====
-   اللوبي بيفتح اللعبة بـ location.href من مجلد golden-tree، فالرجوع للوبي هو الصفحة الأم (../index.html).
-   أولاً بنرجع بالتاريخ (هيك اللوبي بيتخطى فيديو المقدمة)، وإذا ما في تاريخ بنفتح اللوبي بالرابط مع بيانات تيليجرام. */
 const LOBBY_URL = '../index.html';
 window.goLobby = () => {
-  if(spinning || inFree){
+  if(spinning || inFree || bonusOpen){
     $('result').innerHTML = '<span class="lose-t">استنّى تخلص اللفة الحالية</span>';
     return;
   }
@@ -652,10 +410,9 @@ const PAY = {
   scatterDollar:{3:10,4:40,5:200},
   scatterStar:{3:40}
 };
-/* أسعار البونص (×الرهان) - مثل اللعبة الأصلية: على رهان 300 = 30 ألف / 60 ألف / 105 ألف / العشوائي 80 ألف */
+/* أسعار البونص (×الرهان) */
 const BONUS_COST_MULT = { '1':100, '2':200, '3':350, 'r':800/3 };
-/* معامل أرباح اللفات المجانية لكل باقة: محسوب بمحاكاة (100 ألف بونص لكل باقة) ليرجع للاعب حوالي 80% من سعر الباقة (ربح البيت 20%).
-   لو بدك رجوع أعلى ارفع الأرقام كلها بنفس النسبة، ولو بدك أقل نزّلها. */
+/* معامل أرباح اللفات المجانية لكل باقة (رجوع للاعب حوالي 80%) */
 const BONUS_PAY_SCALE = { '1':2.27, '2':0.424, '3':0.1195, 'r':0.232 };
 let bonusPkg = null;
 
@@ -663,33 +420,17 @@ function R(n){ return Math.round(n); }
 
 const SoundEngine = (() => {
   let ctx = null;
-  /* ===== مستويات الصوت: عدّل الأرقام من هون (من 0 لـ 1) ===== */
-  const VOL = {
-    bg:       0.12,  /* صوت الخلفية */
-    reel:     0.12,  /* صوت ضغطة السبين */
-    reelStop: 0.6,   /* صوت وقوف كل بكرة (مضاعف) */
-    wild:     0.22,  /* صوت نزول الشجرة */
-    bonus:    0.15,  /* صوت اختيار وشراء البونص */
-    big:      0.3,   /* صوت البيج وين والميجا وين */
-    win:      0.25,  /* صوت الفوز العادي (3 رموز متطابقة) */
-    star:     0.25,  /* صوت نزول النجمة */
-    dollar:   0.25,  /* صوت نزول الدولار */
-    synth:    0.6    /* الأصوات المولّدة (مكاسب عادية) */
-  };
+  const VOL = { bg:0.12, reel:0.12, reelStop:0.6, wild:0.22, bonus:0.15, big:0.3, win:0.25, star:0.25, dollar:0.25, synth:0.6 };
   function ac(){
-    if(!ctx){
-      try{ ctx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ ctx=null; }
-    }
+    if(!ctx){ try{ ctx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ ctx=null; } }
     if(ctx && ctx.state === 'suspended') ctx.resume().catch(()=>{});
     return ctx;
   }
   function tone(freq, dur, type='sine', vol=0.25, startDelay=0, freqEnd=null){
     const c = ac(); if(!c) return;
     const t0 = c.currentTime + startDelay;
-    const osc = c.createOscillator();
-    const gain = c.createGain();
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, t0);
+    const osc = c.createOscillator(); const gain = c.createGain();
+    osc.type = type; osc.frequency.setValueAtTime(freq, t0);
     if(freqEnd) osc.frequency.exponentialRampToValueAtTime(freqEnd, t0+dur);
     gain.gain.setValueAtTime(0, t0);
     gain.gain.linearRampToValueAtTime(vol*VOL.synth, t0+0.012);
@@ -704,25 +445,21 @@ const SoundEngine = (() => {
     const buffer = c.createBuffer(1, bufferSize, c.sampleRate);
     const data = buffer.getChannelData(0);
     for(let i=0;i<bufferSize;i++) data[i] = (Math.random()*2-1) * (1 - i/bufferSize);
-    const src = c.createBufferSource();
-    src.buffer = buffer;
-    const filt = c.createBiquadFilter();
-    filt.type='lowpass'; filt.frequency.value = filterFreq;
+    const src = c.createBufferSource(); src.buffer = buffer;
+    const filt = c.createBiquadFilter(); filt.type='lowpass'; filt.frequency.value = filterFreq;
     const gain = c.createGain();
     gain.gain.setValueAtTime(vol*VOL.synth, t0);
     gain.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
     src.connect(filt); filt.connect(gain); gain.connect(c.destination);
     src.start(t0);
   }
-
   const bgMusicEl = document.getElementById('bgMusic');
   let musicBroken = false;
   if(bgMusicEl){
     bgMusicEl.volume = VOL.bg;
-    bgMusicEl.addEventListener('error', ()=>{ musicBroken = true; console.warn('bg-music.mp3 فشل تحميلها، رح نستخدم المولّدة بدلها'); startAmbientSynth(); });
+    bgMusicEl.addEventListener('error', ()=>{ musicBroken = true; startAmbientSynth(); });
   }
-  let ambientOn = false;
-  let ambientNodes = null;
+  let ambientOn = false, ambientNodes = null;
   function startAmbientSynth(){
     const c = ac(); if(!c || ambientNodes) return;
     ambientOn = true;
@@ -730,39 +467,25 @@ const SoundEngine = (() => {
     master.gain.setValueAtTime(0, c.currentTime);
     master.gain.linearRampToValueAtTime(0.028, c.currentTime + 2);
     master.connect(c.destination);
-    const freqs = [130.81, 196.0, 246.94];
-    const oscs = freqs.map(f=>{
-      const osc = c.createOscillator();
-      osc.type = 'sine';
-      osc.frequency.value = f;
-      const g = c.createGain();
-      g.gain.value = 0.5;
-      osc.connect(g); g.connect(master);
-      osc.start();
-      return osc;
+    const oscs = [130.81, 196.0, 246.94].map(f=>{
+      const osc = c.createOscillator(); osc.type = 'sine'; osc.frequency.value = f;
+      const g = c.createGain(); g.gain.value = 0.5;
+      osc.connect(g); g.connect(master); osc.start(); return osc;
     });
-    const lfo = c.createOscillator();
-    lfo.frequency.value = 0.06;
-    const lfoGain = c.createGain();
-    lfoGain.gain.value = 0.02;
-    lfo.connect(lfoGain); lfoGain.connect(master.gain);
-    lfo.start();
+    const lfo = c.createOscillator(); lfo.frequency.value = 0.06;
+    const lfoGain = c.createGain(); lfoGain.gain.value = 0.02;
+    lfo.connect(lfoGain); lfoGain.connect(master.gain); lfo.start();
     ambientNodes = { master, oscs, lfo };
   }
   function stopAmbientSynth(){
     if(!ambientNodes) return;
-    const c = ac();
-    const t = c ? c.currentTime : 0;
+    const c = ac(); const t = c ? c.currentTime : 0;
     ambientNodes.master.gain.linearRampToValueAtTime(0, t+0.6);
-    setTimeout(()=>{
-      try{ ambientNodes.oscs.forEach(o=>o.stop()); ambientNodes.lfo.stop(); }catch(e){}
-      ambientNodes = null;
-    }, 700);
+    setTimeout(()=>{ try{ ambientNodes.oscs.forEach(o=>o.stop()); ambientNodes.lfo.stop(); }catch(e){} ambientNodes = null; }, 700);
     ambientOn = false;
   }
   function startAmbient(){
-    if(musicBroken){ startAmbientSynth(); return; }
-    if(!bgMusicEl) { startAmbientSynth(); return; }
+    if(musicBroken || !bgMusicEl){ startAmbientSynth(); return; }
     bgMusicEl.play().then(()=>{ ambientOn = true; }).catch(()=>{ startAmbientSynth(); });
   }
   function stopAmbient(){
@@ -770,23 +493,18 @@ const SoundEngine = (() => {
     if(ambientNodes) stopAmbientSynth();
     ambientOn = false;
   }
-
   const sfxSpinEl = document.getElementById('sfxSpin');
   const sfxWildEl = document.getElementById('sfxWild');
   let sfxSpinBroken = false, sfxWildBroken = false;
   if(sfxSpinEl){ sfxSpinEl.volume = VOL.reel; sfxSpinEl.addEventListener('error', ()=>{ sfxSpinBroken = true; }); }
   if(sfxWildEl){ sfxWildEl.volume = VOL.wild; sfxWildEl.addEventListener('error', ()=>{ sfxWildBroken = true; }); }
   function playClick(){
-    if(sfxSpinEl && !sfxSpinBroken){
-      try{ sfxSpinEl.currentTime = 0; sfxSpinEl.play().catch(()=>{ synthClick(); }); return; }catch(e){}
-    }
+    if(sfxSpinEl && !sfxSpinBroken){ try{ sfxSpinEl.currentTime = 0; sfxSpinEl.play().catch(()=>{ synthClick(); }); return; }catch(e){} }
     synthClick();
   }
   function synthClick(){ noiseBurst(0.05,0.10,0,4000); tone(900,0.04,'square',0.04); }
   function playWildDrop(){
-    if(sfxWildEl && !sfxWildBroken){
-      try{ sfxWildEl.currentTime = 0; sfxWildEl.play().catch(()=>{ synthWildDrop(); }); return; }catch(e){}
-    }
+    if(sfxWildEl && !sfxWildBroken){ try{ sfxWildEl.currentTime = 0; sfxWildEl.play().catch(()=>{ synthWildDrop(); }); return; }catch(e){} }
     synthWildDrop();
   }
   function synthWildDrop(){
@@ -794,27 +512,20 @@ const SoundEngine = (() => {
     [660,880,1320].forEach((f,i)=> tone(f,0.35,'triangle',0.12,0.04+i*0.05));
     [1568,1976,2349].forEach((f,i)=> tone(f,0.5,'sine',0.22,0.02+i*0.03));
   }
-
   function playCopy(id, vol, fallback){
     const el = document.getElementById(id);
-    if(el){
-      try{ const a = el.cloneNode(true); a.volume = vol; a.play().catch(()=>{ if(fallback) fallback(); }); return; }catch(e){}
-    }
+    if(el){ try{ const a = el.cloneNode(true); a.volume = vol; a.play().catch(()=>{ if(fallback) fallback(); }); return; }catch(e){} }
     if(fallback) fallback();
   }
   function playEl(id, vol, fallback){
     const el = document.getElementById(id);
-    if(el){
-      try{ el.volume = vol; el.currentTime = 0; el.play().catch(()=>{ if(fallback) fallback(); }); return; }catch(e){}
-    }
+    if(el){ try{ el.volume = vol; el.currentTime = 0; el.play().catch(()=>{ if(fallback) fallback(); }); return; }catch(e){} }
     if(fallback) fallback();
   }
-
   return {
     unlock(){ ac(); startAmbient(); },
     toggleAmbient(){ if(ambientOn) stopAmbient(); else startAmbient(); return ambientOn; },
     click(){ playClick(); },
-    reelTick(){ tone(500 + Math.random()*150, 0.035, 'square', 0.025); },
     reelStop(){ noiseBurst(0.06,0.08*VOL.reelStop,0,1800); tone(180,0.08,'sine',0.08*VOL.reelStop); },
     wildDrop(){ playWildDrop(); },
     win(){ playEl('sfxWin', VOL.win, ()=>{ [523,659,784].forEach((f,i)=> tone(f,0.22,'triangle',0.18,i*0.09)); }); },
@@ -823,25 +534,12 @@ const SoundEngine = (() => {
     niceWin(){ playEl('sfxWin', VOL.win, ()=>{ [587,740,880,987].forEach((f,i)=> tone(f,0.25,'triangle',0.19,i*0.08)); }); },
     buyBonus(){ playEl('sfxBuy', VOL.bonus); },
     pickBonus(){ playEl('sfxPick', VOL.bonus); },
-    bigWin(){
-      playEl('sfxBig', VOL.big, ()=>{
-        [523,659,784,1047].forEach((f,i)=> tone(f,0.3,'triangle',0.2,i*0.11));
-        noiseBurst(0.3,0.08,0.3,6000);
-      });
-    },
-    megaWin(){
-      playEl('sfxBig', VOL.big, ()=>{
-        [392,523,659,784,988,1175,1568].forEach((f,i)=> tone(f,0.4,'triangle',0.22,i*0.09));
-        noiseBurst(0.5,0.12,0.5,7000);
-        tone(1568,0.6,'sawtooth',0.06,0.55);
-      });
-    },
-    freeSpins(){ [660,880,1100,1320].forEach((f,i)=> tone(f,0.25,'triangle',0.16,i*0.08)); }
+    bigWin(){ playEl('sfxBig', VOL.big, ()=>{ [523,659,784,1047].forEach((f,i)=> tone(f,0.3,'triangle',0.2,i*0.11)); noiseBurst(0.3,0.08,0.3,6000); }); },
+    megaWin(){ playEl('sfxBig', VOL.big, ()=>{ [392,523,659,784,988,1175,1568].forEach((f,i)=> tone(f,0.4,'triangle',0.22,i*0.09)); noiseBurst(0.5,0.12,0.5,7000); tone(1568,0.6,'sawtooth',0.06,0.55); }); }
   };
 })();
 
 const LINES = [[1,1,1,1,1],[0,0,0,0,0],[2,2,2,2,2],[0,1,2,1,0],[2,1,0,1,2],[0,0,1,2,2],[2,2,1,0,0],[1,2,2,2,1],[1,0,0,0,1],[0,1,1,1,0]];
-/* أوزان مضاعفات الشجرة (معدّلة): x2/x3 نادرة، وx5/x10 تقريباً مرة كل 100 لفة. لزيادة x5/x10 ارفع رقميها، لتقليلها نزّلهن */
 const WMULTS = [{val:1,weight:7000},{val:2,weight:700},{val:3,weight:300},{val:5,weight:1500},{val:10,weight:500}];
 const LEVELS = [
   [300,600,1200,1500,3000],
@@ -860,9 +558,10 @@ const pick = l => { let r=Math.random()*l.reduce((s,x)=>s+x.weight,0); for(const
 let balance=0, bet=300, spinning=false, totalSpins=0, totalWins=0;
 let inFree=false, freeLeft=0, freeWin=0;
 let guaranteedWildsPerSpin=0;
-let randomTrees=false; /* البونص العشوائي: عدد الأشجار (1-3) بيتغيّر عشوائياً بكل لفة مجانية */
+let randomTrees=false;
 let pendingPkg=null;
 let currentGrid=null;
+let bonusOpen=false;
 const $ = id => document.getElementById(id);
 
 const SYMS_NO_BLANK = SYMS.filter(s => s.key !== 'blank');
@@ -871,20 +570,9 @@ const SYMS_NO_BLANK_NO_WILD = SYMS.filter(s => s.key !== 'blank' && s.key !== 'w
 let lastBlankReels = new Set();
 let spinsSinceWild = 0;
 const WILD_PITY_SPINS = 20;
-/* ===== إعدادات المدير (Game Manager) =====
-   MAX_WIN_MULT : أقصى ربح للفة الواحدة = الرهان × هالرقم (النص المكتوب باللعبة ×20,000 ما انلمس)
-   GOV_RATIO    : سقف مجموع أرباح اللاعب بالجلسة = إجمالي رهاناته × هالرقم (+ المخزّن)
-   GOV_BUFFER   : مخزّن أمان بوحدات الرهان (يسمح بربح أولي/كبير قبل ما يشتغل الضابط)
-   الاختبار (محاكاة): 1.5 و 300 ⇒ نسبة رجوع للاعب ≈ 82% وللمنصّة ≈ 18%.
-   لتقليل ربح اللاعب نزّل GOV_RATIO (مثلاً 1.3 و 200 ⇒ ≈ 79%). */
-const MAX_WIN_MULT = 5000; /* أقصى ربح للفة، ولمجموع البونص كامل = الرهان × هالرقم */
-const GOV_RATIO = 1.5;
-const GOV_BUFFER = 300;
-/* حساب ضابط منفصل لكل مستوى رهان (ما بيقدر اللاعب يبني رصيد ضابط برهان صغير ويستعمله برهان كبير).
-   ratio : سقف الرجوع للاعب بالمدى الطويل | buf : مخزّن بوحدات الرهان (يسمح بربح أولي قبل ما يشتغل الضابط)
-   الرهانات الكبيرة أقسى (لاعب الرهان الكبير لازم "يحرق" أكتر قبل ما يربح) */
+/* إعدادات المدير: MAX_WIN_MULT أقصى ربح للفة/للبونص = الرهان × الرقم، وgovTier ضابط نسبة الرجوع لكل مستوى رهان */
+const MAX_WIN_MULT = 5000;
 function govTier(){
-  /* كل ما زاد الرهان صار الضابط أقسى (بالمدى الطويل اللاعب بيسترجع أقل) */
   if(bet<=600)    return {ratio:1.5,  buf:300};
   if(bet<=1200)   return {ratio:0.9,  buf:40};
   if(bet<=1500)   return {ratio:0.8,  buf:20};
@@ -901,16 +589,13 @@ function poolForReel(r, avoidBlank, allowWild){
   if(r===1 || r===3) p = allowWild ? SYMS_NO_BLANK : SYMS_NO_BLANK_NO_WILD;
   else if(avoidBlank) p = allowWild ? SYMS_NO_BLANK : SYMS_NO_BLANK_NO_WILD;
   else p = allowWild ? SYMS : SYMS_NO_WILD;
-  /* النجمة بتنزل بس على البكرات الأولى والثالثة والخامسة */
   return (r===1 || r===3) ? p.filter(x=>x.key!=='scatterStar') : p;
 }
-
 function randomCell(pool){
   const key = pick(pool).key, c={key};
   if(key==='wild') c.mult = pick(WMULTS).val;
   return c;
 }
-function randomColumn(pool){ return Array.from({length:ROWS}, ()=>randomCell(pool)); }
 
 function makeGrid(){
   if(randomTrees) guaranteedWildsPerSpin = 1 + Math.floor(Math.random()*3);
@@ -932,7 +617,6 @@ function makeGrid(){
     });
     grid.push(col);
   }
-  /* ممنوع النجمة والدولار يجتمعوا بنفس البكرة: لو اجتمعوا بنستبدل الدولار برمز عادي */
   for(let r=0;r<REELS;r++){
     const hasStar = grid[r].some(c=>c.key==='scatterStar');
     const hasDollar = grid[r].some(c=>c.key==='scatterDollar');
@@ -943,14 +627,12 @@ function makeGrid(){
     }
   }
   if(guaranteedWildsPerSpin>0){
-    /* شجرة وحدة فقط بكل بكرة: منختار بكرات مختلفة، وبكل وحدة صف عشوائي */
     const reelOrder=[0,1,2,3,4].sort(()=>Math.random()-0.5);
     for(let i=0;i<Math.min(guaranteedWildsPerSpin,REELS);i++){
       const r=reelOrder[i], row=Math.floor(Math.random()*ROWS);
       grid[r][row] = { key:'wild', mult: pick(WMULTS).val };
     }
   }
-  /* أمان: ممنوع شجرتين بنفس البكرة (بنستبدل الزيادة برمز عادي) */
   for(let r=0;r<REELS;r++){
     let seenWild=false;
     grid[r] = grid[r].map(c=>{
@@ -974,19 +656,12 @@ function makeGrid(){
   lastBlankReels = newBlankReels;
   return grid;
 }
-function imgOf(c){
-  if(c.key==='wild') return WILD_IMG[c.mult];
-  return SYMS.find(s=>s.key===c.key).img;
-}
-function emojiOf(c){
-  if(c.key==='wild') return '🌳';
-  return SYMS.find(s=>s.key===c.key).e;
-}
+function imgOf(c){ return c.key==='wild' ? WILD_IMG[c.mult] : SYMS.find(s=>s.key===c.key).img; }
+function emojiOf(c){ return c.key==='wild' ? '🌳' : SYMS.find(s=>s.key===c.key).e; }
 
 function cellHTML(c, isWin){
   const badge = c.key==='wild' && c.mult===10 ? '<span class="badge">x10</span>' : '';
-  const wildClass = (isWin && c.key==='wild') ? ' wild-win' : '';
-  return `<div class="cell dropping ${isWin?'win'+wildClass:''}"><img class="sym-${c.key}" src="${imgOf(c)}" alt="" onerror="this.replaceWith(document.createTextNode('${emojiOf(c)}'))">${badge}</div>`;
+  return `<div class="cell dropping ${isWin?'win':''}"><img class="sym-${c.key}" src="${imgOf(c)}" alt="" onerror="this.replaceWith(document.createTextNode('${emojiOf(c)}'))">${badge}</div>`;
 }
 function renderReelColumn(r, cells, winRowsForReel){
   const el = document.getElementById('reelCol'+r);
@@ -1008,19 +683,17 @@ function render(grid, wins=[]){
   }
 }
 
-/* ===== دوران حقيقي: شريط عمودي ينزل ويوقف ===== */
 function rollReel(r, oldCells, finalCells, ms){
   return new Promise(res=>{
     const col = document.getElementById('reelCol'+r);
     if(!col){ res(); return; }
     const mid = Array.from({length:10+r*4}, ()=>randomCell(poolForReel(r)));
     const all = [...finalCells, ...mid, ...oldCells];
-    // نثبت ارتفاع البكرة قبل ما نحط الشريط الطويل
     const lockedH = col.offsetHeight;
     col.style.height = lockedH+'px';
     col.innerHTML = '<div class="strip">'+all.map(c=>cellHTML(c,false).replace(' dropping','')).join('')+'</div>';
     const strip = col.firstChild;
-    const h = strip.children[0].offsetHeight + 2;
+    const h = strip.offsetHeight / all.length;
     strip.style.transform = `translateY(${-(all.length-ROWS)*h}px)`;
     strip.getBoundingClientRect();
     strip.style.transition = `transform ${ms}ms cubic-bezier(.15,.7,.25,1)`;
@@ -1051,17 +724,22 @@ function drawWinLines(winLinesCells){
     svg.appendChild(poly);
   });
 }
-function clearWinLines(){
-  const svg = document.getElementById('lineOverlay');
-  if(svg) svg.innerHTML='';
+function clearWinLines(){ const svg = document.getElementById('lineOverlay'); if(svg) svg.innerHTML=''; }
+
+/* تلوين الخانات الرابحة بدون إعادة رسم (هيك ما بتختفي ولا بتوميض الرموز) */
+function markWins(wins){
+  wins.forEach(([r,row])=>{
+    const col = document.getElementById('reelCol'+r);
+    const cell = col && col.children[row];
+    if(cell && cell.classList.contains('cell')) cell.classList.add('win');
+  });
 }
 
 function spawnSparks(container, count){
   for(let i=0;i<count;i++){
     const s = document.createElement('span');
     s.className = 'spark';
-    const angle = Math.random()*Math.PI*2;
-    const dist = 35 + Math.random()*45;
+    const angle = Math.random()*Math.PI*2, dist = 35 + Math.random()*45;
     s.style.setProperty('--sx', Math.cos(angle)*dist+'px');
     s.style.setProperty('--sy', Math.sin(angle)*dist+'px');
     s.style.left = (38 + Math.random()*24)+'%';
@@ -1072,14 +750,8 @@ function spawnSparks(container, count){
 }
 function triggerGoldFlash(){
   let fl = document.getElementById('goldFlash');
-  if(!fl){
-    fl = document.createElement('div');
-    fl.id = 'goldFlash';
-    document.body.appendChild(fl);
-  }
-  fl.classList.remove('on');
-  void fl.offsetWidth;
-  fl.classList.add('on');
+  if(!fl){ fl = document.createElement('div'); fl.id = 'goldFlash'; document.body.appendChild(fl); }
+  fl.classList.remove('on'); void fl.offsetWidth; fl.classList.add('on');
 }
 
 function evaluate(grid, b){
@@ -1135,6 +807,8 @@ function update(){
   b.textContent = `لفات مجانية متبقية: ${freeLeft}`;
   const fc=$('freeCnt');
   if(inFree){ fc.style.display='flex'; fc.textContent=freeLeft; } else { fc.style.display='none'; }
+  $('bLeft').textContent = freeLeft;
+  $('bWin').textContent = R(freeWin).toLocaleString();
 }
 function renderChips(){
   $('chips').innerHTML = BETS.map(v=>`<button class="chip ${v===bet?'active':''}" onclick="setBet(${v})">${fmt(v)}</button>`).join('');
@@ -1180,11 +854,7 @@ function autoNext(){
   }, 600);
 }
 window.cycleSpeed = () => { speed=(speed+1)%3; $('speedBtn').textContent='⚡'.repeat(speed+1); };
-
-window.toggleSound = () => {
-  const on = SoundEngine.toggleAmbient();
-  $('soundToggle').classList.toggle('off', !on);
-};
+window.toggleSound = () => { const on = SoundEngine.toggleAmbient(); $('soundToggle').classList.toggle('off', !on); };
 
 function updateBonusCosts(){
   $('bonusBetDisplay').textContent = bet.toLocaleString()+' NSP';
@@ -1218,6 +888,59 @@ window.selectPkg = (el, key) => {
   pendingPkg = key;
   $('confirmBuyBtn').disabled = false;
 };
+
+/* ===== نافذة البونص: البكرات بتنتقل لجواها وبترجع بعد ما يخلص ===== */
+const BG_R = 902/986, FR_R = 533/937;
+function fitBonus(){
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const w = Math.min(vw, vh*BG_R), bw = $('bonusWrap');
+  bw.style.width = w+'px'; bw.style.height = (w/BG_R)+'px'; bw.style.fontSize = (w/100)+'px';
+  const cw = Math.min(vw*0.94, vh*0.9/FR_R, 640), pc = $('wpCard');
+  pc.style.width = cw+'px'; pc.style.height = (cw*FR_R)+'px'; pc.style.fontSize = (cw/100)+'px';
+}
+window.addEventListener('resize', fitBonus);
+window.addEventListener('orientationchange', fitBonus);
+function enterBonus(){
+  bonusOpen = true;
+  const home = $('reelsHome');
+  home.style.height = home.offsetHeight+'px';
+  $('bonusWrap').appendChild($('reels'));
+  $('reels').classList.add('bonus-mode');
+  $('bonusScreen').style.display = 'block';
+  fitBonus();
+}
+function exitBonus(){
+  bonusOpen = false;
+  $('bonusScreen').style.display = 'none';
+  $('reels').classList.remove('bonus-mode');
+  const home = $('reelsHome');
+  home.appendChild($('reels'));
+  home.style.height = '';
+  fitStage();
+}
+/* نافذة BIG WIN / MEGA WIN / TOTAL WIN: collect=true بتستنى ضغطة COLLECT، وإلا بتختفي لحالها */
+function showPop(amount, title, label, collect, dur, total){
+  return new Promise(res=>{
+    fitBonus();
+    const pop = $('winPop'), A = $('wpAmount'), B = $('wpCollect');
+    $('wpCard').className = 'wp-card' + (total ? ' total' : '');
+    $('wpTitle').textContent = title; $('wpLabel').textContent = label;
+    B.style.display = collect ? 'block' : 'none';
+    pop.className = 'show' + (collect ? ' collect' : '');
+    const len = R(amount).toLocaleString().length;
+    A.style.fontSize = Math.min(12, (total ? 54 : 82)/(len*0.7)) + 'em';
+    const t0 = performance.now();
+    function step(now){
+      const p = Math.min(1, (now - t0)/dur), e = 1 - Math.pow(1 - p, 3);
+      A.textContent = R(amount*e).toLocaleString();
+      if(p < 1) requestAnimationFrame(step);
+      else if(!collect) setTimeout(()=>{ pop.className = ''; res(); }, 900);
+    }
+    requestAnimationFrame(step);
+    if(collect) B.onclick = ()=>{ pop.className = ''; res(); };
+  });
+}
+
 window.confirmBuy = async () => {
   if(!pendingPkg) return;
   const cost = R(bet * BONUS_COST_MULT[pendingPkg]);
@@ -1232,6 +955,7 @@ window.confirmBuy = async () => {
   guaranteedWildsPerSpin = pendingPkg==='1' ? 1 : pendingPkg==='2' ? 2 : pendingPkg==='3' ? 3 : (1+Math.floor(Math.random()*3));
   inFree=true; freeLeft=5; freeWin=0;
   closeBuyModal();
+  enterBonus();
   showFreeSpinsIntro(5);
   update(); await save(); spin();
 };
@@ -1248,7 +972,6 @@ async function save(){
   if(!dbApi || !window.__balanceOk) return;
   try{ await dbApi.saveBalance(userId,{balance,totalSpins,totalWins,govGoldenTree:govLedger}); }
   catch(e){ console.error('خطأ بالحفظ:', e); return; }
-  /* إحصائيات المنصّة الحقيقية (مجموع الرهانات والأرباح لكل اللاعبين) - بتفشل بصمت إذا القواعد ما انضافت */
   try{
     const t = ledgerTotals();
     const dW = t.wager-lastStat.wager, dP = t.paid-lastStat.paid, dS = totalSpins-lastStat.spins;
@@ -1259,7 +982,6 @@ async function save(){
 async function loadUser(){
   renderChips();
   const tEnd = Date.now() + 300000;
-  let lastErr = null;
   while(Date.now() < tEnd){
     try{
       if(!dbApi){
@@ -1277,7 +999,6 @@ async function loadUser(){
       update();
       return;
     }catch(e){
-      lastErr = e;
       console.error(e);
       $('result').innerHTML = '<span class="lose-t">'+(e.message||e)+'</span>';
       await new Promise(r=>setTimeout(r,2000));
@@ -1285,7 +1006,6 @@ async function loadUser(){
   }
 }
 
-/* ربح شبكة (مع توسّع الشجرة) لاستعماله بضابط النسبة */
 function gridWin(grid){
   const eg = grid.map(col=>{
     const w = bestWild(col);
@@ -1295,7 +1015,6 @@ function gridWin(grid){
   const rawWin = evaluate(eg, bet).total;
   return inFree ? R(rawWin * (BONUS_PAY_SCALE[bonusPkg] || 1)) : rawWin;
 }
-/* ضابط النسبة: لو مجموع أرباح اللاعب تعدّى السقف، بيعيد سحب الشبكة (حتى 8 مرات) ويختار الأقل ربحاً */
 function makeGridGoverned(){
   const snapS = spinsSinceWild, snapL = lastBlankReels;
   const acc = govAcc(), tier = govTier();
@@ -1325,7 +1044,6 @@ window.spin = function(){
   $('result').textContent = '';
   if(!inFree){ balance = R(balance - bet); totalSpins++; govAcc().wager += bet; }
   update();
-
   const finalGrid = makeGridGoverned();
   const oldGrid = currentGrid || finalGrid;
   const base = [900,650,450][speed];
@@ -1339,41 +1057,20 @@ function spawnShockRing(){
   document.body.appendChild(ring);
   setTimeout(()=> ring.remove(), 1050);
 }
-function showWinOverlay(amount, label){
-  const ov = $('winOverlay');
-  if(!ov) return;
-  $('winOverlayTitle').textContent = label;
-  $('winOverlayAmount').textContent = '0';
-  ov.classList.add('show');
-  const dur = 2800;
-  const t0 = performance.now();
-  function step(now){
-    const p = Math.min(1, (now - t0) / dur);
-    const eased = 1 - Math.pow(1 - p, 3);
-    $('winOverlayAmount').textContent = R(amount * eased).toLocaleString();
-    if(p < 1) requestAnimationFrame(step);
-    else setTimeout(()=> ov.classList.remove('show'), 900);
-  }
-  requestAnimationFrame(step);
-}
+function showWinOverlay(amount, label){ showPop(amount, label+'!', 'الربح:', false, 2800, false); }
 
 const bestWild = col => col.filter(c=>c.key==='wild').reduce((a,c)=>(!a || c.mult>a.mult) ? c : a, null);
 
 async function resolveWithGrid(grid){
-  /* الشجرة تتحسب على كل خانات البكرة (ما عدا النجمة والدولار) - ظهورها وباقي المنطق ما تغيّر */
   const evalGrid = grid.map(col=>{
     const w = bestWild(col);
     if(!w) return col;
     return col.map(c=> (c.key==='scatterDollar' || c.key==='scatterStar') ? c : {key:'wild', mult:w.mult});
   });
   let {total, wins, sc, winLinesCells} = evaluate(evalGrid, bet);
-  /* سقف مجموع البونص كامل */
   if(inFree){ total = R(total * (BONUS_PAY_SCALE[bonusPkg] || 1)); }
   if(inFree){ total = Math.max(0, Math.min(total, R(bet*MAX_WIN_MULT) - freeWin)); }
-  for(let r=0;r<REELS;r++){
-    const winRows = wins.filter(([wr])=>wr===r).map(([,wrow])=>wrow);
-    if(winRows.length) renderReelColumn(r, grid[r], winRows);
-  }
+  markWins(wins);
   drawWinLines(winLinesCells);
 
   const wildReels = new Set();
@@ -1417,15 +1114,9 @@ async function resolveWithGrid(grid){
     balance = R(balance + total); totalWins = R(totalWins + total); govAcc().paid += total; if(inFree) freeWin = R(freeWin + total);
     msg = `<span class="win-t">مكسب: ${total.toLocaleString()}</span>`;
     if(total >= bet*50){
-      bigOrMega = true;
-      SoundEngine.megaWin();
-      showWinOverlay(total, 'MEGA WIN');
-      spawnShockRing();
+      bigOrMega = true; SoundEngine.megaWin(); showWinOverlay(total, 'MEGA WIN'); spawnShockRing();
     } else if(total >= bet*20){
-      bigOrMega = true;
-      SoundEngine.bigWin();
-      showWinOverlay(total, 'BIG WIN');
-      spawnShockRing();
+      bigOrMega = true; SoundEngine.bigWin(); showWinOverlay(total, 'BIG WIN'); spawnShockRing();
     } else if(total >= bet*5){
       SoundEngine.niceWin();
     } else {
@@ -1448,18 +1139,22 @@ async function resolveWithGrid(grid){
       if(freeLeft<=0){
         inFree=false;
         guaranteedWildsPerSpin=0; randomTrees=false;
-        $('result').innerHTML += (msg?'<br>':'') + `<span class="win-t">مجموع اللفات المجانية: ${freeWin.toLocaleString()}</span>`;
-        update(); $('spinBtn').disabled=false; autoNext();
+        update();
+        /* شاشة TOTAL WIN، وبضغطة COLLECT بترجعي لشاشة اللعبة العادية */
+        showPop(freeWin, '', 'مجموع الأرباح:', true, 1800, true).then(()=>{
+          exitBonus();
+          $('result').innerHTML = `<span class="win-t">مجموع اللفات المجانية: ${freeWin.toLocaleString()}</span>`;
+          $('spinBtn').disabled=false; autoNext();
+        });
       } else { setTimeout(()=>spin(),1200); }
     } else { $('spinBtn').disabled=false; autoNext(); }
   }, settleDelay);
 }
 
 function preloadAll(){
-  const urls=[...SYMS.filter(x=>x.img).map(x=>x.img),...Object.values(WILD_IMG),'images/spin-icon.jpg','images/bg.jpg'];
+  const urls=[...SYMS.filter(x=>x.img).map(x=>x.img),...Object.values(WILD_IMG),'images/spin-icon.jpg','images/bg.jpg','images/bonus-bg.jpg','images/win-frame.png','images/total-win-frame.png'];
   const loadOne = u => new Promise(res=>{
     const im=new Image();
-    /* ما في مهلة هون: بنستنى الصورة تتحمل كاملة مهما كان النت بطيء، والسبلاش بيفتح اللعبة بعد 3 دقايق كحد أقصى */
     im.onload=()=>{ Promise.race([(im.decode?im.decode():Promise.resolve()).catch(()=>{}), new Promise(r=>setTimeout(r,5000))]).then(()=>res(true)); };
     im.onerror=()=>res(false);
     im.src=u;
@@ -1481,8 +1176,6 @@ if(!tg?.initDataUnsafe?.user){
   };
   const isTestKey = k => { k=(k||'').toLowerCase(); return k==='m' || k==='p' || k==='t'; };
   document.addEventListener('keydown', e=>{ if(isTestKey(e.key)) addTestBonus(); });
-  window.addEventListener('keydown', e=>{ if(isTestKey(e.key)) addTestBonus(); });
-
   let tapCount=0, tapTimer=null;
   $('logoTitle').addEventListener('click', ()=>{
     tapCount++;
@@ -1510,9 +1203,7 @@ window.addEventListener('orientationchange', fitStage);
 
 window.__forceEnter = function(){
   window.__forced = true;
-  try{
-    if(!currentGrid){ currentGrid = makeGrid(); render(currentGrid); }
-  }catch(e){ console.error(e); }
+  try{ if(!currentGrid){ currentGrid = makeGrid(); render(currentGrid); } }catch(e){ console.error(e); }
   setTimeout(fitStage,0);
   requestAnimationFrame(fitStage);
 };
@@ -1520,10 +1211,7 @@ window.__startLoading = function(){
   if(window.__loadStarted) return;
   window.__loadStarted = true;
   Promise.all([loadUser(), preloadAll()]).then(()=>{
-    if(!currentGrid){
-      currentGrid = makeGrid();
-      render(currentGrid);
-    }
+    if(!currentGrid){ currentGrid = makeGrid(); render(currentGrid); }
   }).catch(e=>{
     console.error(e);
     $('result').innerHTML = '<span class="lose-t">'+(e.message||e)+'</span>';
@@ -1535,10 +1223,7 @@ window.__startLoading = function(){
 };
 if(window.__loadRequested) window.__startLoading();
 
-/* [إضافة] عدّاد ضمان الشجرة (spinsSinceWild) منفصل لكل مستوى رهان (بالذاكرة فقط، بدون حفظ).
-   لما اللاعب يغيّر الرهان، بنحفظ عدّاد الرهان القديم وبنحمّل عدّاد الرهان الجديد، ورهان ما لعب عليه بهالجلسة بيبدأ من الصفر.
-   هيك ما بيقدر يعدّ 19-20 لفة برهان صغير ويرفع الرهان ليلحق ضمان الشجرة على رهان كبير.
-   بيشتغل بتغليف دوال تغيير الرهان (بدون ما نلمس أي سطر موجود)، وكل طرق تغيير الرهان مغطّاة. */
+/* عدّاد ضمان الشجرة منفصل لكل مستوى رهان */
 (function(){
   const pityMap = {};
   let pityBet = bet;
@@ -1555,8 +1240,6 @@ if(window.__loadRequested) window.__startLoading();
   });
 })();
 </script>
-
-<!-- ============ PATCH UI v5 : الكتلة B (بداية) ============ -->
 <script>
 (function(){
   var els=document.querySelectorAll('.suit span');
@@ -1570,6 +1253,5 @@ if(window.__loadRequested) window.__startLoading();
   },1200);
 })();
 </script>
-<!-- ============ PATCH UI v5 : الكتلة B (نهاية) ============ -->
 </body>
 </html>
