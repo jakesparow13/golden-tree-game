@@ -67,7 +67,7 @@ body{min-height:100vh;font-family:'Cairo',sans-serif;color:#f2f2f2;overflow-x:hi
 @keyframes wildGlowPulse{0%{opacity:0;transform:scale(.35);}45%{opacity:1;transform:scale(1.25);}100%{opacity:0;transform:scale(1.7);}}
 .spark{position:absolute;width:6px;height:6px;border-radius:50%;background:radial-gradient(circle,#fff,var(--gold2) 55%,transparent 100%);pointer-events:none;z-index:12;box-shadow:0 0 6px 2px rgba(255,215,0,.85);animation:sparkFly .8s ease-out forwards;}
 @keyframes sparkFly{0%{transform:translate(0,0) scale(1);opacity:1;}100%{transform:translate(var(--sx),var(--sy)) scale(0);opacity:0;}}
-.reel.spinning .cell img{filter:blur(1.3px) brightness(1.04);transition:filter .06s linear;}
+.reel.spinning .cell img{filter:none;} /* أثناء الدوران: بدون تغبيش ولا ظل (أخف وأوضح) */
 .cell.dropping img{animation:cellDrop .22s cubic-bezier(.3,.9,.4,1);}
 @keyframes cellDrop{0%{transform:translateY(-30%) scaleY(1.15);opacity:.5;}70%{transform:translateY(4%) scaleY(1.02);opacity:1;}100%{transform:translateY(0) scaleY(1);opacity:1;}}
 .reels.shake{animation:reelShake .35s ease-in-out;}
@@ -168,6 +168,7 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 .back-btn{position:absolute;top:6px;right:6px;width:34px;height:34px;border-radius:50%;border:1.5px solid rgba(212,164,55,.6);background:rgba(10,4,30,.6);color:#fff;font-size:16px;line-height:1;cursor:pointer;z-index:15;}
 
 /* ===== نافذة البونص ===== */
+body.inbonus .orb,body.inbonus #stage::before,body.inbonus .logo::after,body.inbonus .suit,body.inbonus .suit::after{animation:none;} /* ما في داعي تضل شغّالة خلف شاشة البونص */
 #bonusScreen{position:absolute;inset:0;display:none;background:#0e0804;z-index:5;overflow:hidden;}
 .bonus-wrap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:url(images/bonus-bg.jpg) center/100% 100% no-repeat;}
 #reels.bonus-mode{position:absolute;margin:0;left:5.84%;top:34.92%;width:85.92%;gap:0 2.11%;z-index:2;}
@@ -214,7 +215,7 @@ button:disabled{opacity:.5;cursor:not-allowed;}
   <div class="game-title">Tree of Chronos</div>
   <div class="loading-bar-wrap"><div id="loadingBar"></div></div>
   <div id="loadingPct">0%</div>
-  <div id="verTag" style="margin-top:6px;font-size:11px;color:#8f86b8;">v7</div>
+  <div id="verTag" style="margin-top:6px;font-size:11px;color:#8f86b8;">v8</div>
 </div>
 
 <div id="gameScreen">
@@ -509,12 +510,40 @@ const SoundEngine = (() => {
   let sfxSpinBroken = false, sfxWildBroken = false;
   if(sfxSpinEl){ sfxSpinEl.volume = VOL.reel; sfxSpinEl.addEventListener('error', ()=>{ sfxSpinBroken = true; }); }
   if(sfxWildEl){ sfxWildEl.volume = VOL.wild; sfxWildEl.addEventListener('error', ()=>{ sfxWildBroken = true; }); }
+  /* المؤثرات الصوتية: بتتحمّل وتتفكّ مرة وحدة بالذاكرة وبتشتغل فوراً (الـaudio العادي بيتأخر على الجوال). إذا ما تحمّل ملف بيرجع للطريقة القديمة تلقائياً */
+  const SFX_IDS = ['sfxSpin','sfxWild','sfxBuy','sfxBig','sfxPick','sfxWin','sfxStar','sfxDollar'];
+  const bufs = {};
+  let spinHandle = null;
+  function playBuf(id, vol){
+    const c = ac(), b = bufs[id];
+    if(!c || !b) return null;
+    try{
+      const s = c.createBufferSource(), g = c.createGain();
+      s.buffer = b; g.gain.value = vol;
+      s.connect(g); g.connect(c.destination); s.start(0);
+      return { s, g };
+    }catch(e){ return null; }
+  }
+  async function preloadSfx(){
+    const c = ac(); if(!c) return;
+    await Promise.all(SFX_IDS.map(async id=>{
+      const el = document.getElementById(id); if(!el) return;
+      try{
+        const r = await fetch(el.getAttribute('src')); if(!r.ok) return;
+        const ab = await r.arrayBuffer();
+        bufs[id] = await new Promise((res, rej)=>{ const p = c.decodeAudioData(ab, res, rej); if(p && p.catch) p.catch(rej); });
+      }catch(e){}
+    }));
+  }
   function playClick(){
+    const h = playBuf('sfxSpin', VOL.reel);
+    if(h){ spinHandle = h; return; }
     if(sfxSpinEl && !sfxSpinBroken){ try{ sfxSpinEl.currentTime = 0; sfxSpinEl.play().catch(()=>{ synthClick(); }); return; }catch(e){} }
     synthClick();
   }
   function synthClick(){ noiseBurst(0.05,0.10,0,4000); tone(900,0.04,'square',0.04); }
   function playWildDrop(){
+    if(playBuf('sfxWild', VOL.wild)) return;
     if(sfxWildEl && !sfxWildBroken){ try{ sfxWildEl.currentTime = 0; sfxWildEl.play().catch(()=>{ synthWildDrop(); }); return; }catch(e){} }
     synthWildDrop();
   }
@@ -524,17 +553,26 @@ const SoundEngine = (() => {
     [1568,1976,2349].forEach((f,i)=> tone(f,0.5,'sine',0.22,0.02+i*0.03));
   }
   function playCopy(id, vol, fallback){
+    if(playBuf(id, vol)) return;
     const el = document.getElementById(id);
     if(el){ try{ const a = el.cloneNode(true); a.volume = vol; a.play().catch(()=>{ if(fallback) fallback(); }); return; }catch(e){} }
     if(fallback) fallback();
   }
   function playEl(id, vol, fallback){
+    if(playBuf(id, vol)) return;
     const el = document.getElementById(id);
     if(el){ try{ el.volume = vol; el.currentTime = 0; el.play().catch(()=>{ if(fallback) fallback(); }); return; }catch(e){} }
     if(fallback) fallback();
   }
   return {
     unlock(){ ac(); startAmbient(); },
+    preload: preloadSfx,
+    /* صوت الدوران بيخفت وبيوقف بنفس لحظة توقف آخر بكرة */
+    stopSpin(){
+      const h = spinHandle; spinHandle = null;
+      if(!h) return;
+      try{ const c = ac(), t = c.currentTime; h.g.gain.setValueAtTime(h.g.gain.value, t); h.g.gain.linearRampToValueAtTime(0, t+0.15); h.s.stop(t+0.17); }catch(e){}
+    },
     toggleAmbient(){ if(ambientOn) stopAmbient(); else startAmbient(); return ambientOn; },
     click(){ playClick(); },
     reelStop(){ noiseBurst(0.06,0.08*VOL.reelStop,0,1800); tone(180,0.08,'sine',0.08*VOL.reelStop); },
@@ -715,7 +753,7 @@ function rollReel(r, oldCells, finalCells, ms){
     const h = strip.offsetHeight / all.length;
     strip.style.transform = `translateY(${-(all.length-ROWS)*h}px)`;
     strip.getBoundingClientRect();
-    strip.style.transition = `transform ${ms}ms cubic-bezier(.15,.7,.25,1)`;
+    strip.style.transition = `transform ${ms}ms cubic-bezier(.25,.46,.45,.94)`;
     strip.style.transform = 'translateY(0)';
     col.classList.add('spinning');
     setTimeout(()=>{
@@ -919,6 +957,7 @@ window.addEventListener('resize', fitBonus);
 window.addEventListener('orientationchange', fitBonus);
 function enterBonus(){
   bonusOpen = true;
+  document.body.classList.add('inbonus');
   const home = $('reelsHome');
   home.style.height = home.offsetHeight+'px';
   $('bonusWrap').appendChild($('reels'));
@@ -928,6 +967,7 @@ function enterBonus(){
 }
 function exitBonus(){
   bonusOpen = false;
+  document.body.classList.remove('inbonus');
   $('bonusScreen').style.display = 'none';
   $('reels').classList.remove('bonus-mode');
   const home = $('reelsHome');
@@ -970,6 +1010,7 @@ function playBuyVideo(){
       try{ v.pause(); }catch(e){}
       ov.style.display = 'none'; msg.textContent = '';
       ov.onclick = null; v.onended = null; v.onerror = null;
+      try{ SoundEngine.unlock(); }catch(e){}
       res();
     };
     const fail = why=>{
@@ -1112,8 +1153,11 @@ window.spin = function(){
   const finalGrid = makeGridGoverned();
   const oldGrid = currentGrid || finalGrid;
   const base = [900,650,450][speed];
-  Promise.all(finalGrid.map((_,r)=> rollReel(r, oldGrid[r], finalGrid[r], base + r*250)))
-    .then(()=>{ currentGrid = finalGrid; resolveWithGrid(finalGrid); });
+  Promise.all(finalGrid.map((_,r)=> rollReel(r, oldGrid[r], finalGrid[r], base + r*250).then(()=>{
+    if(finalGrid[r].some(c=>c.key==='scatterStar')) SoundEngine.star();
+    if(finalGrid[r].some(c=>c.key==='scatterDollar')) SoundEngine.dollar();
+  })))
+    .then(()=>{ SoundEngine.stopSpin(); currentGrid = finalGrid; resolveWithGrid(finalGrid); });
 };
 
 function spawnShockRing(){
@@ -1167,11 +1211,6 @@ async function resolveWithGrid(grid){
     setTimeout(()=> $('reels').classList.remove('shake'), 400);
   }
 
-  const nStar = grid.reduce((a,col)=>a+col.filter(c=>c.key==='scatterStar').length,0);
-  const nDollar = grid.reduce((a,col)=>a+col.filter(c=>c.key==='scatterDollar').length,0);
-  let scT = 0;
-  for(let i=0;i<nStar;i++){ setTimeout(()=>SoundEngine.star(), scT); scT += 200; }
-  for(let i=0;i<nDollar;i++){ setTimeout(()=>SoundEngine.dollar(), scT); scT += 200; }
 
   let msg='';
   let bigOrMega = false;
@@ -1275,7 +1314,7 @@ window.__forceEnter = function(){
 window.__startLoading = function(){
   if(window.__loadStarted) return;
   window.__loadStarted = true;
-  Promise.all([loadUser(), preloadAll()]).then(()=>{
+  Promise.all([loadUser(), preloadAll(), Promise.race([SoundEngine.preload(), new Promise(r=>setTimeout(r,20000))])]).then(()=>{
     if(!currentGrid){ currentGrid = makeGrid(); render(currentGrid); }
   }).catch(e=>{
     console.error(e);
