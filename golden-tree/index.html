@@ -652,8 +652,12 @@ const PAY = {
   scatterDollar:{3:10,4:40,5:200},
   scatterStar:{3:40}
 };
-/* أسعار البونص (×الرهان) - محسوبة بمحاكاة لتكون نسبة رجوع اللاعب حوالي 78-80% */
-const BONUS_COST_MULT = { '1':40, '2':360, '3':1950, 'r':800 };
+/* أسعار البونص (×الرهان) - مثل اللعبة الأصلية: على رهان 300 = 30 ألف / 60 ألف / 105 ألف / العشوائي 80 ألف */
+const BONUS_COST_MULT = { '1':100, '2':200, '3':350, 'r':800/3 };
+/* معامل أرباح اللفات المجانية لكل باقة: محسوب بمحاكاة (100 ألف بونص لكل باقة) ليرجع للاعب حوالي 80% من سعر الباقة (ربح البيت 20%).
+   لو بدك رجوع أعلى ارفع الأرقام كلها بنفس النسبة، ولو بدك أقل نزّلها. */
+const BONUS_PAY_SCALE = { '1':2.27, '2':0.424, '3':0.1195, 'r':0.232 };
+let bonusPkg = null;
 
 function R(n){ return Math.round(n); }
 
@@ -939,13 +943,21 @@ function makeGrid(){
     }
   }
   if(guaranteedWildsPerSpin>0){
-    const positions=[];
-    for(let r=0;r<REELS;r++) for(let row=0;row<ROWS;row++) positions.push([r,row]);
-    positions.sort(()=>Math.random()-0.5);
-    for(let i=0;i<Math.min(guaranteedWildsPerSpin,positions.length);i++){
-      const [r,row]=positions[i];
+    /* شجرة وحدة فقط بكل بكرة: منختار بكرات مختلفة، وبكل وحدة صف عشوائي */
+    const reelOrder=[0,1,2,3,4].sort(()=>Math.random()-0.5);
+    for(let i=0;i<Math.min(guaranteedWildsPerSpin,REELS);i++){
+      const r=reelOrder[i], row=Math.floor(Math.random()*ROWS);
       grid[r][row] = { key:'wild', mult: pick(WMULTS).val };
     }
+  }
+  /* أمان: ممنوع شجرتين بنفس البكرة (بنستبدل الزيادة برمز عادي) */
+  for(let r=0;r<REELS;r++){
+    let seenWild=false;
+    grid[r] = grid[r].map(c=>{
+      if(c.key!=='wild') return c;
+      if(!seenWild){ seenWild=true; return c; }
+      return randomCell(SYMS_NO_BLANK_NO_WILD.filter(x=>x.key!=='scatterDollar' && x.key!=='scatterStar'));
+    });
   }
   if(!bonusForce && !inFree){
     let hasWild = grid.some(col=>col.some(c=>c.key==='wild'));
@@ -1216,7 +1228,7 @@ window.confirmBuy = async () => {
   }
   balance = R(balance - cost); govAcc().wager += cost;
   SoundEngine.buyBonus();
-  randomTrees = (pendingPkg==='r');
+  randomTrees = (pendingPkg==='r'); bonusPkg = pendingPkg;
   guaranteedWildsPerSpin = pendingPkg==='1' ? 1 : pendingPkg==='2' ? 2 : pendingPkg==='3' ? 3 : (1+Math.floor(Math.random()*3));
   inFree=true; freeLeft=5; freeWin=0;
   closeBuyModal();
@@ -1280,7 +1292,8 @@ function gridWin(grid){
     if(!w) return col;
     return col.map(c=> (c.key==='scatterDollar' || c.key==='scatterStar') ? c : {key:'wild', mult:w.mult});
   });
-  return evaluate(eg, bet).total;
+  const rawWin = evaluate(eg, bet).total;
+  return inFree ? R(rawWin * (BONUS_PAY_SCALE[bonusPkg] || 1)) : rawWin;
 }
 /* ضابط النسبة: لو مجموع أرباح اللاعب تعدّى السقف، بيعيد سحب الشبكة (حتى 8 مرات) ويختار الأقل ربحاً */
 function makeGridGoverned(){
@@ -1355,6 +1368,7 @@ async function resolveWithGrid(grid){
   });
   let {total, wins, sc, winLinesCells} = evaluate(evalGrid, bet);
   /* سقف مجموع البونص كامل */
+  if(inFree){ total = R(total * (BONUS_PAY_SCALE[bonusPkg] || 1)); }
   if(inFree){ total = Math.max(0, Math.min(total, R(bet*MAX_WIN_MULT) - freeWin)); }
   for(let r=0;r<REELS;r++){
     const winRows = wins.filter(([wr])=>wr===r).map(([,wrow])=>wrow);
@@ -1520,6 +1534,26 @@ window.__startLoading = function(){
   });
 };
 if(window.__loadRequested) window.__startLoading();
+
+/* [إضافة] عدّاد ضمان الشجرة (spinsSinceWild) منفصل لكل مستوى رهان (بالذاكرة فقط، بدون حفظ).
+   لما اللاعب يغيّر الرهان، بنحفظ عدّاد الرهان القديم وبنحمّل عدّاد الرهان الجديد، ورهان ما لعب عليه بهالجلسة بيبدأ من الصفر.
+   هيك ما بيقدر يعدّ 19-20 لفة برهان صغير ويرفع الرهان ليلحق ضمان الشجرة على رهان كبير.
+   بيشتغل بتغليف دوال تغيير الرهان (بدون ما نلمس أي سطر موجود)، وكل طرق تغيير الرهان مغطّاة. */
+(function(){
+  const pityMap = {};
+  let pityBet = bet;
+  const syncPity = () => {
+    if(bet === pityBet) return;
+    pityMap[String(pityBet)] = spinsSinceWild;
+    spinsSinceWild = (String(bet) in pityMap) ? pityMap[String(bet)] : 0;
+    pityBet = bet;
+  };
+  ['setBet','setLevel','bonusStepBet'].forEach(name=>{
+    const orig = window[name];
+    if(typeof orig !== 'function') return;
+    window[name] = function(){ const r = orig.apply(this, arguments); syncPity(); return r; };
+  });
+})();
 </script>
 
 <!-- ============ PATCH UI v5 : الكتلة B (بداية) ============ -->
