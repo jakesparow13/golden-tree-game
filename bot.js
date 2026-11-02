@@ -393,6 +393,620 @@ if (adminToken) {
       adminBot.sendMessage(chatId, `❌ خطأ: ${e.message}`).catch(() => {});
     }
   });
+// ============================================================================
+// ➕ إضافات بوت الشجرة الذهبية: صيانة + بث + عروض الشحن + الاسترداد اليومي
+// ----------------------------------------------------------------------------
+// طريقة التركيب (إدراج فقط، بدون تعديل أي سطر موجود):
+//   الصقي هذا الملف كامل داخل بلوك بوت الإدارة، مباشرة قبل هذا السطر:
+//       console.log('🛡️ بوت الإدارة شغال');
+//   (يعني بعد آخر  });  الخاص بـ callback_query لطلبات الشحن dpok/dpno)
+//
+// كل مسارات Firebase الجديدة بادئتها gt_ حتى ما تتداخل مع الألعاب التانية
+// اللي على نفس القاعدة:
+//   gt_settings/maintenance   gt_bot_users   gt_promos
+//   gt_cashback_snap / gt_cashback_meta / gt_cashback_log / gt_cashback_flag
+// الحقل الوحيد المضاف على سجل اللاعب: users/{id}/promoBonus (مجموع بونصات العروض)
+// ============================================================================
+try {
+  const gtDbApi = require('firebase/database');
+  const gtOnValue = gtDbApi.onValue;
+  const gtTx = gtDbApi.runTransaction;
+
+  const gtSleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const gtNum = (n) => Number(n || 0).toLocaleString('en-US');
+  const gtDigits = (s) => String(s || '').trim().replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+  const gtSafe = (p) => { if (p && typeof p.catch === 'function') p.catch(() => {}); };
+  const GT_DIV = '┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄';
+  const GT_ADMIN_BTNS = ['🚀 ستارت', '📊 إحصائيات', '👥 اللاعبون', '🔍 بحث عن لاعب'];
+
+  // ======================= 🛠️ الصيانة =======================
+  // بتوقّف البوت (لاعبين فقط) وبتخلّي الأدمن يشتغل عادي. ما بتأثر على اللعبة (الويب) نفسها.
+  let GT_MAINT = false;
+  gtOnValue(ref(db, 'gt_settings/maintenance'), (s) => {
+    GT_MAINT = s.val() === true;
+    console.log('🛠️ [GT MAINTENANCE]', GT_MAINT ? 'ON' : 'OFF');
+  });
+
+  const gtOrigProcess = bot.processUpdate.bind(bot);
+  bot.processUpdate = (update) => {
+    try {
+      const from = ((update && (update.message || update.callback_query)) || {}).from;
+      if (GT_MAINT && from && !ADMIN_IDS.includes(from.id)) {
+        if (update.callback_query) {
+          gtSafe(bot.answerCallbackQuery(update.callback_query.id, {
+            text: '🛠️ البوت تحت الصيانة حالياً، ارجع بعد شوي',
+            show_alert: true
+          }));
+        } else if (update.message) {
+          gtSafe(bot.sendMessage(update.message.chat.id, '🛠️ البوت تحت الصيانة حالياً، ارجع بعد شوي.'));
+        }
+        return;
+      }
+    } catch (e) { /* إذا صار أي خطأ منكمّل عادي */ }
+    gtOrigProcess(update);
+  };
+
+  async function gtSetMaint(on) {
+    await set(ref(db, 'gt_settings/maintenance'), on);
+    GT_MAINT = on;
+  }
+
+  // ======================= 👥 سجل مستخدمي بوت الشجرة =======================
+  // أي حدا بيتفاعل مع البوت بينسجّل هون (مرة وحدة)، والبث بيروح لهالسجل فقط
+  const gtSeen = new Set();
+  function gtRegister(from, chat) {
+    try {
+      if (!from || from.is_bot || gtSeen.has(from.id)) return;
+      if (chat && chat.type && chat.type !== 'private') return;
+      gtSeen.add(from.id);
+      gtSafe(gtTx(ref(db, `gt_bot_users/${from.id}`), (cur) =>
+        cur ? undefined : { name: from.first_name || '', username: from.username || '', at: Date.now() }
+      ));
+    } catch (e) { /* تجاهل */ }
+  }
+  bot.on('message', (msg) => gtRegister(msg.from, msg.chat));
+  bot.on('callback_query', (q) => gtRegister(q.from, q.message && q.message.chat));
+
+  // تعبئة السجل من اللي تعاملوا مع بوت الشجرة قبل (شحن/سحب) — بأمر /backfill
+  async function gtBackfill() {
+    const [regS, depS, wdS] = await Promise.all([
+      get(ref(db, 'gt_bot_users')),
+      get(ref(db, 'bot_deposits')),
+      get(ref(db, 'withdrawals'))
+    ]);
+    const have = regS.val() || {};
+    const add = {};
+    const take = (r) => {
+      if (!r || !r.userId) return;
+      const id = String(r.userId);
+      if (!/^\d+$/.test(id) || have[id] || add[id]) return;
+      add[id] = { name: r.name || '', username: '', at: Date.now(), backfilled: true };
+    };
+    Object.values(depS.val() || {}).forEach(take);
+    Object.values(wdS.val() || {}).forEach(take);
+    const n = Object.keys(add).length;
+    if (n) await update(ref(db, 'gt_bot_users'), add);
+    return { added: n, total: Object.keys(have).length + n };
+  }
+
+  // ======================= 📢 البث =======================
+  async function gtBroadcast(text, adminChatId) {
+    let ok = 0;
+    let fail = 0;
+    try {
+      const s = await get(ref(db, 'gt_bot_users'));
+      for (const id of Object.keys(s.val() || {})) {
+        try { await bot.sendMessage(Number(id), text); ok++; } catch (e) { fail++; }
+        await gtSleep(60);
+      }
+    } catch (e) {
+      console.log('gt broadcast error:', e.message);
+    }
+    gtSafe(adminBot.sendMessage(adminChatId, `📢 انتهى البث\n✅ وصلت: ${ok}\n❌ ما وصلت: ${fail}`));
+  }
+  const gtBc = new Map(); // adminId -> { step: 'await' | 'confirm', text }
+
+  // ======================= 🎁 عروض الشحن =======================
+  const GT_PROMO_MAX_BONUS = 5000000; // أقصى مكافأة لشحنة وحدة (NSP) — غيّريه إذا بدك
+  const GT_PROMOS = { p10: false, p20: false, end: false, endNum: '', note: '' };
+  gtOnValue(ref(db, 'gt_promos'), (s) => {
+    const v = s.val() || {};
+    GT_PROMOS.p10 = v.p10 === true;
+    GT_PROMOS.p20 = v.p20 === true;
+    GT_PROMOS.end = v.end === true;
+    GT_PROMOS.endNum = v.endNum ? String(v.endNum) : '';
+    GT_PROMOS.note = v.note ? String(v.note) : '';
+  });
+  function gtPromoSave() {
+    return set(ref(db, 'gt_promos'), {
+      p10: GT_PROMOS.p10, p20: GT_PROMOS.p20, end: GT_PROMOS.end,
+      endNum: GT_PROMOS.endNum, note: GT_PROMOS.note
+    });
+  }
+  // لو انطبق أكتر من عرض بياخد الأكبر فقط
+  function gtPromoBonusFor(req) {
+    const amount = Number(req.amountNSP) || 0;
+    let pct = 0;
+    let label = '';
+    if (GT_PROMOS.p10) { pct = 10; label = 'زيادة 10%'; }
+    if (GT_PROMOS.p20) { pct = 20; label = 'زيادة 20%'; }
+    if (GT_PROMOS.end && GT_PROMOS.endNum && gtDigits(req.txId).endsWith(GT_PROMOS.endNum) && pct < 50) {
+      pct = 50;
+      label = `هدية رقم العملية المنتهي بـ ${GT_PROMOS.endNum} (50%)`;
+    }
+    if (!pct || amount <= 0) return { bonus: 0, pct: 0, label: '' };
+    return { bonus: Math.min(GT_PROMO_MAX_BONUS, Math.floor((amount * pct) / 100)), pct, label };
+  }
+  function gtPromoAnnounce(key) {
+    const what =
+      key === 'p10' ? '✅ تم تفعيل بونص 10% على عمليات الشحن'
+      : key === 'p20' ? '✅ تم تفعيل بونص 20% على عمليات الشحن'
+      : `✅ تم تفعيل عرض الهدية: أي رقم عملية شحن ينتهي بـ ${GT_PROMOS.endNum} يحصل على هدية 50% من قيمة الشحن`;
+    return `🎁 عرض جديد 🎁\n\n${what}` +
+      (GT_PROMOS.note ? `\n⏰ ${GT_PROMOS.note}` : '') +
+      `\n\nاشحن الآن وبتنضاف الزيادة لمحفظتك تلقائياً ⚡`;
+  }
+  function gtPromoMenu() {
+    const st = (b) => (b ? '🟢 شغّال' : '⚪ مطفي');
+    const text =
+      `${GT_DIV}\n🎁 عروض الشحن\n${GT_DIV}\n` +
+      `1) زيادة 10%: ${st(GT_PROMOS.p10)}\n` +
+      `2) زيادة 20%: ${st(GT_PROMOS.p20)}\n` +
+      `3) رقم عملية ينتهي بـ ${GT_PROMOS.endNum || '(ما انحدد)'} ← هدية 50%: ${st(GT_PROMOS.end)}\n\n` +
+      `⏰ ملاحظة الوقت بالإعلان: ${GT_PROMOS.note || '(ما في)'}\n\n` +
+      `لتحديد الرقم المنتهي للعرض 3 اكتبي: /endnum 22\n` +
+      `لكتابة وقت العرض بالإعلان: /offernote حتى الساعة 12 مساء\n` +
+      `لمسح الملاحظة: /offernote off\n` +
+      `عند تشغيل أي عرض بينبعت إعلان تلقائي لكل مستخدمي البوت.\n` +
+      `إذا انطبق أكتر من عرض، اللاعب بياخد الأكبر فقط.`;
+    const btn = (label, on, key) => [{ text: `${on ? '🔴 إيقاف' : '🟢 تشغيل'} ${label}`, callback_data: `gtpr_${key}` }];
+    return {
+      text,
+      markup: {
+        reply_markup: {
+          inline_keyboard: [
+            btn('زيادة 10%', GT_PROMOS.p10, 'p10'),
+            btn('زيادة 20%', GT_PROMOS.p20, 'p20'),
+            btn('عرض الرقم المنتهي 50%', GT_PROMOS.end, 'end')
+          ]
+        }
+      }
+    };
+  }
+
+  // بونص العروض: بيشتغل بعد ما الموافقة الأصلية (dpok) تخلص، بدون لمس كودها.
+  // بينتظر لحد ما حالة الطلب تصير approved، وبعدين بيدفع البونص مرة وحدة فقط.
+  adminBot.on('callback_query', async (query) => {
+    const m = /^dpok_(.+)$/.exec(query.data || '');
+    if (!m || !isAdmin(query.from.id)) return;
+    const key = m[1];
+    try {
+      let rq = null;
+      for (let i = 0; i < 20; i++) {
+        await gtSleep(1000);
+        const s = await get(ref(db, `bot_deposits/${key}`));
+        rq = s.val();
+        if (rq && rq.status === 'approved') break;
+        if (rq && rq.status === 'rejected') return;
+      }
+      if (!rq || rq.status !== 'approved') return;
+      const p = gtPromoBonusFor(rq);
+      if (p.bonus <= 0) return;
+
+      const claimRef = ref(db, `bot_deposits/${key}/bonusPaid`);
+      const claim = await gtTx(claimRef, (c) => (c === null ? Date.now() : undefined));
+      if (!claim.committed) return; // اندفع قبل
+
+      await gtSleep(1500); // نعطي الشحن الأصلي وقت يخلص
+      let userOk = true;
+      let newBal = 0;
+      const res = await gtTx(ref(db, `users/${rq.userId}`), (x) => {
+        if (x === null) { userOk = false; return x; }
+        userOk = true;
+        x.botBalance = (x.botBalance || 0) + p.bonus;
+        x.promoBonus = (x.promoBonus || 0) + p.bonus;
+        return x;
+      });
+      const val = res.snapshot && res.snapshot.val();
+      if (!res.committed || !val || !userOk) {
+        gtSafe(set(claimRef, null)); // فشل: بنفك الحجز
+        return;
+      }
+      newBal = val.botBalance || 0;
+      gtSafe(set(ref(db, `bot_deposits/${key}/bonus`), { amount: p.bonus, label: p.label }));
+      gtSafe(bot.sendMessage(rq.userId,
+        `🎁 ${p.label}\n➕ ${gtNum(p.bonus)} NSP انضافت لمحفظتك\n💰 رصيد محفظة البوت: ${gtNum(newBal)} NSP`));
+      gtSafe(adminBot.sendMessage(query.from.id, `🎁 انضافت مكافأة ${gtNum(p.bonus)} NSP (${p.label}) لطلب الشحن ${key}`));
+    } catch (e) {
+      console.log('gt promo bonus error:', e.message);
+    }
+  });
+
+  // ======================= 💸 الاسترداد اليومي =======================
+  // خسارة اللاعب = (رصيده وقت نقطة البداية + شحنه − سحبه) − رصيده الحالي (محفظة + لعبة + سحوبات معلّقة)
+  // وبتتحدد بحد أقصى مبلغ شحنه بنفس الفترة. مرة وحدة باليوم (بتوقيت دمشق).
+  const GT_CB_PCT = 10;           // نسبة الاسترداد %
+  const GT_CB_MIN_LOSS = 20000;   // أقل خسارة بتستاهل استرداد (NSP)
+  const GT_CB_MAX = 5000000;      // أقصى استرداد للاعب بالمرة الوحدة (NSP)
+  let gtCbRunning = false;
+  const gtDateKey = () => new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10);
+
+  // اللاعب اللي بيهدي رصيد بيطلع من الاسترداد لحد النقطة الجاية (حتى ما تنعمل ثغرة بين حسابين)
+  bot.onText(/\/gift (\d+) (\d+)/, (msg) => {
+    if (msg.from) gtSafe(set(ref(db, `gt_cashback_flag/${msg.from.id}`), true));
+  });
+
+  async function gtCbIds() {
+    const [regS, depS] = await Promise.all([get(ref(db, 'gt_bot_users')), get(ref(db, 'bot_deposits'))]);
+    const ids = new Set(Object.keys(regS.val() || {}));
+    for (const r of Object.values(depS.val() || {})) {
+      if (r && r.userId && r.status === 'approved') ids.add(String(r.userId));
+    }
+    return [...ids].filter((id) => /^\d+$/.test(id));
+  }
+  async function gtCbPendingWd() {
+    const s = await get(ref(db, 'withdrawals'));
+    const m = {};
+    for (const r of Object.values(s.val() || {})) {
+      if (r && r.status === 'pending') m[r.userId] = (m[r.userId] || 0) + (Number(r.amount) || 0);
+    }
+    return m;
+  }
+  async function gtCbUser(id, pend) {
+    const s = await get(ref(db, `users/${id}`));
+    if (!s.exists()) return null;
+    const u = s.val() || {};
+    return {
+      name: u.name || '-',
+      bal: (Number(u.botBalance) || 0) + (Number(u.balance) || 0) + (pend[id] || 0),
+      dep: (Number(u.totalDeposits) || 0) + (Number(u.promoBonus) || 0),
+      wd: Number(u.totalWithdrawals) || 0
+    };
+  }
+  async function gtCbSnapshot() {
+    const ids = await gtCbIds();
+    const pend = await gtCbPendingWd();
+    const snap = {};
+    for (let i = 0; i < ids.length; i += 20) {
+      await Promise.all(ids.slice(i, i + 20).map(async (id) => {
+        const u = await gtCbUser(id, pend);
+        if (u) snap[id] = { bal: u.bal, dep: u.dep, wd: u.wd };
+      }));
+    }
+    await set(ref(db, 'gt_cashback_snap'), snap);
+    await set(ref(db, 'gt_cashback_meta/snapAt'), Date.now());
+    await set(ref(db, 'gt_cashback_flag'), null);
+  }
+  async function gtCbCompute() {
+    const [snapS, flagS] = await Promise.all([get(ref(db, 'gt_cashback_snap')), get(ref(db, 'gt_cashback_flag'))]);
+    const snap = snapS.val() || {};
+    const flags = flagS.val() || {};
+    const ids = await gtCbIds();
+    const pend = await gtCbPendingWd();
+    const rows = [];
+    for (let i = 0; i < ids.length; i += 20) {
+      const part = await Promise.all(ids.slice(i, i + 20).map(async (id) => ({ id, u: await gtCbUser(id, pend) })));
+      for (const { id, u } of part) {
+        if (!u || flags[id]) continue;
+        const s = snap[id] || {};
+        const dep = u.dep - (Number(s.dep) || 0);
+        if (dep <= 0) continue;
+        const wd = u.wd - (Number(s.wd) || 0);
+        let loss = (Number(s.bal) || 0) + dep - wd - u.bal;
+        loss = Math.min(loss, dep);
+        if (loss < GT_CB_MIN_LOSS) continue;
+        const amount = Math.min(GT_CB_MAX, Math.floor((loss * GT_CB_PCT) / 100));
+        if (amount <= 0) continue;
+        rows.push({ id, name: u.name, loss: Math.floor(loss), amount });
+      }
+    }
+    rows.sort((a, b) => b.loss - a.loss);
+    return rows;
+  }
+
+  // أول تشغيل: بنسجّل نقطة البداية تلقائياً إذا ما كانت موجودة
+  setTimeout(async () => {
+    try {
+      const m = await get(ref(db, 'gt_cashback_meta/snapAt'));
+      if (!m.val()) {
+        await gtCbSnapshot();
+        console.log('💸 gt cashback: تم تسجيل نقطة البداية');
+      }
+    } catch (e) {
+      console.log('gt cashback baseline error:', e.message);
+    }
+  }, 20000);
+
+  async function gtCbPreview(chatId) {
+    const dk = gtDateKey();
+    const last = (await get(ref(db, 'gt_cashback_meta/lastRun'))).val();
+    if (last === dk) {
+      return adminBot.sendMessage(chatId, '✅ الاسترداد اليومي انصرف اليوم من قبل (مرة وحدة باليوم).');
+    }
+    const snapAt = (await get(ref(db, 'gt_cashback_meta/snapAt'))).val();
+    if (!snapAt) {
+      await gtCbSnapshot();
+      return adminBot.sendMessage(chatId, '📌 تم تسجيل نقطة البداية الآن. اضغطي «💸 الاسترداد اليومي» بعد ما يلعبوا (بكرا مثلاً).');
+    }
+    const rows = await gtCbCompute();
+    const since = new Date(snapAt).toLocaleString();
+    if (!rows.length) {
+      return adminBot.sendMessage(chatId,
+        `💸 الاسترداد اليومي\n${GT_DIV}\nمنذ: ${since}\nما في لاعب مستحق (خسارة ≥ ${gtNum(GT_CB_MIN_LOSS)} NSP) حالياً.`);
+    }
+    const total = rows.reduce((a, r) => a + r.amount, 0);
+    const lines = rows.slice(0, 25).map((r) =>
+      `• ${r.name} (${r.id})\n   خسارة ${gtNum(r.loss)} ← استرداد ${gtNum(r.amount)}`);
+    const text =
+      `💸 الاسترداد اليومي (${GT_CB_PCT}% من الخسارة الفعلية)\n${GT_DIV}\n` +
+      `منذ: ${since}\n` +
+      `👥 عدد المستحقين: ${rows.length}\n💰 المجموع: ${gtNum(total)} NSP\n\n` +
+      lines.join('\n') +
+      (rows.length > 25 ? `\n… و${rows.length - 25} غيرهم` : '') +
+      `\n\nاضغطي «تأكيد» ليتم الصرف لمحفظة البوت (الأرقام بتنحسب من جديد لحظة التأكيد).`;
+    return adminBot.sendMessage(chatId, text, {
+      reply_markup: {
+        inline_keyboard: [[
+          { text: '✅ تأكيد وصرف', callback_data: 'gtcb_yes' },
+          { text: '❌ إلغاء', callback_data: 'gtcb_no' }
+        ]]
+      }
+    });
+  }
+
+  async function gtCbPay(chatId) {
+    if (gtCbRunning) {
+      return adminBot.sendMessage(chatId, '⏳ عم ينصرف، استني.');
+    }
+    gtCbRunning = true;
+    try {
+      const dk = gtDateKey();
+      const last = (await get(ref(db, 'gt_cashback_meta/lastRun'))).val();
+      if (last === dk) {
+        return adminBot.sendMessage(chatId, '✅ انصرف اليوم من قبل.');
+      }
+      await adminBot.sendMessage(chatId, '⏳ عم يتم الصرف...');
+      const rows = await gtCbCompute();
+      let ok = 0;
+      let fail = 0;
+      let total = 0;
+      for (const r of rows) {
+        try {
+          const claim = await gtTx(ref(db, `gt_cashback_log/${dk}/${r.id}`),
+            (c) => (c === null ? { loss: r.loss, amount: r.amount, at: Date.now() } : undefined));
+          if (!claim.committed) continue; // انصرف له اليوم قبل
+          let userOk = true;
+          const res = await gtTx(ref(db, `users/${r.id}`), (x) => {
+            if (x === null) { userOk = false; return x; }
+            userOk = true;
+            x.botBalance = (x.botBalance || 0) + r.amount;
+            return x;
+          });
+          const val = res.snapshot && res.snapshot.val();
+          if (!res.committed || !val || !userOk) {
+            await set(ref(db, `gt_cashback_log/${dk}/${r.id}`), null);
+            fail++;
+            continue;
+          }
+          ok++;
+          total += r.amount;
+          gtSafe(bot.sendMessage(Number(r.id),
+            `💸 استرداد يومي\n${GT_DIV}\nخسارتك الفعلية: ${gtNum(r.loss)} NSP\n` +
+            `✅ رجعنالك ${GT_CB_PCT}% = ${gtNum(r.amount)} NSP إلى محفظة البوت\n` +
+            `💼 محفظة البوت: ${gtNum(val.botBalance)} NSP`));
+        } catch (e) {
+          fail++;
+          console.log('gt cashback pay error:', r.id, e.message);
+        }
+        await gtSleep(60);
+      }
+      await gtCbSnapshot();
+      await set(ref(db, 'gt_cashback_meta/lastRun'), dk);
+      return adminBot.sendMessage(chatId,
+        `💸 انتهى صرف الاسترداد اليومي\n✅ انصرف لـ ${ok} لاعب\n💰 المجموع: ${gtNum(total)} NSP` +
+        (fail ? `\n⚠️ فشل ${fail} (ما انحسب عليهم)` : ''));
+    } finally {
+      gtCbRunning = false;
+    }
+  }
+
+  // ======================= ⚙️ واجهة الأدمن (أزرار + أوامر) =======================
+  function gtToolsMenu() {
+    return {
+      text: `⚙️ أدوات إضافية\n${GT_DIV}\nالصيانة: ${GT_MAINT ? '🛠️ مفعّلة' : '⚪ معطّلة'}`,
+      markup: {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '🎁 العروض', callback_data: 'gtx_promo' }, { text: '💸 الاسترداد اليومي', callback_data: 'gtx_cb' }],
+            [{ text: '🛠️ الصيانة', callback_data: 'gtx_maint' }, { text: '📢 بث للجميع', callback_data: 'gtx_bc' }],
+            [{ text: '👥 عدد المسجّلين بالبوت', callback_data: 'gtx_count' }]
+          ]
+        }
+      }
+    };
+  }
+
+  // بعد رسالة لوحة الإدارة الأصلية، بنبعت رسالة الأدوات الإضافية
+  adminBot.onText(/^\/(start|tools)/, (msg) => {
+    if (!isAdmin(msg.from.id)) return;
+    const t = gtToolsMenu();
+    gtSafe(adminBot.sendMessage(msg.chat.id, t.text, t.markup));
+  });
+
+  adminBot.onText(/^\/maintenance\s+(on|off)$/i, async (msg, m) => {
+    if (!isAdmin(msg.from.id)) return;
+    try {
+      const on = m[1].toLowerCase() === 'on';
+      await gtSetMaint(on);
+      await adminBot.sendMessage(msg.chat.id, on
+        ? '🛠️ وضع الصيانة: مُفعّل\nاللاعبين بيشوفوا رسالة صيانة، وأنت بتشتغل عادي.\nللإيقاف: /maintenance off'
+        : '✅ وضع الصيانة: معطّل\nالبوت رجع شغّال.\nللتفعيل: /maintenance on');
+    } catch (e) {
+      gtSafe(adminBot.sendMessage(msg.chat.id, '❌ خطأ: ' + e.message));
+    }
+  });
+
+  adminBot.onText(/^\/backfill$/i, async (msg) => {
+    if (!isAdmin(msg.from.id)) return;
+    try {
+      const r = await gtBackfill();
+      await adminBot.sendMessage(msg.chat.id, `✅ تمت تعبئة السجل\n➕ انضاف: ${r.added}\n👥 المجموع: ${r.total}`);
+    } catch (e) {
+      gtSafe(adminBot.sendMessage(msg.chat.id, '❌ خطأ: ' + e.message));
+    }
+  });
+
+  adminBot.onText(/^\/endnum\s+(\S+)$/i, async (msg, match) => {
+    if (!isAdmin(msg.from.id)) return;
+    const n = gtDigits(match[1]);
+    if (!/^\d{1,6}$/.test(n)) {
+      return adminBot.sendMessage(msg.chat.id, '❌ اكتبي أرقام فقط، مثال: /endnum 22');
+    }
+    GT_PROMOS.endNum = n;
+    await gtPromoSave();
+    const m = gtPromoMenu();
+    return adminBot.sendMessage(msg.chat.id, `✅ تم تحديد الرقم: ${n}\n\n` + m.text, m.markup);
+  });
+
+  adminBot.onText(/^\/offernote\s+([\s\S]+)$/i, async (msg, match) => {
+    if (!isAdmin(msg.from.id)) return;
+    const t = match[1].trim();
+    GT_PROMOS.note = /^(off|مسح)$/i.test(t) ? '' : t.slice(0, 120);
+    await gtPromoSave();
+    const m = gtPromoMenu();
+    return adminBot.sendMessage(msg.chat.id,
+      (GT_PROMOS.note ? `✅ انحفظت الملاحظة: ${GT_PROMOS.note}` : '✅ انمسحت الملاحظة') + '\n\n' + m.text, m.markup);
+  });
+
+  // استقبال نص البث (بعد ما الأدمن يضغط «📢 بث للجميع»)
+  adminBot.on('message', async (msg) => {
+    try {
+      const adminId = msg.from && msg.from.id;
+      if (!adminId || !isAdmin(adminId)) return;
+      const text = msg.text;
+      if (!text) return;
+      const st = gtBc.get(adminId);
+      if (!st || st.step !== 'await') return;
+      if (text.startsWith('/') || GT_ADMIN_BTNS.includes(text)) { gtBc.delete(adminId); return; }
+      st.step = 'confirm';
+      st.text = text;
+      const cnt = Object.keys((await get(ref(db, 'gt_bot_users'))).val() || {}).length;
+      await adminBot.sendMessage(msg.chat.id,
+        `📢 معاينة:\n\n${text}\n\nبعتها لـ ${cnt} مستخدم؟`,
+        {
+          reply_markup: {
+            inline_keyboard: [[
+              { text: '✅ ابعت', callback_data: 'gtbc_yes' },
+              { text: '❌ إلغاء', callback_data: 'gtbc_no' }
+            ]]
+          }
+        });
+    } catch (e) {
+      console.log('gt broadcast preview error:', e.message);
+    }
+  });
+
+  // كل أزرار الإضافات
+  adminBot.on('callback_query', async (q) => {
+    const d = q.data || '';
+    if (!/^(gtx|gtmt|gtpr|gtcb|gtbc)_/.test(d)) return;
+    if (!isAdmin(q.from.id) || !q.message) return;
+    const chatId = q.message.chat.id;
+    const adminId = q.from.id;
+    const stripBtns = () => gtSafe(adminBot.editMessageReplyMarkup(
+      { inline_keyboard: [] }, { chat_id: chatId, message_id: q.message.message_id }));
+    try {
+      gtSafe(adminBot.answerCallbackQuery(q.id));
+
+      if (d === 'gtx_promo') {
+        const m = gtPromoMenu();
+        return adminBot.sendMessage(chatId, m.text, m.markup);
+      }
+      if (d === 'gtx_cb') {
+        return await gtCbPreview(chatId);
+      }
+      if (d === 'gtx_maint') {
+        return adminBot.sendMessage(chatId,
+          `🛠️ حالة الصيانة حالياً: ${GT_MAINT ? 'مفعّلة ✅' : 'معطّلة ⚪'}\nاختاري:`,
+          {
+            reply_markup: {
+              inline_keyboard: [[
+                { text: '🟢 تشغيل', callback_data: 'gtmt_on' },
+                { text: '🔴 إيقاف', callback_data: 'gtmt_off' }
+              ]]
+            }
+          });
+      }
+      if (d === 'gtx_bc') {
+        awaitingSearch.delete(adminId); // حتى ما يلتقط نص البث كأنه بحث عن لاعب
+        gtBc.set(adminId, { step: 'await', text: null });
+        return adminBot.sendMessage(chatId, '📢 اكتبي الرسالة اللي بدك تبعتيها لكل مستخدمي بوت الشجرة:');
+      }
+      if (d === 'gtx_count') {
+        const n = Object.keys((await get(ref(db, 'gt_bot_users'))).val() || {}).length;
+        return adminBot.sendMessage(chatId,
+          `👥 المسجّلين بالبوت: ${n}\nإذا بدك تضيفي اللي تعاملوا قبل (شحن/سحب) اكتبي: /backfill`);
+      }
+      if (d === 'gtmt_on' || d === 'gtmt_off') {
+        const on = d === 'gtmt_on';
+        stripBtns();
+        await gtSetMaint(on);
+        return adminBot.sendMessage(chatId, on ? '🛠️ وضع الصيانة: مُفعّل الآن' : '✅ وضع الصيانة: معطّل الآن');
+      }
+      if (/^gtpr_/.test(d)) {
+        const key = d.slice(5);
+        if (key === 'p10') {
+          GT_PROMOS.p10 = !GT_PROMOS.p10;
+          if (GT_PROMOS.p10) GT_PROMOS.p20 = false;
+        } else if (key === 'p20') {
+          GT_PROMOS.p20 = !GT_PROMOS.p20;
+          if (GT_PROMOS.p20) GT_PROMOS.p10 = false;
+        } else if (key === 'end') {
+          if (!GT_PROMOS.end && !GT_PROMOS.endNum) {
+            return adminBot.sendMessage(chatId, '❌ حددي الرقم أولاً: /endnum 22');
+          }
+          GT_PROMOS.end = !GT_PROMOS.end;
+        } else {
+          return;
+        }
+        await gtPromoSave();
+        const turnedOn = (key === 'p10' && GT_PROMOS.p10) || (key === 'p20' && GT_PROMOS.p20) || (key === 'end' && GT_PROMOS.end);
+        if (turnedOn) {
+          gtBroadcast(gtPromoAnnounce(key), chatId);
+          gtSafe(adminBot.sendMessage(chatId, '✅ تم التشغيل — عم يتبعت إعلان للجميع'));
+        }
+        const m = gtPromoMenu();
+        return gtSafe(adminBot.editMessageText(m.text, { chat_id: chatId, message_id: q.message.message_id, ...m.markup }));
+      }
+      if (d === 'gtcb_no') {
+        stripBtns();
+        return adminBot.sendMessage(chatId, '🛑 تم إلغاء الصرف.');
+      }
+      if (d === 'gtcb_yes') {
+        stripBtns();
+        return await gtCbPay(chatId);
+      }
+      if (d === 'gtbc_yes' || d === 'gtbc_no') {
+        stripBtns();
+        const st = gtBc.get(adminId);
+        gtBc.delete(adminId);
+        if (d === 'gtbc_no' || !st || !st.text) {
+          return adminBot.sendMessage(chatId, d === 'gtbc_no' ? '🛑 تم إلغاء البث.' : '❌ ما في رسالة للبث، ابدئي من جديد.');
+        }
+        await adminBot.sendMessage(chatId, '📢 عم يتبعت...');
+        return gtBroadcast(st.text, chatId);
+      }
+    } catch (e) {
+      console.log('gt extras callback error:', e.message);
+      gtSafe(adminBot.sendMessage(chatId, '❌ صار خطأ: ' + e.message));
+    }
+  });
+
+  console.log('✅ إضافات الشجرة (صيانة + بث + عروض + استرداد) جاهزة');
+} catch (e) {
+  // أي خطأ بالإضافات ما بيوقّف البوت الأصلي
+  console.log('gt extras init error:', e.message);
+}
   console.log('🛡️ بوت الإدارة شغال');
 }
 
