@@ -417,7 +417,22 @@ try {
   const gtDigits = (s) => String(s || '').trim().replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
   const gtSafe = (p) => { if (p && typeof p.catch === 'function') p.catch(() => {}); };
   const GT_DIV = '┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄';
-  const GT_ADMIN_BTNS = ['🚀 ستارت', '📊 إحصائيات', '👥 اللاعبون', '🔍 بحث عن لاعب'];
+  const GT_BTN_PROMO = '🎁 العروض';
+  const GT_BTN_CB = '💸 الاسترداد';
+  const GT_BTN_MAINT = '🛠️ الصيانة';
+  const GT_BTN_BC = '📢 بث للجميع';
+  const GT_NEW_BTNS = [GT_BTN_PROMO, GT_BTN_CB, GT_BTN_MAINT, GT_BTN_BC];
+  const GT_ADMIN_BTNS = ['🚀 ستارت', '📊 إحصائيات', '👥 اللاعبون', '🔍 بحث عن لاعب', ...GT_NEW_BTNS];
+
+  // ✅ أزرار ثابتة: بنضيف صفين لكيبورد الأدمن الموجود (نفس الكائن) بدون تعديل أي سطر منه
+  try {
+    if (adminKeyboard && Array.isArray(adminKeyboard.keyboard)) {
+      adminKeyboard.keyboard.push(
+        [{ text: GT_BTN_PROMO }, { text: GT_BTN_CB }],
+        [{ text: GT_BTN_MAINT }, { text: GT_BTN_BC }]
+      );
+    }
+  } catch (e) { console.log('gt keyboard error:', e.message); }
 
   // ======================= 🛠️ الصيانة =======================
   // بتوقّف البوت (لاعبين فقط) وبتخلّي الأدمن يشتغل عادي. ما بتأثر على اللعبة (الويب) نفسها.
@@ -826,8 +841,8 @@ try {
     };
   }
 
-  // بعد رسالة لوحة الإدارة الأصلية، بنبعت رسالة الأدوات الإضافية
-  adminBot.onText(/^\/(start|tools)/, (msg) => {
+  // /tools بيبعت قائمة الأدوات كأزرار inline (الأزرار الثابتة موجودة أصلاً بلوحة الأدمن)
+  adminBot.onText(/^\/tools/, (msg) => {
     if (!isAdmin(msg.from.id)) return;
     const t = gtToolsMenu();
     gtSafe(adminBot.sendMessage(msg.chat.id, t.text, t.markup));
@@ -903,6 +918,45 @@ try {
         });
     } catch (e) {
       console.log('gt broadcast preview error:', e.message);
+    }
+  });
+
+  // ضغط الأزرار الثابتة (🎁 العروض / 💸 الاسترداد / 🛠️ الصيانة / 📢 بث للجميع)
+  adminBot.on('message', async (msg) => {
+    try {
+      const adminId = msg.from && msg.from.id;
+      if (!adminId || !isAdmin(adminId)) return;
+      const t = (msg.text || '').trim();
+      if (!GT_NEW_BTNS.includes(t)) return;
+      const chatId = msg.chat.id;
+      awaitingSearch.delete(adminId);
+      gtBc.delete(adminId);
+      if (t === GT_BTN_PROMO) {
+        const m = gtPromoMenu();
+        return await adminBot.sendMessage(chatId, m.text, m.markup);
+      }
+      if (t === GT_BTN_CB) {
+        return await gtCbPreview(chatId);
+      }
+      if (t === GT_BTN_MAINT) {
+        return await adminBot.sendMessage(chatId,
+          `🛠️ حالة الصيانة حالياً: ${GT_MAINT ? 'مفعّلة ✅' : 'معطّلة ⚪'}\nاختاري:`,
+          {
+            reply_markup: {
+              inline_keyboard: [[
+                { text: '🟢 تشغيل', callback_data: 'gtmt_on' },
+                { text: '🔴 إيقاف', callback_data: 'gtmt_off' }
+              ]]
+            }
+          });
+      }
+      if (t === GT_BTN_BC) {
+        gtBc.set(adminId, { step: 'await', text: null });
+        return await adminBot.sendMessage(chatId, '📢 اكتبي الرسالة اللي بدك تبعتيها لكل مستخدمي بوت الشجرة:');
+      }
+    } catch (e) {
+      console.log('gt button error:', e.message);
+      gtSafe(adminBot.sendMessage(msg.chat.id, '❌ صار خطأ: ' + e.message));
     }
   });
 
