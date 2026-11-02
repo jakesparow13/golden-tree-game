@@ -215,7 +215,7 @@ body.inbonus .orb,body.inbonus #stage::before,body.inbonus .logo::after,body.inb
   <div class="game-title">Tree of Chronos</div>
   <div class="loading-bar-wrap"><div id="loadingBar"></div></div>
   <div id="loadingPct">0%</div>
-  <div id="verTag" style="margin-top:6px;font-size:11px;color:#8f86b8;">v9</div>
+  <div id="verTag" style="margin-top:6px;font-size:11px;color:#8f86b8;">v12</div>
 </div>
 
 <div id="gameScreen">
@@ -432,7 +432,7 @@ function R(n){ return Math.round(n); }
 
 const SoundEngine = (() => {
   let ctx = null;
-  const VOL = { bg:0.06, reel:0.2, reelStop:1.0, wild:0.22, bonus:0.15, big:0.3, win:0.25, star:0.25, dollar:0.25, synth:0.6 };
+  const VOL = { bg:0.03, reel:0.35, reelStop:2.5, wild:0.5, bonus:0.15, big:0.3, win:0.25, star:0.25, dollar:0.25, synth:0.6 };
   function ac(){
     if(!ctx){ try{ ctx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ ctx=null; } }
     if(ctx && ctx.state === 'suspended') ctx.resume().catch(()=>{});
@@ -471,7 +471,7 @@ const SoundEngine = (() => {
     bgMusicEl.volume = VOL.bg;
     bgMusicEl.addEventListener('error', ()=>{ musicBroken = true; startAmbientSynth(); });
   }
-  let ambientOn = false, ambientNodes = null;
+  let ambientOn = false, ambientNodes = null, musicSrc = null, ducked = false;
   function startAmbientSynth(){
     const c = ac(); if(!c || ambientNodes) return;
     ambientOn = true;
@@ -497,10 +497,25 @@ const SoundEngine = (() => {
     ambientOn = false;
   }
   function startAmbient(){
+    /* الموسيقى من الذاكرة: تكرار بدون فجوات، وإذا النظام وقّف الصوت (مثلاً بسبب الفيديو) بترجع من نفس المكان */
+    if(bufs.bgMusic){
+      if(musicSrc){ ambientOn = true; return; }
+      const c = ac();
+      if(c){
+        try{
+          if(bgMusicEl) bgMusicEl.pause();
+          const s = c.createBufferSource(), g = c.createGain();
+          s.buffer = bufs.bgMusic; s.loop = true; g.gain.value = ducked ? 0 : VOL.bg;
+          s.connect(g); g.connect(c.destination); s.start(0);
+          musicSrc = { s, g }; ambientOn = true; return;
+        }catch(e){ musicSrc = null; }
+      }
+    }
     if(musicBroken || !bgMusicEl){ startAmbientSynth(); return; }
     bgMusicEl.play().then(()=>{ ambientOn = true; }).catch(()=>{ startAmbientSynth(); });
   }
   function stopAmbient(){
+    if(musicSrc){ try{ musicSrc.s.stop(); }catch(e){} musicSrc = null; }
     if(bgMusicEl && !musicBroken) bgMusicEl.pause();
     if(ambientNodes) stopAmbientSynth();
     ambientOn = false;
@@ -511,15 +526,15 @@ const SoundEngine = (() => {
   if(sfxSpinEl){ sfxSpinEl.volume = VOL.reel; sfxSpinEl.addEventListener('error', ()=>{ sfxSpinBroken = true; }); }
   if(sfxWildEl){ sfxWildEl.volume = VOL.wild; sfxWildEl.addEventListener('error', ()=>{ sfxWildBroken = true; }); }
   /* المؤثرات الصوتية: بتتحمّل وتتفكّ مرة وحدة بالذاكرة وبتشتغل فوراً (الـaudio العادي بيتأخر على الجوال). إذا ما تحمّل ملف بيرجع للطريقة القديمة تلقائياً */
-  const SFX_IDS = ['sfxSpin','sfxWild','sfxBuy','sfxBig','sfxPick','sfxWin','sfxStar','sfxDollar'];
+  const SFX_IDS = ['sfxSpin','sfxWild','sfxBuy','sfxBig','sfxPick','sfxWin','sfxStar','sfxDollar','bgMusic'];
   const bufs = {};
   let spinHandle = null;
-  function playBuf(id, vol){
+  function playBuf(id, vol, loop){
     const c = ac(), b = bufs[id];
     if(!c || !b) return null;
     try{
       const s = c.createBufferSource(), g = c.createGain();
-      s.buffer = b; g.gain.value = vol;
+      s.buffer = b; s.loop = !!loop; g.gain.value = vol;
       s.connect(g); g.connect(c.destination); s.start(0);
       return { s, g };
     }catch(e){ return null; }
@@ -535,9 +550,29 @@ const SoundEngine = (() => {
       }catch(e){}
     }));
   }
+  /* صوت دوران ناعم (مولّد) بيستمر طول دوران البكرات وبيخفت مع توقف آخر بكرة. بيُستعمل إذا ملف spin-click قصير */
+  function startWhirr(){
+    const c = ac(); if(!c) return;
+    try{
+      const n = c.sampleRate, buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+      for(let i=0;i<n;i++) d[i] = Math.random()*2-1;
+      const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(), t = c.currentTime;
+      s.buffer = buf; s.loop = true;
+      f.type = 'bandpass'; f.frequency.value = 700; f.Q.value = 0.8;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(VOL.reel*0.6, t+0.12);
+      s.connect(f); f.connect(g); g.connect(c.destination); s.start(0); s.stop(t+8);
+      spinHandle = { s, g };
+    }catch(e){}
+  }
   function playClick(){
+    const b = bufs.sfxSpin;
+    if(b && b.duration >= 0.4){
+      /* ملف دوران طويل: بيتكرر لحد ما توقف آخر بكرة */
+      const hl = playBuf('sfxSpin', VOL.reel, true);
+      if(hl){ try{ hl.s.stop(ac().currentTime + 6); }catch(e){} spinHandle = hl; return; }
+    }
     const h = playBuf('sfxSpin', VOL.reel);
-    if(h){ spinHandle = h; return; }
+    if(h){ startWhirr(); return; }
     if(sfxSpinEl && !sfxSpinBroken){ try{ sfxSpinEl.currentTime = 0; sfxSpinEl.play().catch(()=>{ synthClick(); }); return; }catch(e){} }
     synthClick();
   }
@@ -567,6 +602,17 @@ const SoundEngine = (() => {
   return {
     unlock(){ ac(); startAmbient(); },
     preload: preloadSfx,
+    /* كتم موسيقى الخلفية أثناء فيديو الشراء (on=true) ورجوعها بعده (on=false) */
+    duck(on){
+      ducked = !!on;
+      const c = ac(), t = c ? c.currentTime : 0;
+      if(musicSrc){ try{ const g = musicSrc.g.gain; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(on ? 0 : VOL.bg, t + (on ? 0.25 : 0.5)); }catch(e){} }
+      if(ambientNodes){ try{ ambientNodes.master.gain.linearRampToValueAtTime(on ? 0 : 0.028, t + 0.4); }catch(e){} }
+      if(bgMusicEl && !musicBroken){
+        bgMusicEl.volume = on ? 0 : VOL.bg;
+        if(!on && ambientOn && !musicSrc && bgMusicEl.paused) bgMusicEl.play().catch(()=>{});
+      }
+    },
     /* صوت الدوران بيخفت وبيوقف بنفس لحظة توقف آخر بكرة */
     stopSpin(){
       const h = spinHandle; spinHandle = null;
@@ -1010,7 +1056,7 @@ function playBuyVideo(){
       try{ v.pause(); }catch(e){}
       ov.style.display = 'none'; msg.textContent = '';
       ov.onclick = null; v.onended = null; v.onerror = null;
-      try{ SoundEngine.unlock(); }catch(e){}
+      try{ SoundEngine.duck(false); }catch(e){}
       res();
     };
     const fail = why=>{
@@ -1022,6 +1068,7 @@ function playBuyVideo(){
       setTimeout(finish, 3000);
     };
     ov.style.display = 'flex';
+    SoundEngine.duck(true);
     v.onended = finish; v.onerror = ()=>fail('error');
     if(v.readyState < 2){ try{ v.load(); }catch(e){} }
     try{ v.currentTime = 0; }catch(e){}
