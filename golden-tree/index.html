@@ -198,6 +198,13 @@ body.inbonus .orb,body.inbonus #stage::before,body.inbonus .logo::after,body.inb
 .wp-card.total .wp-title{display:none;}
 .wp-card.total .wp-amount{left:19.6%;right:19.6%;top:40.7%;height:35.6%;display:flex;align-items:center;justify-content:center;line-height:1;}
 .wp-card.total .wp-label{top:79%;}
+/* ===== كشف عدد الأشجار بكرت البونص العشوائي ===== */
+.pkg-icons.quad span.rv::after{content:none;}
+.pkg-icons.quad span.no::after{content:'✕';font-size:20px;font-weight:800;color:#6b6b80;}
+.pkg-icons.quad span.no{opacity:.45;}
+.pkg-icons.quad span img{width:100%;height:100%;border:none;border-radius:0;background:none;filter:none;}
+.pkg-icons.quad span.flip{animation:rvflip .28s ease-out;}
+@keyframes rvflip{0%{transform:rotateY(90deg) scale(.8);}100%{transform:rotateY(0) scale(1);}}
 /* ===== فيديو شراء البونص: فيديو واحد بملء الشاشة (cover) فوق كل شي ===== */
 #buyVideoOverlay{display:none;position:fixed;inset:0;z-index:300;background:radial-gradient(circle at 50% 50%,#4a2c08,#000 80%);overflow:hidden;align-items:center;justify-content:center;}
 #buyVideo{width:100%;height:100%;object-fit:cover;}
@@ -215,7 +222,7 @@ body.inbonus .orb,body.inbonus #stage::before,body.inbonus .logo::after,body.inb
   <div class="game-title">Tree of Chronos</div>
   <div class="loading-bar-wrap"><div id="loadingBar"></div></div>
   <div id="loadingPct">0%</div>
-  <div id="verTag" style="margin-top:6px;font-size:11px;color:#8f86b8;">v12</div>
+  <div id="verTag" style="margin-top:6px;font-size:11px;color:#8f86b8;">v13</div>
 </div>
 
 <div id="gameScreen">
@@ -427,6 +434,11 @@ const BONUS_COST_MULT = { '1':100, '2':200, '3':350, 'r':800/3 };
 /* معامل أرباح اللفات المجانية لكل باقة (رجوع للاعب حوالي 80%) */
 const BONUS_PAY_SCALE = { '1':2.27, '2':0.424, '3':0.1195, 'r':0.232 };
 let bonusPkg = null;
+/* البونص العشوائي: عدد الأشجار بيتحدد مرة وحدة وقت الشراء ويثبت للـ5 لفات. نسبة الظهور % (لازم المجموع 100) */
+const R_W = { 1:52, 2:40, 3:8 };
+/* معامل بيعوّض الربح عشان متوسط الرجوع للباقة العشوائية يضل نفس تسعيرها (بناءً على معاملات الباقات 1 و2 و3) */
+const R_F = BONUS_COST_MULT['r'] / (R_W[1]/100*BONUS_COST_MULT['1'] + R_W[2]/100*BONUS_COST_MULT['2'] + R_W[3]/100*BONUS_COST_MULT['3']);
+function pickRandomTrees(){ const u = Math.random()*100; return u < R_W[1] ? 1 : (u < R_W[1]+R_W[2] ? 2 : 3); }
 
 function R(n){ return Math.round(n); }
 
@@ -1084,6 +1096,38 @@ function playBuyVideo(){
   });
 }
 
+/* كشف عدد الأشجار للبونص العشوائي: علامات الاستفهام بتتقلب وبتبين العدد النهائي (شجرة أو شجرتين أو 3) قبل الفيديو */
+function revealRandomTrees(k){
+  return new Promise(res=>{
+    const spans = [...document.querySelectorAll('.pkg-icons.quad span')];
+    const tree = '<img src="images/wild-base.png" alt="">';
+    const flip = sp=>{ sp.classList.remove('flip'); void sp.offsetWidth; sp.classList.add('flip'); };
+    const flick = setInterval(()=>{
+      spans.forEach(sp=>{
+        flip(sp); sp.classList.remove('no');
+        const t = Math.random() < 0.5;
+        sp.classList.toggle('rv', t); sp.innerHTML = t ? tree : '؟';
+      });
+    }, 140);
+    setTimeout(()=>{
+      clearInterval(flick);
+      let i = 0;
+      const step = ()=>{
+        if(i >= spans.length){ setTimeout(res, 900); return; }
+        const sp = spans[i], isTree = i < k-1;
+        flip(sp);
+        sp.classList.toggle('rv', isTree); sp.classList.toggle('no', !isTree);
+        sp.innerHTML = isTree ? tree : '';
+        i++; setTimeout(step, 320);
+      };
+      step();
+    }, 1300);
+  });
+}
+function resetRandomCard(){
+  document.querySelectorAll('.pkg-icons.quad span').forEach(sp=>{ sp.className = ''; sp.innerHTML = '؟'; });
+}
+
 window.confirmBuy = async () => {
   if(!pendingPkg) return;
   const cost = R(bet * BONUS_COST_MULT[pendingPkg]);
@@ -1094,10 +1138,14 @@ window.confirmBuy = async () => {
   }
   balance = R(balance - cost); govAcc().wager += cost;
   SoundEngine.buyBonus();
-  randomTrees = (pendingPkg==='r'); bonusPkg = pendingPkg;
-  guaranteedWildsPerSpin = pendingPkg==='1' ? 1 : pendingPkg==='2' ? 2 : pendingPkg==='3' ? 3 : (1+Math.floor(Math.random()*3));
+  let rk = 0;
+  if(pendingPkg==='r'){ rk = pickRandomTrees(); BONUS_PAY_SCALE['r'] = BONUS_PAY_SCALE[String(rk)] * R_F; }
+  randomTrees = false; bonusPkg = pendingPkg;
+  guaranteedWildsPerSpin = pendingPkg==='1' ? 1 : pendingPkg==='2' ? 2 : pendingPkg==='3' ? 3 : rk;
   inFree=true; freeLeft=5; freeWin=0;
+  if(rk){ $('buyModal').style.pointerEvents = 'none'; await revealRandomTrees(rk); }
   closeBuyModal();
+  if(rk){ resetRandomCard(); $('buyModal').style.pointerEvents = ''; }
   await playBuyVideo();
   enterBonus();
   update(); await save();
