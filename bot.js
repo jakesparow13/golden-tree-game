@@ -1218,7 +1218,7 @@ bot.on('message', async (msg) => {
 const dpFs = require('fs');
 const dpPath = require('path');
 const SYR_CODES = ['00525989', '43833398'];
-const SHAM_ADDRESS = 'afeb9f1352b9d297ab8e553ff5eb01e2';
+const SHAM_ADDRESS = 'e383fc92531d62570598dc67d1729076';
 const SHAM_QR_FILE = dpPath.join(__dirname, 'shamcash-qr.jpg');
 const DP_MIN = 200;   // أقل شحنة بالعملة الجديدة
 const DP_RATE = 100;  // 200 = 20,000 NSP
